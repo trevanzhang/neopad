@@ -67,7 +67,11 @@ const alwaysOnTop = ref(false)
 const theme = ref<'system' | 'light' | 'dark'>('system')
 const language = ref<AppLanguage>(initialLanguage())
 const tabBarOrientation = ref<TabBarOrientation>(initialTabBarOrientation())
+const wordWrap = ref(initialBooleanSetting('neopad.wordWrap', true))
+const editorFontFamily = ref(initialStringSetting('neopad.editorFontFamily', '"Segoe UI", Arial, sans-serif'))
+const editorBackgroundColor = ref(initialStringSetting('neopad.editorBackgroundColor', '#ffffff'))
 const fileInput = ref<HTMLInputElement | null>(null)
+const backgroundColorInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
 const workspacePath = ref('~/.neopad')
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
@@ -148,6 +152,18 @@ watch(tabBarOrientation, () => {
   window.localStorage.setItem('neopad.tabBarOrientation', tabBarOrientation.value)
 })
 
+watch(wordWrap, () => {
+  window.localStorage.setItem('neopad.wordWrap', String(wordWrap.value))
+})
+
+watch(editorFontFamily, () => {
+  window.localStorage.setItem('neopad.editorFontFamily', editorFontFamily.value)
+})
+
+watch(editorBackgroundColor, () => {
+  window.localStorage.setItem('neopad.editorBackgroundColor', editorBackgroundColor.value)
+})
+
 function initialLanguage(): AppLanguage {
   if (typeof window === 'undefined') {
     return 'en'
@@ -162,6 +178,23 @@ function initialTabBarOrientation(): TabBarOrientation {
   }
 
   return window.localStorage.getItem('neopad.tabBarOrientation') === 'vertical' ? 'vertical' : 'horizontal'
+}
+
+function initialBooleanSetting(key: string, fallback: boolean) {
+  if (typeof window === 'undefined') {
+    return fallback
+  }
+
+  const value = window.localStorage.getItem(key)
+  return value === null ? fallback : value === 'true'
+}
+
+function initialStringSetting(key: string, fallback: string) {
+  if (typeof window === 'undefined') {
+    return fallback
+  }
+
+  return window.localStorage.getItem(key) || fallback
 }
 
 async function selectTab(tabId: string) {
@@ -372,6 +405,31 @@ function toggleTabBarOrientation() {
   tabBarOrientation.value = tabBarOrientation.value === 'horizontal' ? 'vertical' : 'horizontal'
 }
 
+function promptEditorFont() {
+  const nextFont = window.prompt(t.value.menu.font, editorFontFamily.value)?.trim()
+  if (!nextFont) {
+    return
+  }
+
+  editorFontFamily.value = nextFont
+  statusMessage.value = t.value.status.fontUpdated
+}
+
+function openBackgroundColorPicker() {
+  backgroundColorInput.value?.click()
+}
+
+function updateEditorBackground(event: Event) {
+  const input = event.target as HTMLInputElement
+  editorBackgroundColor.value = input.value
+  statusMessage.value = t.value.status.backgroundUpdated
+}
+
+function toggleWordWrap() {
+  wordWrap.value = !wordWrap.value
+  statusMessage.value = wordWrap.value ? t.value.status.wordWrapOn : t.value.status.wordWrapOff
+}
+
 function showSearchPlaceholder() {
   searchOpen.value = true
   statusMessage.value = t.value.status.search
@@ -556,6 +614,11 @@ function handleKeydown(event: KeyboardEvent) {
     toggleTabBarOrientation()
   }
 
+  if (event.key.toLowerCase() === 'w' && event.ctrlKey) {
+    event.preventDefault()
+    toggleWordWrap()
+  }
+
   if (event.key.toLowerCase() === 'v' && event.ctrlKey && event.shiftKey) {
     event.preventDefault()
     void saveCurrentClipboard()
@@ -654,6 +717,7 @@ function downloadText(fileName: string, text: string) {
       <MenuBar
         :preview-mode="previewMode"
         :tab-bar-orientation="tabBarOrientation"
+        :word-wrap="wordWrap"
         :messages="t.menu"
         @new-note="createLocalTab"
         @save-clipboard="saveCurrentClipboard"
@@ -677,6 +741,9 @@ function downloadText(fileName: string, text: string) {
         @toggle-pin="togglePin"
         @toggle-tab-bar-orientation="toggleTabBarOrientation"
         @update-tab-bar-orientation="tabBarOrientation = $event"
+        @format-font="promptEditorFont"
+        @format-background="openBackgroundColorPicker"
+        @toggle-word-wrap="toggleWordWrap"
         @update-preview-mode="previewMode = $event"
       />
     </template>
@@ -698,11 +765,21 @@ function downloadText(fileName: string, text: string) {
         accept=".md,.markdown,.txt,text/markdown,text/plain"
         @change="loadFileFromInput"
       />
+      <input
+        ref="backgroundColorInput"
+        class="file-loader"
+        type="color"
+        :value="editorBackgroundColor"
+        @input="updateEditorBackground"
+      />
       <EditorPane
         v-if="previewMode !== 'preview'"
         ref="editorPane"
         v-model="content"
         :title="activeTab?.title ?? 'Untitled'"
+        :word-wrap="wordWrap"
+        :font-family="editorFontFamily"
+        :background-color="editorBackgroundColor"
       />
       <PreviewPane v-if="previewMode !== 'edit'" :content="content" />
     </div>

@@ -43,6 +43,10 @@ export type AppMessages = {
     horizontal: string
     vertical: string
     f10: string
+    font: string
+    backgroundColor: string
+    wordWrap: string
+    ctrlW: string
     editMode: string
     splitMode: string
     previewMode: string
@@ -99,6 +103,10 @@ export type AppMessages = {
     savedAsFile: string
     exported: string
     trashOpened: string
+    fontUpdated: string
+    backgroundUpdated: string
+    wordWrapOn: string
+    wordWrapOff: string
     search: string
     settings: string
     alwaysOnTop: string
@@ -154,6 +162,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       horizontal: 'Horizontal(H)',
       vertical: 'Vertical(V)',
       f10: 'F10',
+      font: 'Font(F)...',
+      backgroundColor: 'Background Color(B)...',
+      wordWrap: 'Word Wrap(W)',
+      ctrlW: 'Ctrl+W',
       editMode: 'Edit',
       splitMode: 'Split',
       previewMode: 'Preview',
@@ -210,6 +222,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       savedAsFile: 'Saved as file',
       exported: 'Exported',
       trashOpened: 'Trash opened',
+      fontUpdated: 'Font updated',
+      backgroundUpdated: 'Background color updated',
+      wordWrapOn: 'Word wrap on',
+      wordWrapOff: 'Word wrap off',
       search: 'Search',
       settings: 'Settings',
       alwaysOnTop: 'Always on top',
@@ -263,6 +279,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       horizontal: '\u6a2a\u5411\u65b9\u5f0f(H)',
       vertical: '\u7eb5\u5411\u65b9\u5f0f(V)',
       f10: 'F10',
+      font: '\u5b57\u4f53(F)...',
+      backgroundColor: '\u80cc\u666f\u8272(B)...',
+      wordWrap: '\u81ea\u52a8\u6362\u884c(W)',
+      ctrlW: 'Ctrl+W',
       editMode: '\u7f16\u8f91',
       splitMode: '\u5206\u5c4f',
       previewMode: '\u9884\u89c8',
@@ -319,6 +339,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       savedAsFile: '\u5df2\u53e6\u5b58\u5230\u6587\u4ef6',
       exported: '\u5df2\u5168\u90e8\u5bfc\u51fa',
       trashOpened: '\u5df2\u6253\u5f00\u56de\u6536\u7ad9',
+      fontUpdated: '\u5df2\u66f4\u65b0\u5b57\u4f53',
+      backgroundUpdated: '\u5df2\u66f4\u65b0\u80cc\u666f\u8272',
+      wordWrapOn: '\u5df2\u5f00\u542f\u81ea\u52a8\u6362\u884c',
+      wordWrapOff: '\u5df2\u5173\u95ed\u81ea\u52a8\u6362\u884c',
       search: '\u641c\u7d22',
       settings: '\u8bbe\u7f6e',
       alwaysOnTop: '\u7a97\u53e3\u7f6e\u9876',

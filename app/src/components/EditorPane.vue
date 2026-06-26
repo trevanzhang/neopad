@@ -12,14 +12,19 @@ import {
 } from '@codemirror/view'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   title: string
+  wordWrap: boolean
+  fontFamily: string
+  backgroundColor: string
 }>()
 
 const model = defineModel<string>({ required: true })
 const editorRoot = ref<HTMLDivElement | null>(null)
 let editorView: EditorView | null = null
 const editable = new Compartment()
+const wrap = new Compartment()
+const appearance = new Compartment()
 
 const extensions = [
   history(),
@@ -30,7 +35,8 @@ const extensions = [
   markdown(),
   keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
   editable.of(EditorView.editable.of(true)),
-  EditorView.lineWrapping,
+  wrap.of(props.wordWrap ? EditorView.lineWrapping : []),
+  appearance.of(editorAppearance()),
   EditorView.updateListener.of((update) => {
     if (!update.docChanged) {
       return
@@ -41,15 +47,17 @@ const extensions = [
       model.value = nextValue
     }
   }),
-  EditorView.theme({
+  baseEditorTheme(),
+]
+
+function baseEditorTheme() {
+  return EditorView.theme({
     '&': {
       height: '100%',
       color: 'var(--np-text)',
-      backgroundColor: '#ffffff',
       fontSize: '15px',
     },
     '.cm-scroller': {
-      fontFamily: '"Segoe UI", Arial, sans-serif',
       lineHeight: '1.45',
     },
     '.cm-content': {
@@ -72,8 +80,19 @@ const extensions = [
     '.cm-focused': {
       outline: '0',
     },
-  }),
-]
+  })
+}
+
+function editorAppearance() {
+  return EditorView.theme({
+    '&': {
+      backgroundColor: props.backgroundColor,
+    },
+    '.cm-scroller': {
+      fontFamily: props.fontFamily,
+    },
+  })
+}
 
 onMounted(() => {
   if (!editorRoot.value) {
@@ -112,6 +131,24 @@ watch(model, (nextValue) => {
     },
   })
 })
+
+watch(
+  () => props.wordWrap,
+  (wordWrap) => {
+    editorView?.dispatch({
+      effects: wrap.reconfigure(wordWrap ? EditorView.lineWrapping : []),
+    })
+  },
+)
+
+watch(
+  () => [props.fontFamily, props.backgroundColor],
+  () => {
+    editorView?.dispatch({
+      effects: appearance.reconfigure(editorAppearance()),
+    })
+  },
+)
 
 function runEditorCommand(command: (view: EditorView) => boolean) {
   if (!editorView) {

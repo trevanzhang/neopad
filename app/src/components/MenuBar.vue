@@ -5,6 +5,7 @@ import type { PreviewMode } from './ModeSwitch.vue'
 defineProps<{
   previewMode: PreviewMode
   tabBarOrientation: 'horizontal' | 'vertical'
+  wordWrap: boolean
   messages: AppMessages['menu']
 }>()
 
@@ -31,6 +32,9 @@ defineEmits<{
   togglePin: []
   toggleTabBarOrientation: []
   updateTabBarOrientation: [orientation: 'horizontal' | 'vertical']
+  formatFont: []
+  formatBackground: []
+  toggleWordWrap: []
   updatePreviewMode: [mode: PreviewMode]
 }>()
 </script>
@@ -145,8 +149,13 @@ defineEmits<{
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.format }}</button>
       <div class="menu-popover">
-        <button type="button" disabled>{{ messages.plainText }}</button>
-        <button type="button" disabled>{{ messages.markdown }}</button>
+        <button type="button" @click="$emit('formatFont')">{{ messages.font }}</button>
+        <button type="button" @click="$emit('formatBackground')">{{ messages.backgroundColor }}</button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" class="menu-command" :class="{ checked: wordWrap }" @click="$emit('toggleWordWrap')">
+          <span>{{ messages.wordWrap }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlW }}</span>
+        </button>
       </div>
     </div>
 
