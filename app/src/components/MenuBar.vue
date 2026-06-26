@@ -6,6 +6,7 @@ defineProps<{
   previewMode: PreviewMode
   tabBarOrientation: 'horizontal' | 'vertical'
   wordWrap: boolean
+  alwaysOnTop: boolean
   messages: AppMessages['menu']
 }>()
 
@@ -40,6 +41,9 @@ defineEmits<{
   insertDateTimeSeparator: []
   insertReminder: []
   insertTextSettings: []
+  windowOpacity: []
+  reminderList: []
+  processText: [action: string]
   updatePreviewMode: [mode: PreviewMode]
 }>()
 </script>
@@ -191,8 +195,53 @@ defineEmits<{
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.tools }}</button>
       <div class="menu-popover">
-        <button type="button" @click="$emit('search')">{{ messages.search }}</button>
-        <button type="button" @click="$emit('settings')">{{ messages.settings }}</button>
+        <button type="button" class="menu-command" :class="{ checked: alwaysOnTop }" @click="$emit('togglePin')">
+          <span>{{ messages.keepOnTop }}</span>
+          <span class="menu-shortcut">{{ messages.f6 }}</span>
+        </button>
+        <button type="button" @click="$emit('windowOpacity')">{{ messages.windowOpacity }}</button>
+        <div class="menu-separator" role="separator" />
+        <div class="menu-subroot">
+          <button type="button" class="menu-command">
+            <span>{{ messages.textProcessing }}</span>
+            <span class="menu-arrow">&rsaquo;</span>
+          </button>
+          <div class="menu-popover menu-subpopover menu-tall-popover">
+            <button type="button" @click="$emit('processText', 'uppercase')">{{ messages.uppercase }}</button>
+            <button type="button" @click="$emit('processText', 'lowercase')">{{ messages.lowercase }}</button>
+            <div class="menu-separator" role="separator" />
+            <button type="button" @click="$emit('processText', 'removeExtraSpaces')">{{ messages.removeExtraSpaces }}</button>
+            <button type="button" @click="$emit('processText', 'trimLeadingSpaces')">{{ messages.trimLeadingSpaces }}</button>
+            <button type="button" @click="$emit('processText', 'removeEmptyLines')">{{ messages.removeEmptyLines }}</button>
+            <button type="button" @click="$emit('processText', 'removeDuplicateEmptyLines')">{{ messages.removeDuplicateEmptyLines }}</button>
+            <div class="menu-separator" role="separator" />
+            <button type="button" @click="$emit('processText', 'sortLines')">{{ messages.sortLines }}</button>
+            <button type="button" @click="$emit('processText', 'uniqueLines')">{{ messages.uniqueLines }}</button>
+            <div class="menu-separator" role="separator" />
+            <button type="button" @click="$emit('processText', 'toSimplified')">{{ messages.toSimplifiedChinese }}</button>
+            <button type="button" @click="$emit('processText', 'toTraditional')">{{ messages.toTraditionalChinese }}</button>
+            <button type="button" @click="$emit('processText', 'toHalfWidth')">{{ messages.toHalfWidth }}</button>
+            <button type="button" @click="$emit('processText', 'toFullWidth')">{{ messages.toFullWidth }}</button>
+            <div class="menu-separator" role="separator" />
+            <button type="button" @click="$emit('processText', 'addLineNumbers')">{{ messages.addLineNumbers }}</button>
+            <button type="button" @click="$emit('processText', 'removeLineNumbers')">{{ messages.removeLineNumbers }}</button>
+            <div class="menu-separator" role="separator" />
+            <button type="button" @click="$emit('processText', 'urlEncode')">{{ messages.urlEncode }}</button>
+            <button type="button" @click="$emit('processText', 'urlDecode')">{{ messages.urlDecode }}</button>
+            <button type="button" @click="$emit('processText', 'base64Encode')">{{ messages.base64Encode }}</button>
+            <button type="button" @click="$emit('processText', 'base64Decode')">{{ messages.base64Decode }}</button>
+            <div class="menu-separator" role="separator" />
+            <button type="button" @click="$emit('processText', 'md5Hash')">{{ messages.md5Hash }}</button>
+            <button type="button" @click="$emit('processText', 'sha1Hash')">{{ messages.sha1Hash }}</button>
+            <button type="button" @click="$emit('processText', 'sha256Hash')">{{ messages.sha256Hash }}</button>
+          </div>
+        </div>
+        <button type="button" @click="$emit('reminderList')">{{ messages.reminderList }}</button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" class="menu-command" @click="$emit('settings')">
+          <span>{{ messages.settingsWithKey }}</span>
+          <span class="menu-shortcut">{{ messages.f8 }}</span>
+        </button>
       </div>
     </div>
 

@@ -66,6 +66,34 @@ export type AppMessages = {
     ctrlD: string
     ctrlShiftDash: string
     ctrlE: string
+    keepOnTop: string
+    f6: string
+    windowOpacity: string
+    textProcessing: string
+    uppercase: string
+    lowercase: string
+    removeExtraSpaces: string
+    trimLeadingSpaces: string
+    removeEmptyLines: string
+    removeDuplicateEmptyLines: string
+    sortLines: string
+    uniqueLines: string
+    toSimplifiedChinese: string
+    toTraditionalChinese: string
+    toHalfWidth: string
+    toFullWidth: string
+    addLineNumbers: string
+    removeLineNumbers: string
+    urlEncode: string
+    urlDecode: string
+    base64Encode: string
+    base64Decode: string
+    md5Hash: string
+    sha1Hash: string
+    sha256Hash: string
+    reminderList: string
+    settingsWithKey: string
+    f8: string
     search: string
     settings: string
     about: string
@@ -117,6 +145,9 @@ export type AppMessages = {
     wordWrapOn: string
     wordWrapOff: string
     inserted: string
+    textProcessed: string
+    opacityUpdated: string
+    unsupportedHash: string
     search: string
     settings: string
     alwaysOnTop: string
@@ -195,6 +226,34 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlD: 'Ctrl+D',
       ctrlShiftDash: 'Ctrl+Shift+-',
       ctrlE: 'Ctrl+E',
+      keepOnTop: 'Keep Window on Top(T)',
+      f6: 'F6',
+      windowOpacity: 'Window Opacity(W)...',
+      textProcessing: 'Text Processing(P)',
+      uppercase: 'To Uppercase(U)',
+      lowercase: 'To Lowercase(L)',
+      removeExtraSpaces: 'Remove Extra Spaces(S)',
+      trimLeadingSpaces: 'Trim Leading Spaces(T)',
+      removeEmptyLines: 'Remove Empty Lines(R)',
+      removeDuplicateEmptyLines: 'Remove Duplicate Empty Lines(M)',
+      sortLines: 'Sort Lines(O)',
+      uniqueLines: 'Remove Duplicates(D)',
+      toSimplifiedChinese: 'To Simplified Chinese(J)',
+      toTraditionalChinese: 'To Traditional Chinese(F)',
+      toHalfWidth: 'To Half Width(H)',
+      toFullWidth: 'To Full Width(W)',
+      addLineNumbers: 'Add Line Numbers(N)',
+      removeLineNumbers: 'Remove Line Numbers(I)',
+      urlEncode: 'URL Encode(E)',
+      urlDecode: 'URL Decode(C)',
+      base64Encode: 'Base64 Encode(B)',
+      base64Decode: 'Base64 Decode(A)',
+      md5Hash: 'MD5 Hash',
+      sha1Hash: 'SHA1 Hash',
+      sha256Hash: 'SHA256 Hash',
+      reminderList: 'Reminder List(R)...',
+      settingsWithKey: 'Settings(O)...',
+      f8: 'F8',
       search: 'Search',
       settings: 'Settings',
       about: 'About NeoPad',
@@ -246,6 +305,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       wordWrapOn: 'Word wrap on',
       wordWrapOff: 'Word wrap off',
       inserted: 'Inserted',
+      textProcessed: 'Text processed',
+      opacityUpdated: 'Window opacity updated',
+      unsupportedHash: 'Hash algorithm is not available',
       search: 'Search',
       settings: 'Settings',
       alwaysOnTop: 'Always on top',
@@ -322,6 +384,34 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlD: 'Ctrl+D',
       ctrlShiftDash: 'Ctrl+Shift+-',
       ctrlE: 'Ctrl+E',
+      keepOnTop: '\u7a97\u53e3\u4fdd\u6301\u5728\u6700\u9876\u5c42(T)',
+      f6: 'F6',
+      windowOpacity: '\u7a97\u53e3\u900f\u660e\u5ea6(W)...',
+      textProcessing: '\u6587\u672c\u5904\u7406(P)',
+      uppercase: '\u8f6c\u5927\u5199(U)',
+      lowercase: '\u8f6c\u5c0f\u5199(L)',
+      removeExtraSpaces: '\u53bb\u9664\u591a\u4f59\u7a7a\u683c(S)',
+      trimLeadingSpaces: '\u9996\u5c3e\u53bb\u7a7a\u683c(T)',
+      removeEmptyLines: '\u53bb\u7a7a\u884c(R)',
+      removeDuplicateEmptyLines: '\u53bb\u91cd\u590d\u7a7a\u884c(M)',
+      sortLines: '\u6309\u884c\u6392\u5e8f(O)',
+      uniqueLines: '\u53bb\u91cd(D)',
+      toSimplifiedChinese: '\u8f6c\u7b80\u4f53\u4e2d\u6587(J)',
+      toTraditionalChinese: '\u8f6c\u7e41\u4f53\u4e2d\u6587(F)',
+      toHalfWidth: '\u8f6c\u534a\u89d2(H)',
+      toFullWidth: '\u8f6c\u5168\u89d2(W)',
+      addLineNumbers: '\u6dfb\u52a0\u884c\u53f7(N)',
+      removeLineNumbers: '\u79fb\u9664\u884c\u53f7(I)',
+      urlEncode: 'URL \u7f16\u7801(E)',
+      urlDecode: 'URL \u89e3\u7801(C)',
+      base64Encode: 'Base64 \u7f16\u7801(B)',
+      base64Decode: 'Base64 \u89e3\u7801(A)',
+      md5Hash: 'MD5 Hash',
+      sha1Hash: 'SHA1 Hash',
+      sha256Hash: 'SHA256 Hash',
+      reminderList: '\u63d0\u9192\u5217\u8868(R)...',
+      settingsWithKey: '\u8bbe\u7f6e(O)...',
+      f8: 'F8',
       search: '\u641c\u7d22',
       settings: '\u8bbe\u7f6e',
       about: '\u5173\u4e8e NeoPad',
@@ -373,6 +463,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       wordWrapOn: '\u5df2\u5f00\u542f\u81ea\u52a8\u6362\u884c',
       wordWrapOff: '\u5df2\u5173\u95ed\u81ea\u52a8\u6362\u884c',
       inserted: '\u5df2\u63d2\u5165',
+      textProcessed: '\u5df2\u5904\u7406\u6587\u672c',
+      opacityUpdated: '\u5df2\u66f4\u65b0\u7a97\u53e3\u900f\u660e\u5ea6',
+      unsupportedHash: '\u5f53\u524d\u73af\u5883\u4e0d\u652f\u6301\u8be5 Hash \u7b97\u6cd5',
       search: '\u641c\u7d22',
       settings: '\u8bbe\u7f6e',
       alwaysOnTop: '\u7a97\u53e3\u7f6e\u9876',

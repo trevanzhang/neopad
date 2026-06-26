@@ -233,6 +233,25 @@ function insertText(text: string) {
   return true
 }
 
+async function transformText(transform: (text: string) => string | Promise<string>) {
+  if (!editorView) {
+    return false
+  }
+
+  const selection = editorView.state.selection.main
+  const from = selection.empty ? 0 : selection.from
+  const to = selection.empty ? editorView.state.doc.length : selection.to
+  const currentText = editorView.state.doc.sliceString(from, to)
+  const nextText = await transform(currentText)
+
+  editorView.dispatch({
+    changes: { from, to, insert: nextText },
+    selection: EditorSelection.single(from, from + nextText.length),
+  })
+  editorView.focus()
+  return true
+}
+
 defineExpose({
   undoEdit,
   redoEdit,
@@ -241,6 +260,7 @@ defineExpose({
   pasteClipboard,
   selectAllText,
   insertText,
+  transformText,
 })
 </script>
 

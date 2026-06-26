@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppShell from './components/AppShell.vue'
 import EditorPane from './components/EditorPane.vue'
@@ -70,6 +70,7 @@ const tabBarOrientation = ref<TabBarOrientation>(initialTabBarOrientation())
 const wordWrap = ref(initialBooleanSetting('neopad.wordWrap', true))
 const editorFontFamily = ref(initialStringSetting('neopad.editorFontFamily', '"Segoe UI", Arial, sans-serif'))
 const editorBackgroundColor = ref(initialStringSetting('neopad.editorBackgroundColor', '#ffffff'))
+const windowOpacity = ref(Number(initialStringSetting('neopad.windowOpacity', '1')))
 const fileInput = ref<HTMLInputElement | null>(null)
 const backgroundColorInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
@@ -162,6 +163,10 @@ watch(editorFontFamily, () => {
 
 watch(editorBackgroundColor, () => {
   window.localStorage.setItem('neopad.editorBackgroundColor', editorBackgroundColor.value)
+})
+
+watch(windowOpacity, () => {
+  window.localStorage.setItem('neopad.windowOpacity', String(windowOpacity.value))
 })
 
 function initialLanguage(): AppLanguage {
@@ -506,6 +511,96 @@ async function togglePin() {
   }
 }
 
+function promptWindowOpacity() {
+  const current = Math.round(windowOpacity.value * 100)
+  const input = window.prompt(t.value.menu.windowOpacity, String(current))
+  if (!input) {
+    return
+  }
+
+  const nextOpacity = Number(input)
+  if (!Number.isFinite(nextOpacity)) {
+    return
+  }
+
+  windowOpacity.value = Math.min(1, Math.max(0.2, nextOpacity / 100))
+  statusMessage.value = t.value.status.opacityUpdated
+}
+
+function openReminderList() {
+  searchQuery.value = '- [ ]'
+  showSearchPlaceholder()
+}
+
+async function processEditorText(action: string) {
+  try {
+    const processed = await editorPane.value?.transformText((text) => transformText(action, text))
+    if (processed) {
+      statusMessage.value = t.value.status.textProcessed
+    }
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function transformText(action: string, text: string) {
+  switch (action) {
+    case 'uppercase':
+      return text.toUpperCase()
+    case 'lowercase':
+      return text.toLowerCase()
+    case 'removeExtraSpaces':
+      return text.replace(/[ \t]+/g, ' ')
+    case 'trimLeadingSpaces':
+      return text
+        .split('\n')
+        .map((line) => line.trim())
+        .join('\n')
+    case 'removeEmptyLines':
+      return text
+        .split('\n')
+        .filter((line) => line.trim() !== '')
+        .join('\n')
+    case 'removeDuplicateEmptyLines':
+      return text.replace(/(\n\s*){3,}/g, '\n\n')
+    case 'sortLines':
+      return text.split('\n').sort((a, b) => a.localeCompare(b)).join('\n')
+    case 'uniqueLines':
+      return Array.from(new Set(text.split('\n'))).join('\n')
+    case 'toSimplified':
+      return convertChinese(text, traditionalToSimplifiedMap)
+    case 'toTraditional':
+      return convertChinese(text, simplifiedToTraditionalMap)
+    case 'toHalfWidth':
+      return toHalfWidth(text)
+    case 'toFullWidth':
+      return toFullWidth(text)
+    case 'addLineNumbers':
+      return text
+        .split('\n')
+        .map((line, index) => `${index + 1}. ${line}`)
+        .join('\n')
+    case 'removeLineNumbers':
+      return text.replace(/^\s*\d+[\).\u3001]\s*/gm, '')
+    case 'urlEncode':
+      return encodeURIComponent(text)
+    case 'urlDecode':
+      return decodeURIComponent(text)
+    case 'base64Encode':
+      return btoa(unescape(encodeURIComponent(text)))
+    case 'base64Decode':
+      return decodeURIComponent(escape(atob(text)))
+    case 'md5Hash':
+      return md5(text)
+    case 'sha1Hash':
+      return digestText('SHA-1', text)
+    case 'sha256Hash':
+      return digestText('SHA-256', text)
+    default:
+      return text
+  }
+}
+
 async function copyMcpConfig(allowWrite: boolean) {
   const args = ['--workspace', workspacePath.value || '~/.neopad']
   if (allowWrite) {
@@ -640,6 +735,16 @@ function handleKeydown(event: KeyboardEvent) {
     toggleTabBarOrientation()
   }
 
+  if (event.key === 'F6') {
+    event.preventDefault()
+    void togglePin()
+  }
+
+  if (event.key === 'F8') {
+    event.preventDefault()
+    openSettings()
+  }
+
   if (event.key.toLowerCase() === 'w' && event.ctrlKey) {
     event.preventDefault()
     toggleWordWrap()
@@ -762,16 +867,268 @@ function formatDateTime(date: Date) {
   const minutes = pad(date.getMinutes())
   return `${year}-${month}-${day} ${hours}:${minutes}`
 }
+
+function toHalfWidth(text: string) {
+  return text.replace(/[\uff01-\uff5e]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0)).replace(/\u3000/g, ' ')
+}
+
+function toFullWidth(text: string) {
+  return text.replace(/[!-~]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0xfee0)).replace(/ /g, '\u3000')
+}
+
+function convertChinese(text: string, map: Record<string, string>) {
+  return text.replace(/./g, (char) => map[char] ?? char)
+}
+
+async function digestText(algorithm: AlgorithmIdentifier, text: string) {
+  if (!crypto.subtle) {
+    throw new Error(t.value.status.unsupportedHash)
+  }
+
+  const hash = await crypto.subtle.digest(algorithm, new TextEncoder().encode(text))
+  return Array.from(new Uint8Array(hash))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function md5(text: string) {
+  const rotateLeft = (value: number, shift: number) => (value << shift) | (value >>> (32 - shift))
+  const add = (left: number, right: number) => (left + right) & 0xffffffff
+  const cmn = (q: number, a: number, b: number, x: number, s: number, t: number) => add(rotateLeft(add(add(a, q), add(x, t)), s), b)
+  const ff = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn((b & c) | (~b & d), a, b, x, s, t)
+  const gg = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn((b & d) | (c & ~d), a, b, x, s, t)
+  const hh = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn(b ^ c ^ d, a, b, x, s, t)
+  const ii = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn(c ^ (b | ~d), a, b, x, s, t)
+  const words = md5Words(text)
+  let a = 1732584193
+  let b = -271733879
+  let c = -1732584194
+  let d = 271733878
+
+  for (let i = 0; i < words.length; i += 16) {
+    const aa = a
+    const bb = b
+    const cc = c
+    const dd = d
+    a = ff(a, b, c, d, words[i], 7, -680876936)
+    d = ff(d, a, b, c, words[i + 1], 12, -389564586)
+    c = ff(c, d, a, b, words[i + 2], 17, 606105819)
+    b = ff(b, c, d, a, words[i + 3], 22, -1044525330)
+    a = ff(a, b, c, d, words[i + 4], 7, -176418897)
+    d = ff(d, a, b, c, words[i + 5], 12, 1200080426)
+    c = ff(c, d, a, b, words[i + 6], 17, -1473231341)
+    b = ff(b, c, d, a, words[i + 7], 22, -45705983)
+    a = ff(a, b, c, d, words[i + 8], 7, 1770035416)
+    d = ff(d, a, b, c, words[i + 9], 12, -1958414417)
+    c = ff(c, d, a, b, words[i + 10], 17, -42063)
+    b = ff(b, c, d, a, words[i + 11], 22, -1990404162)
+    a = ff(a, b, c, d, words[i + 12], 7, 1804603682)
+    d = ff(d, a, b, c, words[i + 13], 12, -40341101)
+    c = ff(c, d, a, b, words[i + 14], 17, -1502002290)
+    b = ff(b, c, d, a, words[i + 15], 22, 1236535329)
+    a = gg(a, b, c, d, words[i + 1], 5, -165796510)
+    d = gg(d, a, b, c, words[i + 6], 9, -1069501632)
+    c = gg(c, d, a, b, words[i + 11], 14, 643717713)
+    b = gg(b, c, d, a, words[i], 20, -373897302)
+    a = gg(a, b, c, d, words[i + 5], 5, -701558691)
+    d = gg(d, a, b, c, words[i + 10], 9, 38016083)
+    c = gg(c, d, a, b, words[i + 15], 14, -660478335)
+    b = gg(b, c, d, a, words[i + 4], 20, -405537848)
+    a = gg(a, b, c, d, words[i + 9], 5, 568446438)
+    d = gg(d, a, b, c, words[i + 14], 9, -1019803690)
+    c = gg(c, d, a, b, words[i + 3], 14, -187363961)
+    b = gg(b, c, d, a, words[i + 8], 20, 1163531501)
+    a = gg(a, b, c, d, words[i + 13], 5, -1444681467)
+    d = gg(d, a, b, c, words[i + 2], 9, -51403784)
+    c = gg(c, d, a, b, words[i + 7], 14, 1735328473)
+    b = gg(b, c, d, a, words[i + 12], 20, -1926607734)
+    a = hh(a, b, c, d, words[i + 5], 4, -378558)
+    d = hh(d, a, b, c, words[i + 8], 11, -2022574463)
+    c = hh(c, d, a, b, words[i + 11], 16, 1839030562)
+    b = hh(b, c, d, a, words[i + 14], 23, -35309556)
+    a = hh(a, b, c, d, words[i + 1], 4, -1530992060)
+    d = hh(d, a, b, c, words[i + 4], 11, 1272893353)
+    c = hh(c, d, a, b, words[i + 7], 16, -155497632)
+    b = hh(b, c, d, a, words[i + 10], 23, -1094730640)
+    a = hh(a, b, c, d, words[i + 13], 4, 681279174)
+    d = hh(d, a, b, c, words[i], 11, -358537222)
+    c = hh(c, d, a, b, words[i + 3], 16, -722521979)
+    b = hh(b, c, d, a, words[i + 6], 23, 76029189)
+    a = hh(a, b, c, d, words[i + 9], 4, -640364487)
+    d = hh(d, a, b, c, words[i + 12], 11, -421815835)
+    c = hh(c, d, a, b, words[i + 15], 16, 530742520)
+    b = hh(b, c, d, a, words[i + 2], 23, -995338651)
+    a = ii(a, b, c, d, words[i], 6, -198630844)
+    d = ii(d, a, b, c, words[i + 7], 10, 1126891415)
+    c = ii(c, d, a, b, words[i + 14], 15, -1416354905)
+    b = ii(b, c, d, a, words[i + 5], 21, -57434055)
+    a = ii(a, b, c, d, words[i + 12], 6, 1700485571)
+    d = ii(d, a, b, c, words[i + 3], 10, -1894986606)
+    c = ii(c, d, a, b, words[i + 10], 15, -1051523)
+    b = ii(b, c, d, a, words[i + 1], 21, -2054922799)
+    a = ii(a, b, c, d, words[i + 8], 6, 1873313359)
+    d = ii(d, a, b, c, words[i + 15], 10, -30611744)
+    c = ii(c, d, a, b, words[i + 6], 15, -1560198380)
+    b = ii(b, c, d, a, words[i + 13], 21, 1309151649)
+    a = ii(a, b, c, d, words[i + 4], 6, -145523070)
+    d = ii(d, a, b, c, words[i + 11], 10, -1120210379)
+    c = ii(c, d, a, b, words[i + 2], 15, 718787259)
+    b = ii(b, c, d, a, words[i + 9], 21, -343485551)
+    a = add(a, aa)
+    b = add(b, bb)
+    c = add(c, cc)
+    d = add(d, dd)
+  }
+
+  return [a, b, c, d].map((value) => md5Hex(value)).join('')
+}
+
+function md5Words(text: string) {
+  const bytes = Array.from(new TextEncoder().encode(text))
+  const words: number[] = []
+  bytes.forEach((byte, index) => {
+    words[index >> 2] = (words[index >> 2] || 0) | (byte << ((index % 4) * 8))
+  })
+  words[bytes.length >> 2] = (words[bytes.length >> 2] || 0) | (0x80 << ((bytes.length % 4) * 8))
+  words[(((bytes.length + 8) >> 6) + 1) * 16 - 2] = bytes.length * 8
+  return words
+}
+
+function md5Hex(value: number) {
+  let output = ''
+  for (let i = 0; i < 4; i += 1) {
+    output += ((value >> (i * 8)) & 0xff).toString(16).padStart(2, '0')
+  }
+  return output
+}
+
+const simplifiedToTraditionalMap: Record<string, string> = {
+  '\u4e07': '\u842c',
+  '\u4e0e': '\u8207',
+  '\u4e13': '\u5c08',
+  '\u4e1a': '\u696d',
+  '\u4e1c': '\u6771',
+  '\u4e24': '\u5169',
+  '\u4e25': '\u56b4',
+  '\u4e2a': '\u500b',
+  '\u4e3a': '\u70ba',
+  '\u4e49': '\u7fa9',
+  '\u4e50': '\u6a02',
+  '\u4e60': '\u7fd2',
+  '\u4e66': '\u66f8',
+  '\u4e70': '\u8cb7',
+  '\u4e89': '\u722d',
+  '\u4e8e': '\u65bc',
+  '\u4e91': '\u96f2',
+  '\u4ea7': '\u7522',
+  '\u4eb2': '\u89aa',
+  '\u4ebf': '\u5104',
+  '\u4ec5': '\u50c5',
+  '\u4ece': '\u5f9e',
+  '\u4ed3': '\u5009',
+  '\u4eea': '\u5100',
+  '\u4eec': '\u5011',
+  '\u4ef7': '\u50f9',
+  '\u4f17': '\u773e',
+  '\u4f18': '\u512a',
+  '\u4f1a': '\u6703',
+  '\u4f20': '\u50b3',
+  '\u4f24': '\u50b7',
+  '\u4f53': '\u9ad4',
+  '\u513f': '\u5152',
+  '\u515a': '\u9ee8',
+  '\u5170': '\u862d',
+  '\u5173': '\u95dc',
+  '\u5174': '\u8208',
+  '\u5199': '\u5beb',
+  '\u519b': '\u8ecd',
+  '\u519c': '\u8fb2',
+  '\u51b2': '\u885d',
+  '\u51b3': '\u6c7a',
+  '\u51c6': '\u6e96',
+  '\u51e0': '\u5e7e',
+  '\u5219': '\u5247',
+  '\u521a': '\u525b',
+  '\u521b': '\u5275',
+  '\u5220': '\u522a',
+  '\u522b': '\u5225',
+  '\u5267': '\u5287',
+  '\u529e': '\u8fa6',
+  '\u52a1': '\u52d9',
+  '\u52a8': '\u52d5',
+  '\u533a': '\u5340',
+  '\u533b': '\u91ab',
+  '\u534e': '\u83ef',
+  '\u5355': '\u55ae',
+  '\u5356': '\u8ce3',
+  '\u536b': '\u885b',
+  '\u53d1': '\u767c',
+  '\u53d8': '\u8b8a',
+  '\u53f7': '\u865f',
+  '\u540e': '\u5f8c',
+  '\u542c': '\u807d',
+  '\u542f': '\u555f',
+  '\u5458': '\u54e1',
+  '\u56fd': '\u570b',
+  '\u56fe': '\u5716',
+  '\u5706': '\u5713',
+  '\u575a': '\u5805',
+  '\u575b': '\u58c7',
+  '\u5757': '\u584a',
+  '\u58f0': '\u8072',
+  '\u5907': '\u5099',
+  '\u590d': '\u5fa9',
+  '\u5934': '\u982d',
+  '\u593a': '\u596a',
+  '\u594b': '\u596e',
+  '\u5956': '\u734e',
+  '\u5987': '\u5a66',
+  '\u5988': '\u5abd',
+  '\u5a31': '\u5a1b',
+  '\u5b59': '\u5b6b',
+  '\u5b66': '\u5b78',
+  '\u5b81': '\u5be7',
+  '\u5b9d': '\u5bf6',
+  '\u5b9e': '\u5be6',
+  '\u5bf9': '\u5c0d',
+  '\u5bfc': '\u5c0e',
+  '\u5c14': '\u723e',
+  '\u5c3d': '\u76e1',
+  '\u5c42': '\u5c64',
+  '\u5c5e': '\u5c6c',
+  '\u5c81': '\u6b72',
+  '\u5c9b': '\u5cf6',
+  '\u5e01': '\u5e63',
+  '\u5e08': '\u5e2b',
+  '\u5e26': '\u5e36',
+  '\u5e2e': '\u5e6b',
+  '\u5e7f': '\u5ee3',
+  '\u5e86': '\u6176',
+  '\u5e93': '\u5eab',
+  '\u5e94': '\u61c9',
+  '\u5f00': '\u958b',
+  '\u5f20': '\u5f35',
+  '\u5f52': '\u6b78',
+  '\u5f53': '\u7576',
+  '\u5f55': '\u9304',
+  '\u5fc6': '\u61b6',
+  '\u6001': '\u614b',
+  '\u603b': '\u7e3d',
+  '\u604b': '\u6200'
+}
+
+const traditionalToSimplifiedMap = Object.fromEntries(Object.entries(simplifiedToTraditionalMap).map(([key, value]) => [value, key]))
 </script>
 
 <template>
-  <AppShell :tab-orientation="tabBarOrientation">
+  <AppShell :tab-orientation="tabBarOrientation" :window-opacity="windowOpacity">
     <template #title>
       <TitleBar />
       <MenuBar
         :preview-mode="previewMode"
         :tab-bar-orientation="tabBarOrientation"
         :word-wrap="wordWrap"
+        :always-on-top="alwaysOnTop"
         :messages="t.menu"
         @new-note="createLocalTab"
         @save-clipboard="saveCurrentClipboard"
@@ -803,6 +1160,9 @@ function formatDateTime(date: Date) {
         @insert-date-time-separator="insertDateTimeSeparator"
         @insert-reminder="insertReminder"
         @insert-text-settings="openInsertTextSettings"
+        @window-opacity="promptWindowOpacity"
+        @reminder-list="openReminderList"
+        @process-text="processEditorText"
         @update-preview-mode="previewMode = $event"
       />
     </template>
@@ -880,3 +1240,4 @@ function formatDateTime(date: Date) {
     </template>
   </AppShell>
 </template>
+
