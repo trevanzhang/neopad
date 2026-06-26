@@ -8,6 +8,7 @@ defineProps<{
 
 defineEmits<{
   selectTab: [tabId: string]
+  titleDoubleClick: [tabId: string]
   newTab: []
 }>()
 </script>
@@ -22,6 +23,7 @@ defineEmits<{
       :class="{ active: tab.id === activeTabId }"
       type="button"
       @click="$emit('selectTab', tab.id)"
+      @dblclick="$emit('titleDoubleClick', tab.id)"
     >
       {{ tab.title }}
     </button>

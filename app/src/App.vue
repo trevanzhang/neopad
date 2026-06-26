@@ -12,6 +12,7 @@ import TabBar from './components/TabBar.vue'
 import TitleBar from './components/TitleBar.vue'
 import {
   createNote,
+  deleteNote,
   getShortcutWarnings,
   getWorkspace,
   hideWindow,
@@ -19,6 +20,7 @@ import {
   openTrash,
   quitApp,
   readNote,
+  renameNote,
   saveClipboard,
   searchNotes,
   toggleAlwaysOnTop,
@@ -31,6 +33,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
 type TabBarOrientation = 'horizontal' | 'vertical'
 type HelpTopic = 'software' | 'shortcuts' | 'expression' | 'about'
+type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
 
 const now = Date.now()
 const tabs = ref<NoteTab[]>([
@@ -73,6 +76,17 @@ const wordWrap = ref(initialBooleanSetting('neopad.wordWrap', true))
 const editorFontFamily = ref(initialStringSetting('neopad.editorFontFamily', '"Segoe UI", Arial, sans-serif'))
 const editorBackgroundColor = ref(initialStringSetting('neopad.editorBackgroundColor', '#ffffff'))
 const windowOpacity = ref(Number(initialStringSetting('neopad.windowOpacity', '1')))
+const runAtStartup = ref(initialBooleanSetting('neopad.runAtStartup', true))
+const closeToMinimize = ref(initialBooleanSetting('neopad.closeToMinimize', true))
+const snapToEdges = ref(initialBooleanSetting('neopad.snapToEdges', false))
+const transparencyEnabled = ref(initialBooleanSetting('neopad.transparencyEnabled', true))
+const titleDoubleClickAction = ref<TitleDoubleClickAction>(initialTitleDoubleClickAction())
+const shortcutBaseKey = ref(initialStringSetting('neopad.shortcutBaseKey', 'Z'))
+const shortcutModifiers = ref<string[]>(initialJsonSetting('neopad.shortcutModifiers', ['Alt']))
+const insertSeparatorTemplate = ref(initialStringSetting('neopad.insertSeparatorTemplate', "crlf() + chars('-', 80) + crlf()"))
+const insertDateTimeTemplate = ref(initialStringSetting('neopad.insertDateTimeTemplate', "date() + ' ' + time()"))
+const insertDateTimeSeparatorTemplate = ref(initialStringSetting('neopad.insertDateTimeSeparatorTemplate', "crlf() + chars('-', 29) + ' ' + date() + ' ' + time()"))
+const customInsertTexts = ref<string[]>(initialJsonSetting('neopad.customInsertTexts', []))
 const fileInput = ref<HTMLInputElement | null>(null)
 const backgroundColorInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
@@ -172,6 +186,50 @@ watch(windowOpacity, () => {
   window.localStorage.setItem('neopad.windowOpacity', String(windowOpacity.value))
 })
 
+watch(runAtStartup, () => {
+  window.localStorage.setItem('neopad.runAtStartup', String(runAtStartup.value))
+})
+
+watch(closeToMinimize, () => {
+  window.localStorage.setItem('neopad.closeToMinimize', String(closeToMinimize.value))
+})
+
+watch(snapToEdges, () => {
+  window.localStorage.setItem('neopad.snapToEdges', String(snapToEdges.value))
+})
+
+watch(transparencyEnabled, () => {
+  window.localStorage.setItem('neopad.transparencyEnabled', String(transparencyEnabled.value))
+})
+
+watch(titleDoubleClickAction, () => {
+  window.localStorage.setItem('neopad.titleDoubleClickAction', titleDoubleClickAction.value)
+})
+
+watch(shortcutBaseKey, () => {
+  window.localStorage.setItem('neopad.shortcutBaseKey', shortcutBaseKey.value)
+})
+
+watch(shortcutModifiers, () => {
+  window.localStorage.setItem('neopad.shortcutModifiers', JSON.stringify(shortcutModifiers.value))
+}, { deep: true })
+
+watch(insertSeparatorTemplate, () => {
+  window.localStorage.setItem('neopad.insertSeparatorTemplate', insertSeparatorTemplate.value)
+})
+
+watch(insertDateTimeTemplate, () => {
+  window.localStorage.setItem('neopad.insertDateTimeTemplate', insertDateTimeTemplate.value)
+})
+
+watch(insertDateTimeSeparatorTemplate, () => {
+  window.localStorage.setItem('neopad.insertDateTimeSeparatorTemplate', insertDateTimeSeparatorTemplate.value)
+})
+
+watch(customInsertTexts, () => {
+  window.localStorage.setItem('neopad.customInsertTexts', JSON.stringify(customInsertTexts.value))
+}, { deep: true })
+
 function initialLanguage(): AppLanguage {
   if (typeof window === 'undefined') {
     return 'en'
@@ -205,6 +263,24 @@ function initialStringSetting(key: string, fallback: string) {
   return window.localStorage.getItem(key) || fallback
 }
 
+function initialJsonSetting<T>(key: string, fallback: T) {
+  if (typeof window === 'undefined') {
+    return fallback
+  }
+
+  try {
+    const stored = window.localStorage.getItem(key)
+    return stored ? JSON.parse(stored) as T : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function initialTitleDoubleClickAction(): TitleDoubleClickAction {
+  const value = initialStringSetting('neopad.titleDoubleClickAction', 'rename')
+  return value === 'none' || value === 'delete' || value === 'rename' ? value : 'rename'
+}
+
 async function selectTab(tabId: string) {
   if (tabId === activeTabId.value) {
     return
@@ -213,6 +289,57 @@ async function selectTab(tabId: string) {
   await forceSave()
   activeTabId.value = tabId
   await loadActiveNote()
+}
+
+async function handleTabTitleDoubleClick(tabId: string) {
+  if (titleDoubleClickAction.value === 'none') {
+    return
+  }
+
+  const tab = tabs.value.find((item) => item.id === tabId)
+  if (!tab) {
+    return
+  }
+
+  if (titleDoubleClickAction.value === 'rename') {
+    const nextTitle = window.prompt(t.value.settings.renameTitle, tab.title)?.trim()
+    if (!nextTitle) {
+      return
+    }
+
+    if (isTauriRuntime()) {
+      try {
+        const renamed = await renameNote(tab.id, nextTitle)
+        tab.title = renamed.title
+        tab.updatedAt = renamed.updatedAt
+      } catch {
+        saveState.value = 'Failed'
+      }
+    } else {
+      tab.title = nextTitle
+      tab.updatedAt = Date.now()
+    }
+    return
+  }
+
+  if (titleDoubleClickAction.value === 'delete') {
+    if (tab.pinned) {
+      return
+    }
+    if (isTauriRuntime()) {
+      try {
+        await deleteNote(tab.id)
+      } catch {
+        saveState.value = 'Failed'
+        return
+      }
+    }
+    tabs.value = tabs.value.filter((item) => item.id !== tab.id)
+    if (activeTabId.value === tab.id) {
+      activeTabId.value = tabs.value[0]?.id ?? 'inbox'
+      await loadActiveNote()
+    }
+  }
 }
 
 async function createLocalTab() {
@@ -439,15 +566,15 @@ function toggleWordWrap() {
 }
 
 function insertSeparator() {
-  insertEditorText('\n---\n')
+  insertEditorText(renderInsertTemplate(insertSeparatorTemplate.value))
 }
 
 function insertDateTime() {
-  insertEditorText(formatDateTime(new Date()))
+  insertEditorText(renderInsertTemplate(insertDateTimeTemplate.value))
 }
 
 function insertDateTimeSeparator() {
-  insertEditorText(`\n--- ${formatDateTime(new Date())} ---\n`)
+  insertEditorText(renderInsertTemplate(insertDateTimeSeparatorTemplate.value))
 }
 
 function insertReminder() {
@@ -891,6 +1018,46 @@ function formatDateTime(date: Date) {
   return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
+function renderInsertTemplate(template: string) {
+  const now = new Date()
+  const parts = template.split(/\s*\+\s*/g)
+  return parts.map((part) => renderInsertTemplatePart(part.trim(), now)).join('')
+}
+
+function renderInsertTemplatePart(part: string, date: Date) {
+  if (part === 'crlf()') {
+    return '\n'
+  }
+  if (part === 'date()') {
+    return formatDate(date)
+  }
+  if (part === 'time()') {
+    return formatTime(date)
+  }
+
+  const charsMatch = part.match(/^chars\(['"](.+)['"],\s*(\d+)\)$/)
+  if (charsMatch) {
+    return charsMatch[1].repeat(Number(charsMatch[2]))
+  }
+
+  const quotedMatch = part.match(/^['"](.*)['"]$/)
+  if (quotedMatch) {
+    return quotedMatch[1]
+  }
+
+  return part
+}
+
+function formatDate(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function formatTime(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 function toHalfWidth(text: string) {
   return text.replace(/[\uff01-\uff5e]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0)).replace(/\u3000/g, ' ')
 }
@@ -1215,7 +1382,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
 </script>
 
 <template>
-  <AppShell :tab-orientation="tabBarOrientation" :window-opacity="windowOpacity">
+  <AppShell :tab-orientation="tabBarOrientation" :window-opacity="transparencyEnabled ? windowOpacity : 1">
     <template #title>
       <TitleBar />
       <MenuBar
@@ -1267,6 +1434,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         :tabs="tabs"
         :active-tab-id="activeTabId"
         @select-tab="selectTab"
+        @title-double-click="handleTabTitleDoubleClick"
         @new-tab="createLocalTab"
       />
     </template>
@@ -1315,6 +1483,18 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       :preview-mode="previewMode"
       :language="language"
       :workspace-path="workspacePath"
+      :run-at-startup="runAtStartup"
+      :close-to-minimize="closeToMinimize"
+      :snap-to-edges="snapToEdges"
+      :transparency-enabled="transparencyEnabled"
+      :window-opacity-percent="Math.round(windowOpacity * 100)"
+      :title-double-click-action="titleDoubleClickAction"
+      :shortcut-base-key="shortcutBaseKey"
+      :shortcut-modifiers="shortcutModifiers"
+      :insert-separator-template="insertSeparatorTemplate"
+      :insert-date-time-template="insertDateTimeTemplate"
+      :insert-date-time-separator-template="insertDateTimeSeparatorTemplate"
+      :custom-insert-texts="customInsertTexts"
       :messages="t.settings"
       :menu-messages="t.menu"
       @close="closeSettings"
@@ -1322,6 +1502,18 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       @update:theme="theme = $event"
       @update:preview-mode="previewMode = $event"
       @update:language="language = $event"
+      @update:run-at-startup="runAtStartup = $event"
+      @update:close-to-minimize="closeToMinimize = $event"
+      @update:snap-to-edges="snapToEdges = $event"
+      @update:transparency-enabled="transparencyEnabled = $event"
+      @update:window-opacity-percent="windowOpacity = $event / 100"
+      @update:title-double-click-action="titleDoubleClickAction = $event"
+      @update:shortcut-base-key="shortcutBaseKey = $event"
+      @update:shortcut-modifiers="shortcutModifiers = $event"
+      @update:insert-separator-template="insertSeparatorTemplate = $event"
+      @update:insert-date-time-template="insertDateTimeTemplate = $event"
+      @update:insert-date-time-separator-template="insertDateTimeSeparatorTemplate = $event"
+      @update:custom-insert-texts="customInsertTexts = $event"
       @copy-mcp-config="copyMcpConfig"
     />
 
