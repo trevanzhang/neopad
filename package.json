@@ -1,0 +1,16 @@
+{
+  "name": "neopad",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm --filter neopad-app dev",
+    "build": "pnpm --filter neopad-app build",
+    "tauri": "pnpm --filter neopad-app tauri",
+    "tauri:dev": "pnpm --filter neopad-app tauri dev",
+    "tauri:build": "pnpm --filter neopad-app tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

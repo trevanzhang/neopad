@@ -1,0 +1,17 @@
+[package]
+name = "neopad-mcp"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "neopad-mcp"
+path = "src/main.rs"
+
+[dependencies]
+neopad-core = { path = "../crates/neopad-core" }
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+dirs.workspace = true

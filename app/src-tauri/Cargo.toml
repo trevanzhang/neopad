@@ -1,0 +1,22 @@
+[package]
+name = "neopad-app"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+name = "neopad_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+neopad-core = { path = "../../crates/neopad-core" }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-global-shortcut = "2"
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }

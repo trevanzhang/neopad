@@ -1,0 +1,11 @@
+node_modules/
+app/node_modules/
+app/dist/
+.pnpm-store/
+target/
+.cargo/
+.rustup/
+rustup-init.exe
+*.log
+.vite-dev*.log
+.DS_Store
