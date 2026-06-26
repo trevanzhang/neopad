@@ -57,6 +57,15 @@ export type AppMessages = {
     markdown: string
     date: string
     separator: string
+    insertSeparator: string
+    dateTime: string
+    dateTimeSeparator: string
+    reminder: string
+    insertTextSettings: string
+    ctrlDash: string
+    ctrlD: string
+    ctrlShiftDash: string
+    ctrlE: string
     search: string
     settings: string
     about: string
@@ -107,6 +116,7 @@ export type AppMessages = {
     backgroundUpdated: string
     wordWrapOn: string
     wordWrapOff: string
+    inserted: string
     search: string
     settings: string
     alwaysOnTop: string
@@ -176,6 +186,15 @@ export const messages: Record<AppLanguage, AppMessages> = {
       markdown: 'Markdown',
       date: 'Date',
       separator: 'Separator',
+      insertSeparator: 'Separator(L)',
+      dateTime: 'Date Time(D)',
+      dateTimeSeparator: 'Date Time Separator(B)',
+      reminder: 'Reminder(R)',
+      insertTextSettings: 'Insert Text Settings(C)...',
+      ctrlDash: 'Ctrl+-',
+      ctrlD: 'Ctrl+D',
+      ctrlShiftDash: 'Ctrl+Shift+-',
+      ctrlE: 'Ctrl+E',
       search: 'Search',
       settings: 'Settings',
       about: 'About NeoPad',
@@ -226,6 +245,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       backgroundUpdated: 'Background color updated',
       wordWrapOn: 'Word wrap on',
       wordWrapOff: 'Word wrap off',
+      inserted: 'Inserted',
       search: 'Search',
       settings: 'Settings',
       alwaysOnTop: 'Always on top',
@@ -293,6 +313,15 @@ export const messages: Record<AppLanguage, AppMessages> = {
       markdown: 'Markdown',
       date: '\u65e5\u671f',
       separator: '\u5206\u9694\u7ebf',
+      insertSeparator: '\u5206\u9694\u884c(L)',
+      dateTime: '\u65e5\u671f\u65f6\u95f4(D)',
+      dateTimeSeparator: '\u65e5\u671f\u65f6\u95f4\u5206\u9694\u884c(B)',
+      reminder: '\u63d0\u9192(R)',
+      insertTextSettings: '\u63d2\u5165\u6587\u672c\u8bbe\u7f6e(C)...',
+      ctrlDash: 'Ctrl+-',
+      ctrlD: 'Ctrl+D',
+      ctrlShiftDash: 'Ctrl+Shift+-',
+      ctrlE: 'Ctrl+E',
       search: '\u641c\u7d22',
       settings: '\u8bbe\u7f6e',
       about: '\u5173\u4e8e NeoPad',
@@ -343,6 +372,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       backgroundUpdated: '\u5df2\u66f4\u65b0\u80cc\u666f\u8272',
       wordWrapOn: '\u5df2\u5f00\u542f\u81ea\u52a8\u6362\u884c',
       wordWrapOff: '\u5df2\u5173\u95ed\u81ea\u52a8\u6362\u884c',
+      inserted: '\u5df2\u63d2\u5165',
       search: '\u641c\u7d22',
       settings: '\u8bbe\u7f6e',
       alwaysOnTop: '\u7a97\u53e3\u7f6e\u9876',

@@ -223,6 +223,16 @@ function selectAllText() {
   return true
 }
 
+function insertText(text: string) {
+  if (!editorView) {
+    return false
+  }
+
+  editorView.dispatch(editorView.state.replaceSelection(text))
+  editorView.focus()
+  return true
+}
+
 defineExpose({
   undoEdit,
   redoEdit,
@@ -230,6 +240,7 @@ defineExpose({
   copySelection,
   pasteClipboard,
   selectAllText,
+  insertText,
 })
 </script>
 

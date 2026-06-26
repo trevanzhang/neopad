@@ -430,6 +430,32 @@ function toggleWordWrap() {
   statusMessage.value = wordWrap.value ? t.value.status.wordWrapOn : t.value.status.wordWrapOff
 }
 
+function insertSeparator() {
+  insertEditorText('\n---\n')
+}
+
+function insertDateTime() {
+  insertEditorText(formatDateTime(new Date()))
+}
+
+function insertDateTimeSeparator() {
+  insertEditorText(`\n--- ${formatDateTime(new Date())} ---\n`)
+}
+
+function insertReminder() {
+  insertEditorText(`- [ ] ${formatDateTime(new Date())} `)
+}
+
+function openInsertTextSettings() {
+  openSettings()
+}
+
+function insertEditorText(text: string) {
+  if (editorPane.value?.insertText(text)) {
+    statusMessage.value = t.value.status.inserted
+  }
+}
+
 function showSearchPlaceholder() {
   searchOpen.value = true
   statusMessage.value = t.value.status.search
@@ -619,6 +645,24 @@ function handleKeydown(event: KeyboardEvent) {
     toggleWordWrap()
   }
 
+  if (event.key === '-' && event.ctrlKey && event.shiftKey) {
+    event.preventDefault()
+    insertDateTimeSeparator()
+  } else if (event.key === '-' && event.ctrlKey) {
+    event.preventDefault()
+    insertSeparator()
+  }
+
+  if (event.key.toLowerCase() === 'd' && event.ctrlKey) {
+    event.preventDefault()
+    insertDateTime()
+  }
+
+  if (event.key.toLowerCase() === 'e' && event.ctrlKey) {
+    event.preventDefault()
+    insertReminder()
+  }
+
   if (event.key.toLowerCase() === 'v' && event.ctrlKey && event.shiftKey) {
     event.preventDefault()
     void saveCurrentClipboard()
@@ -708,6 +752,16 @@ function downloadText(fileName: string, text: string) {
   link.click()
   URL.revokeObjectURL(url)
 }
+
+function formatDateTime(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  const year = date.getFullYear()
+  const month = pad(date.getMonth() + 1)
+  const day = pad(date.getDate())
+  const hours = pad(date.getHours())
+  const minutes = pad(date.getMinutes())
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
 </script>
 
 <template>
@@ -744,6 +798,11 @@ function downloadText(fileName: string, text: string) {
         @format-font="promptEditorFont"
         @format-background="openBackgroundColorPicker"
         @toggle-word-wrap="toggleWordWrap"
+        @insert-separator="insertSeparator"
+        @insert-date-time="insertDateTime"
+        @insert-date-time-separator="insertDateTimeSeparator"
+        @insert-reminder="insertReminder"
+        @insert-text-settings="openInsertTextSettings"
         @update-preview-mode="previewMode = $event"
       />
     </template>

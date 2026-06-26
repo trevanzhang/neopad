@@ -35,6 +35,11 @@ defineEmits<{
   formatFont: []
   formatBackground: []
   toggleWordWrap: []
+  insertSeparator: []
+  insertDateTime: []
+  insertDateTimeSeparator: []
+  insertReminder: []
+  insertTextSettings: []
   updatePreviewMode: [mode: PreviewMode]
 }>()
 </script>
@@ -115,7 +120,7 @@ defineEmits<{
         <div class="menu-subroot">
           <button type="button" class="menu-command">
             <span>{{ messages.tabBarDisplay }}</span>
-            <span class="menu-arrow">›</span>
+            <span class="menu-arrow">&rsaquo;</span>
           </button>
           <div class="menu-popover menu-subpopover">
             <button
@@ -162,8 +167,24 @@ defineEmits<{
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.insert }}</button>
       <div class="menu-popover">
-        <button type="button" disabled>{{ messages.date }}</button>
-        <button type="button" disabled>{{ messages.separator }}</button>
+        <button type="button" class="menu-command" @click="$emit('insertSeparator')">
+          <span>{{ messages.insertSeparator }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlDash }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('insertDateTime')">
+          <span>{{ messages.dateTime }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlD }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('insertDateTimeSeparator')">
+          <span>{{ messages.dateTimeSeparator }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlShiftDash }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('insertReminder')">
+          <span>{{ messages.reminder }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlE }}</span>
+        </button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" @click="$emit('insertTextSettings')">{{ messages.insertTextSettings }}</button>
       </div>
     </div>
 
