@@ -151,6 +151,8 @@ export type AppMessages = {
     textProcessed: string
     opacityUpdated: string
     unsupportedHash: string
+    expressionCalculated: string
+    expressionNotFound: string
     search: string
     settings: string
     alwaysOnTop: string
@@ -314,6 +316,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       textProcessed: 'Text processed',
       opacityUpdated: 'Window opacity updated',
       unsupportedHash: 'Hash algorithm is not available',
+      expressionCalculated: 'Expression calculated',
+      expressionNotFound: 'No expression found',
       search: 'Search',
       settings: 'Settings',
       alwaysOnTop: 'Always on top',
@@ -475,6 +479,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       textProcessed: '\u5df2\u5904\u7406\u6587\u672c',
       opacityUpdated: '\u5df2\u66f4\u65b0\u7a97\u53e3\u900f\u660e\u5ea6',
       unsupportedHash: '\u5f53\u524d\u73af\u5883\u4e0d\u652f\u6301\u8be5 Hash \u7b97\u6cd5',
+      expressionCalculated: '\u5df2\u8ba1\u7b97\u8868\u8fbe\u5f0f',
+      expressionNotFound: '\u672a\u627e\u5230\u53ef\u8ba1\u7b97\u8868\u8fbe\u5f0f',
       search: '\u641c\u7d22',
       settings: '\u8bbe\u7f6e',
       alwaysOnTop: '\u7a97\u53e3\u7f6e\u9876',

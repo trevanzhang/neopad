@@ -464,6 +464,12 @@ function insertEditorText(text: string) {
   }
 }
 
+function calculateCurrentLineExpression() {
+  statusMessage.value = editorPane.value?.appendCurrentLineCalculation()
+    ? t.value.status.expressionCalculated
+    : t.value.status.expressionNotFound
+}
+
 function showSearchPlaceholder() {
   searchOpen.value = true
   statusMessage.value = t.value.status.search
@@ -736,6 +742,12 @@ function forceSaveOnHide() {
 }
 
 function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter' && event.ctrlKey) {
+    event.preventDefault()
+    calculateCurrentLineExpression()
+    return
+  }
+
   if (event.key === 'Escape' && isTauriRuntime()) {
     event.preventDefault()
     void hideMainWindow()
@@ -1157,14 +1169,16 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       title: zh ? '\u8868\u8fbe\u5f0f\u8ba1\u7b97\u6307\u5357' : 'Expression Guide',
       lines: zh
         ? [
-            '\u5f53\u524d\u7248\u672c\u5c1a\u672a\u63d0\u4f9b\u72ec\u7acb\u8868\u8fbe\u5f0f\u8ba1\u7b97\u5668\u3002',
-            '\u53ef\u4ee5\u5148\u4f7f\u7528\u6587\u672c\u5904\u7406\u4e2d\u7684 URL/Base64/Hash \u5de5\u5177\u5904\u7406\u9009\u4e2d\u6587\u672c\u3002',
-            '\u540e\u7eed\u53ef\u5728\u6b64\u5904\u63a5\u5165\u7b97\u672f\u8868\u8fbe\u5f0f\u3001\u65e5\u671f\u8868\u8fbe\u5f0f\u548c\u6587\u672c\u51fd\u6570\u6307\u5357\u3002',
+            '\u5728\u7f16\u8f91\u6a21\u5f0f\u4e0b\uff0c\u8f93\u5165\u4e00\u884c\u6570\u5b66\u8868\u8fbe\u5f0f\u540e\u6309 Ctrl+Enter\uff0cNeoPad \u4f1a\u5728\u884c\u5c3e\u8ffd\u52a0\u8ba1\u7b97\u7ed3\u679c\u3002',
+            '\u652f\u6301 +, -, *, /, %, ^ \u548c\u62ec\u53f7\uff0c\u4e5f\u652f\u6301 \u00d7 \u548c \u00f7 \u7b26\u53f7\u3002',
+            '\u793a\u4f8b\uff1a899*565-451 \u6309 Ctrl+Enter \u540e\u53d8\u4e3a 899*565-451 = 507484\u3002',
+            '\u5982\u679c\u884c\u5185\u5305\u542b\u975e\u8868\u8fbe\u5f0f\u6587\u5b57\uff0c\u4f1a\u5c3d\u91cf\u8ba1\u7b97\u53ef\u8bc6\u522b\u7684\u524d\u7f00\u90e8\u5206\u3002',
           ]
         : [
-            'This version does not include a standalone expression calculator yet.',
-            'Use the Text Processing tools for URL, Base64, and hash operations on selected text.',
-            'This page can later host arithmetic, date, and text function references.',
+            'In edit mode, type a math expression on one line and press Ctrl+Enter. NeoPad appends the result to that line.',
+            'Supported operators: +, -, *, /, %, ^, parentheses, ×, and ÷.',
+            'Example: 899*565-451 becomes 899*565-451 = 507484.',
+            'If the line contains non-expression text, NeoPad tries to calculate the recognizable expression prefix.',
           ],
     }
   }

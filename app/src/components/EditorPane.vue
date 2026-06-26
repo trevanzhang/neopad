@@ -25,6 +25,7 @@ let editorView: EditorView | null = null
 const editable = new Compartment()
 const wrap = new Compartment()
 const appearance = new Compartment()
+type ExpressionToken = { type: 'number'; value: number } | { type: 'operator'; value: string } | { type: 'paren'; value: '(' | ')' }
 
 const extensions = [
   history(),
@@ -252,6 +253,210 @@ async function transformText(transform: (text: string) => string | Promise<strin
   return true
 }
 
+function appendCurrentLineCalculation() {
+  if (!editorView) {
+    return false
+  }
+
+  const cursor = editorView.state.selection.main.head
+  const line = editorView.state.doc.lineAt(cursor)
+  const lineText = line.text.trimEnd()
+  const sourceText = lineText.replace(/\s*=\s*[-+]?\d+(?:\.\d+)?(?:e[-+]?\d+)?\s*$/i, '')
+  const result = evaluateExpressionLine(sourceText)
+
+  if (result === null) {
+    editorView.focus()
+    return false
+  }
+
+  const nextLine = `${sourceText} = ${formatCalculationResult(result)}`
+  editorView.dispatch({
+    changes: { from: line.from, to: line.to, insert: nextLine },
+    selection: EditorSelection.single(line.from + nextLine.length),
+  })
+  editorView.focus()
+  return true
+}
+
+function evaluateExpressionLine(lineText: string) {
+  const expression = extractExpression(lineText)
+  if (!expression) {
+    return null
+  }
+
+  try {
+    const tokens = tokenizeExpression(expression)
+    if (tokens.length === 0) {
+      return null
+    }
+
+    const result = evaluateTokens(tokens)
+    return Number.isFinite(result) ? result : null
+  } catch {
+    return null
+  }
+}
+
+function extractExpression(lineText: string) {
+  const normalized = lineText.replace(/×/g, '*').replace(/÷/g, '/').replace(/，/g, ',')
+  const start = normalized.search(/[-+.\d(]/)
+  if (start === -1) {
+    return ''
+  }
+
+  let expression = ''
+  for (let index = start; index < normalized.length; index += 1) {
+    const char = normalized[index]
+    if (/[\d+\-*/%^().\s]/.test(char)) {
+      expression += char
+      continue
+    }
+    break
+  }
+
+  expression = expression.trim().replace(/[+\-*/%^.\s]+$/g, '').trim()
+  while (unmatchedOpenParens(expression) > 0) {
+    expression += ')'
+  }
+  return expression
+}
+
+function unmatchedOpenParens(expression: string) {
+  let depth = 0
+  for (const char of expression) {
+    if (char === '(') {
+      depth += 1
+    } else if (char === ')') {
+      depth -= 1
+    }
+  }
+  return Math.max(0, depth)
+}
+
+function tokenizeExpression(expression: string) {
+  const tokens: ExpressionToken[] = []
+  let index = 0
+
+  while (index < expression.length) {
+    const char = expression[index]
+    if (/\s/.test(char)) {
+      index += 1
+      continue
+    }
+
+    if (char === '(' || char === ')') {
+      tokens.push({ type: 'paren', value: char })
+      index += 1
+      continue
+    }
+
+    if (/[+\-*/%^]/.test(char)) {
+      const previous = tokens[tokens.length - 1]
+      const unary = (char === '+' || char === '-') && (!previous || previous.type === 'operator' || (previous.type === 'paren' && previous.value === '('))
+      const nextChar = expression[index + 1]
+      if (unary && /[\d.]/.test(nextChar ?? '')) {
+        const numberMatch = expression.slice(index).match(/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/i)
+        if (!numberMatch) {
+          throw new Error('invalid number')
+        }
+        tokens.push({ type: 'number', value: Number(numberMatch[0]) })
+        index += numberMatch[0].length
+        continue
+      }
+
+      tokens.push({ type: 'operator', value: char })
+      index += 1
+      continue
+    }
+
+    const numberMatch = expression.slice(index).match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/i)
+    if (!numberMatch) {
+      throw new Error('invalid token')
+    }
+    tokens.push({ type: 'number', value: Number(numberMatch[0]) })
+    index += numberMatch[0].length
+  }
+
+  return tokens
+}
+
+function evaluateTokens(tokens: ExpressionToken[]) {
+  const output: ExpressionToken[] = []
+  const operators: ExpressionToken[] = []
+  const precedence: Record<string, number> = { '+': 1, '-': 1, '*': 2, '/': 2, '%': 2, '^': 3 }
+
+  for (const token of tokens) {
+    if (token.type === 'number') {
+      output.push(token)
+      continue
+    }
+
+    if (token.type === 'paren') {
+      if (token.value === '(') {
+        operators.push(token)
+      } else {
+        while (operators.length && !(operators[operators.length - 1].type === 'paren' && operators[operators.length - 1].value === '(')) {
+          output.push(operators.pop() as ExpressionToken)
+        }
+        operators.pop()
+      }
+      continue
+    }
+
+    while (
+      operators.length &&
+      operators[operators.length - 1].type === 'operator' &&
+      ((token.value === '^' && precedence[operators[operators.length - 1].value] > precedence[token.value]) ||
+        (token.value !== '^' && precedence[operators[operators.length - 1].value] >= precedence[token.value]))
+    ) {
+      output.push(operators.pop() as ExpressionToken)
+    }
+    operators.push(token)
+  }
+
+  while (operators.length) {
+    const operator = operators.pop() as ExpressionToken
+    if (operator.type === 'paren') {
+      throw new Error('unbalanced parentheses')
+    }
+    output.push(operator)
+  }
+
+  const stack: number[] = []
+  for (const token of output) {
+    if (token.type === 'number') {
+      stack.push(token.value)
+      continue
+    }
+    if (token.type !== 'operator' || stack.length < 2) {
+      throw new Error('invalid expression')
+    }
+    const right = stack.pop() as number
+    const left = stack.pop() as number
+    stack.push(applyOperator(left, right, token.value))
+  }
+
+  if (stack.length !== 1) {
+    throw new Error('invalid expression')
+  }
+  return stack[0]
+}
+
+function applyOperator(left: number, right: number, operator: string) {
+  if (operator === '+') return left + right
+  if (operator === '-') return left - right
+  if (operator === '*') return left * right
+  if (operator === '/') return left / right
+  if (operator === '%') return left % right
+  if (operator === '^') return left ** right
+  throw new Error('unknown operator')
+}
+
+function formatCalculationResult(result: number) {
+  const rounded = Math.abs(result) < 1e-12 ? 0 : result
+  return Number.isInteger(rounded) ? String(rounded) : String(Number(rounded.toPrecision(12)))
+}
+
 defineExpose({
   undoEdit,
   redoEdit,
@@ -261,6 +466,7 @@ defineExpose({
   selectAllText,
   insertText,
   transformText,
+  appendCurrentLineCalculation,
 })
 </script>
 
