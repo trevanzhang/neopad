@@ -97,10 +97,24 @@ body {
   line-height: 1;
 }
 
-.window-glyphs span {
+.window-glyphs button {
   display: grid;
   place-items: center;
   height: 100%;
+  color: #111111;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font: inherit;
+}
+
+.window-glyphs button:hover {
+  background: #dde5ef;
+}
+
+.window-glyphs button:last-child:hover {
+  color: #ffffff;
+  background: #c42b1c;
 }
 
 .menu-bar {
