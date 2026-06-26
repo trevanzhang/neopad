@@ -23,7 +23,11 @@ import {
   renameNote,
   saveClipboard,
   searchNotes,
+  setAutostart,
+  setCloseToMinimize,
+  setSnapToEdges,
   toggleAlwaysOnTop,
+  updateToggleShortcut,
   writeNote,
 } from './lib/invoke'
 import { messages, type AppLanguage } from './lib/i18n'
@@ -117,6 +121,7 @@ onMounted(async () => {
   await loadInitialNotes()
   await loadWorkspacePath()
   await loadShortcutWarnings()
+  await syncNativeSettings()
   unlistenNotesChanged = await listen('neopad://notes-changed', async () => {
     await loadInitialNotes()
   })
@@ -188,14 +193,17 @@ watch(windowOpacity, () => {
 
 watch(runAtStartup, () => {
   window.localStorage.setItem('neopad.runAtStartup', String(runAtStartup.value))
+  void syncAutostart()
 })
 
 watch(closeToMinimize, () => {
   window.localStorage.setItem('neopad.closeToMinimize', String(closeToMinimize.value))
+  void syncCloseToMinimize()
 })
 
 watch(snapToEdges, () => {
   window.localStorage.setItem('neopad.snapToEdges', String(snapToEdges.value))
+  void syncSnapToEdges()
 })
 
 watch(transparencyEnabled, () => {
@@ -208,10 +216,12 @@ watch(titleDoubleClickAction, () => {
 
 watch(shortcutBaseKey, () => {
   window.localStorage.setItem('neopad.shortcutBaseKey', shortcutBaseKey.value)
+  void syncToggleShortcut()
 })
 
 watch(shortcutModifiers, () => {
   window.localStorage.setItem('neopad.shortcutModifiers', JSON.stringify(shortcutModifiers.value))
+  void syncToggleShortcut()
 }, { deep: true })
 
 watch(insertSeparatorTemplate, () => {
@@ -800,6 +810,67 @@ async function loadWorkspacePath() {
   try {
     const workspace = await getWorkspace()
     workspacePath.value = workspace.root
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function syncNativeSettings() {
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  await Promise.allSettled([
+    syncAutostart(),
+    syncCloseToMinimize(),
+    syncSnapToEdges(),
+    syncToggleShortcut(),
+  ])
+}
+
+async function syncAutostart() {
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  try {
+    await setAutostart(runAtStartup.value)
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function syncCloseToMinimize() {
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  try {
+    await setCloseToMinimize(closeToMinimize.value)
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function syncSnapToEdges() {
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  try {
+    await setSnapToEdges(snapToEdges.value)
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function syncToggleShortcut() {
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  try {
+    await updateToggleShortcut(shortcutBaseKey.value, shortcutModifiers.value)
   } catch {
     saveState.value = 'Failed'
   }

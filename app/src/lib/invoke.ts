@@ -45,6 +45,22 @@ export function hideWindow(): Promise<void> {
   return invoke('hide_window_command')
 }
 
+export function setAutostart(enabled: boolean): Promise<void> {
+  return invoke('set_autostart_command', { enabled })
+}
+
+export function setCloseToMinimize(enabled: boolean): Promise<void> {
+  return invoke('set_close_to_minimize_command', { enabled })
+}
+
+export function setSnapToEdges(enabled: boolean): Promise<void> {
+  return invoke('set_snap_to_edges_command', { enabled })
+}
+
+export function updateToggleShortcut(baseKey: string, modifiers: string[]): Promise<void> {
+  return invoke('update_toggle_shortcut_command', { baseKey, modifiers })
+}
+
 export function openTrash(): Promise<void> {
   return invoke('open_trash_command')
 }

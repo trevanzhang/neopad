@@ -7,11 +7,13 @@ use commands::{
     app_version, create_note_command, delete_note_command, get_shortcut_warnings_command,
     get_workspace_command, hide_window_command, list_notes_command, open_trash_command,
     quit_app_command, read_note_command, rename_note_command, save_clipboard_command,
-    search_notes_command, show_window_command, toggle_always_on_top_command, toggle_window_command,
-    write_note_command, AppState,
+    search_notes_command, set_autostart_command, set_close_to_minimize_command,
+    set_snap_to_edges_command, show_window_command, toggle_always_on_top_command,
+    toggle_window_command, update_toggle_shortcut_command, write_note_command, AppState,
 };
 use neopad_core::init_workspace;
 use std::sync::{atomic::AtomicBool, Mutex};
+use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 
 fn build_state() -> AppState {
     let workspace = init_workspace(None).expect("failed to initialize NeoPad workspace");
@@ -20,6 +22,9 @@ fn build_state() -> AppState {
         shortcut_warnings: Mutex::new(Vec::new()),
         is_quitting: AtomicBool::new(false),
         always_on_top: AtomicBool::new(false),
+        close_to_minimize: AtomicBool::new(true),
+        snap_to_edges: AtomicBool::new(false),
+        toggle_shortcut: Mutex::new(Shortcut::new(Some(Modifiers::ALT), Code::KeyZ)),
     }
 }
 
@@ -52,6 +57,10 @@ pub fn run() {
             search_notes_command,
             show_window_command,
             hide_window_command,
+            set_autostart_command,
+            set_close_to_minimize_command,
+            set_snap_to_edges_command,
+            update_toggle_shortcut_command,
             open_trash_command,
             quit_app_command,
             toggle_window_command,

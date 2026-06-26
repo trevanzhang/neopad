@@ -10,6 +10,7 @@ use std::sync::{
 };
 use tauri::{AppHandle, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
+use tauri_plugin_global_shortcut::Shortcut;
 
 #[derive(Debug)]
 pub struct AppState {
@@ -17,6 +18,9 @@ pub struct AppState {
     pub shortcut_warnings: Mutex<Vec<String>>,
     pub is_quitting: AtomicBool,
     pub always_on_top: AtomicBool,
+    pub close_to_minimize: AtomicBool,
+    pub snap_to_edges: AtomicBool,
+    pub toggle_shortcut: Mutex<Shortcut>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -102,6 +106,37 @@ pub fn show_window_command(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn hide_window_command(app: AppHandle) -> Result<(), String> {
     crate::window::hide_main_window(&app).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn set_autostart_command(app: AppHandle, enabled: bool) -> Result<(), String> {
+    set_autostart(&app, enabled).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn set_close_to_minimize_command(
+    state: State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), String> {
+    state.close_to_minimize.store(enabled, Ordering::SeqCst);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_snap_to_edges_command(state: State<'_, AppState>, enabled: bool) -> Result<(), String> {
+    state.snap_to_edges.store(enabled, Ordering::SeqCst);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_toggle_shortcut_command(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    base_key: String,
+    modifiers: Vec<String>,
+) -> Result<(), String> {
+    crate::hotkey::update_toggle_window_shortcut(&app, &state, &base_key, &modifiers)
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -204,6 +239,34 @@ fn open_path(path: &std::path::Path) -> anyhow::Result<()> {
     };
 
     command.spawn()?;
+    Ok(())
+}
+
+fn set_autostart(_app: &AppHandle, enabled: bool) -> anyhow::Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        let exe_path = std::env::current_exe()?;
+        let exe = exe_path.to_string_lossy().to_string();
+        let key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
+        let status = if enabled {
+            Command::new("reg")
+                .args(["add", key, "/v", "NeoPad", "/t", "REG_SZ", "/d", &exe, "/f"])
+                .status()?
+        } else {
+            Command::new("reg")
+                .args(["delete", key, "/v", "NeoPad", "/f"])
+                .status()?
+        };
+        if !status.success() && enabled {
+            anyhow::bail!("failed to update Windows Run registry key");
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (app, enabled);
+    }
+
     Ok(())
 }
 
