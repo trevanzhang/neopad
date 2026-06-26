@@ -65,6 +65,7 @@ const alwaysOnTop = ref(false)
 const theme = ref<'system' | 'light' | 'dark'>('system')
 const language = ref<AppLanguage>(initialLanguage())
 const fileInput = ref<HTMLInputElement | null>(null)
+const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
 const workspacePath = ref('~/.neopad')
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
 const t = computed(() => messages[language.value])
@@ -318,6 +319,38 @@ async function exitApp() {
   if (isTauriRuntime()) {
     await quitApp()
   }
+}
+
+function undoEditor() {
+  editorPane.value?.undoEdit()
+}
+
+function cutEditorSelection() {
+  void editorPane.value?.cutSelection()
+}
+
+function copyEditorSelection() {
+  void editorPane.value?.copySelection()
+}
+
+function pasteIntoEditor() {
+  void editorPane.value?.pasteClipboard()
+}
+
+function selectAllEditorText() {
+  editorPane.value?.selectAllText()
+}
+
+function openFindPanel() {
+  showSearchPlaceholder()
+}
+
+function findNextMatch() {
+  showSearchPlaceholder()
+}
+
+function openReplacePanel() {
+  showSearchPlaceholder()
 }
 
 function showSearchPlaceholder() {
@@ -605,6 +638,15 @@ function downloadText(fileName: string, text: string) {
         @open-trash="openTrashFolder"
         @hide-window="hideMainWindow"
         @exit-app="exitApp"
+        @undo="undoEditor"
+        @cut="cutEditorSelection"
+        @copy="copyEditorSelection"
+        @paste="pasteIntoEditor"
+        @find="openFindPanel"
+        @find-next="findNextMatch"
+        @replace="openReplacePanel"
+        @global-search="showSearchPlaceholder"
+        @select-all="selectAllEditorText"
         @search="showSearchPlaceholder"
         @settings="showSettingsPlaceholder"
         @toggle-pin="togglePin"
@@ -631,6 +673,7 @@ function downloadText(fileName: string, text: string) {
       />
       <EditorPane
         v-if="previewMode !== 'preview'"
+        ref="editorPane"
         v-model="content"
         :title="activeTab?.title ?? 'Untitled'"
       />

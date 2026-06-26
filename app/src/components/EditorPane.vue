@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
+import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { bracketMatching } from '@codemirror/language'
-import { Compartment, EditorState } from '@codemirror/state'
+import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
 import {
   drawSelection,
   dropCursor,
@@ -111,6 +111,88 @@ watch(model, (nextValue) => {
       insert: nextValue,
     },
   })
+})
+
+function runEditorCommand(command: (view: EditorView) => boolean) {
+  if (!editorView) {
+    return false
+  }
+
+  editorView.focus()
+  return command(editorView)
+}
+
+function undoEdit() {
+  return runEditorCommand(undo)
+}
+
+function redoEdit() {
+  return runEditorCommand(redo)
+}
+
+async function copySelection() {
+  if (!editorView) {
+    return false
+  }
+
+  const selectedText = editorView.state.selection.ranges
+    .filter((range) => !range.empty)
+    .map((range) => editorView?.state.doc.sliceString(range.from, range.to) ?? '')
+    .join('\n')
+
+  if (!selectedText) {
+    return false
+  }
+
+  await navigator.clipboard.writeText(selectedText)
+  editorView.focus()
+  return true
+}
+
+async function cutSelection() {
+  if (!editorView || !(await copySelection())) {
+    return false
+  }
+
+  editorView.dispatch({
+    changes: editorView.state.selection.ranges
+      .filter((range) => !range.empty)
+      .map((range) => ({ from: range.from, to: range.to, insert: '' })),
+  })
+  editorView.focus()
+  return true
+}
+
+async function pasteClipboard() {
+  if (!editorView) {
+    return false
+  }
+
+  const text = await navigator.clipboard.readText()
+  editorView.dispatch(editorView.state.replaceSelection(text))
+  editorView.focus()
+  return true
+}
+
+function selectAllText() {
+  if (!editorView) {
+    return false
+  }
+
+  editorView.dispatch({
+    selection: EditorSelection.single(0, editorView.state.doc.length),
+  })
+  editorView.focus()
+  return true
+}
+
+defineExpose({
+  undoEdit,
+  redoEdit,
+  cutSelection,
+  copySelection,
+  pasteClipboard,
+  selectAllText,
 })
 </script>
 

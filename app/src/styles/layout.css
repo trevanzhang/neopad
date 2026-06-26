@@ -154,6 +154,10 @@ body {
   color: inherit;
 }
 
+.menu-muted {
+  color: #9a9a9a;
+}
+
 .menu-separator {
   height: 1px;
   margin: 4px 8px;

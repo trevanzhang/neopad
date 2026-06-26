@@ -16,6 +16,15 @@ defineEmits<{
   openTrash: []
   hideWindow: []
   exitApp: []
+  undo: []
+  cut: []
+  copy: []
+  paste: []
+  find: []
+  findNext: []
+  replace: []
+  globalSearch: []
+  selectAll: []
   search: []
   settings: []
   togglePin: []
@@ -46,8 +55,45 @@ defineEmits<{
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.edit }}</button>
       <div class="menu-popover">
-        <button type="button" disabled>{{ messages.undo }}</button>
-        <button type="button" disabled>{{ messages.redo }}</button>
+        <button type="button" class="menu-command menu-muted" @click="$emit('undo')">
+          <span>{{ messages.undo }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlZ }}</span>
+        </button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" class="menu-command" @click="$emit('cut')">
+          <span>{{ messages.cut }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlX }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('copy')">
+          <span>{{ messages.copy }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlC }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('paste')">
+          <span>{{ messages.paste }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlV }}</span>
+        </button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" class="menu-command" @click="$emit('find')">
+          <span>{{ messages.find }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlF }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('findNext')">
+          <span>{{ messages.findNext }}</span>
+          <span class="menu-shortcut">{{ messages.f3 }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('replace')">
+          <span>{{ messages.replace }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlR }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('globalSearch')">
+          <span>{{ messages.globalSearch }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlShiftF }}</span>
+        </button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" class="menu-command menu-muted" @click="$emit('selectAll')">
+          <span>{{ messages.selectAll }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlA }}</span>
+        </button>
       </div>
     </div>
 

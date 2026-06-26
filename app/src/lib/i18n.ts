@@ -21,6 +21,23 @@ export type AppMessages = {
     saveClipboard: string
     undo: string
     redo: string
+    cut: string
+    copy: string
+    paste: string
+    find: string
+    findNext: string
+    replace: string
+    globalSearch: string
+    selectAll: string
+    ctrlZ: string
+    ctrlX: string
+    ctrlC: string
+    ctrlV: string
+    ctrlF: string
+    f3: string
+    ctrlR: string
+    ctrlShiftF: string
+    ctrlA: string
     editMode: string
     splitMode: string
     previewMode: string
@@ -110,6 +127,23 @@ export const messages: Record<AppLanguage, AppMessages> = {
       saveClipboard: 'Save Clipboard',
       undo: 'Undo',
       redo: 'Redo',
+      cut: 'Cut(X)',
+      copy: 'Copy(C)',
+      paste: 'Paste(P)',
+      find: 'Find(F)...',
+      findNext: 'Find Next(N)',
+      replace: 'Replace(R)...',
+      globalSearch: 'Global Search(G)',
+      selectAll: 'Select All(A)',
+      ctrlZ: 'Ctrl+Z',
+      ctrlX: 'Ctrl+X',
+      ctrlC: 'Ctrl+C',
+      ctrlV: 'Ctrl+V',
+      ctrlF: 'Ctrl+F',
+      f3: 'F3',
+      ctrlR: 'Ctrl+R',
+      ctrlShiftF: 'Ctrl+Shift+F',
+      ctrlA: 'Ctrl+A',
       editMode: 'Edit',
       splitMode: 'Split',
       previewMode: 'Preview',
@@ -197,6 +231,23 @@ export const messages: Record<AppLanguage, AppMessages> = {
       saveClipboard: '\u4fdd\u5b58\u526a\u8d34\u677f',
       undo: '\u64a4\u9500',
       redo: '\u91cd\u505a',
+      cut: '\u526a\u5207(X)',
+      copy: '\u590d\u5236(C)',
+      paste: '\u7c98\u8d34(P)',
+      find: '\u67e5\u627e(F)...',
+      findNext: '\u67e5\u627e\u4e0b\u4e00\u4e2a(N)',
+      replace: '\u66ff\u6362(R)...',
+      globalSearch: '\u5168\u5c40\u641c\u7d22(G)',
+      selectAll: '\u5168\u9009(A)',
+      ctrlZ: 'Ctrl+Z',
+      ctrlX: 'Ctrl+X',
+      ctrlC: 'Ctrl+C',
+      ctrlV: 'Ctrl+V',
+      ctrlF: 'Ctrl+F',
+      f3: 'F3',
+      ctrlR: 'Ctrl+R',
+      ctrlShiftF: 'Ctrl+Shift+F',
+      ctrlA: 'Ctrl+A',
       editMode: '\u7f16\u8f91',
       splitMode: '\u5206\u5c4f',
       previewMode: '\u9884\u89c8',
