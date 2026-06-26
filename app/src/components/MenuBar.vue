@@ -4,6 +4,7 @@ import type { PreviewMode } from './ModeSwitch.vue'
 
 defineProps<{
   previewMode: PreviewMode
+  tabBarOrientation: 'horizontal' | 'vertical'
   messages: AppMessages['menu']
 }>()
 
@@ -28,6 +29,8 @@ defineEmits<{
   search: []
   settings: []
   togglePin: []
+  toggleTabBarOrientation: []
+  updateTabBarOrientation: [orientation: 'horizontal' | 'vertical']
   updatePreviewMode: [mode: PreviewMode]
 }>()
 </script>
@@ -100,24 +103,33 @@ defineEmits<{
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.view }}</button>
       <div class="menu-popover">
-        <button type="button" :class="{ checked: previewMode === 'edit' }" @click="$emit('updatePreviewMode', 'edit')">
-          {{ messages.editMode }}
+        <button type="button" class="menu-command" @click="$emit('toggleTabBarOrientation')">
+          <span>{{ messages.toggleTabBarDisplay }}</span>
+          <span class="menu-shortcut">{{ messages.f10 }}</span>
         </button>
-        <button
-          type="button"
-          :class="{ checked: previewMode === 'split' }"
-          @click="$emit('updatePreviewMode', 'split')"
-        >
-          {{ messages.splitMode }}
-        </button>
-        <button
-          type="button"
-          :class="{ checked: previewMode === 'preview' }"
-          @click="$emit('updatePreviewMode', 'preview')"
-        >
-          {{ messages.previewMode }}
-        </button>
-        <button type="button" @click="$emit('togglePin')">{{ messages.alwaysOnTop }}</button>
+        <div class="menu-separator" role="separator" />
+        <div class="menu-subroot">
+          <button type="button" class="menu-command">
+            <span>{{ messages.tabBarDisplay }}</span>
+            <span class="menu-arrow">›</span>
+          </button>
+          <div class="menu-popover menu-subpopover">
+            <button
+              type="button"
+              :class="{ checked: tabBarOrientation === 'horizontal' }"
+              @click="$emit('updateTabBarOrientation', 'horizontal')"
+            >
+              {{ messages.horizontal }}
+            </button>
+            <button
+              type="button"
+              :class="{ checked: tabBarOrientation === 'vertical' }"
+              @click="$emit('updateTabBarOrientation', 'vertical')"
+            >
+              {{ messages.vertical }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 

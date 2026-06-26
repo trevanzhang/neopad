@@ -29,6 +29,8 @@ import { isTauriRuntime } from './lib/runtime'
 import type { NoteTab, SearchResult } from './types/note'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
+type TabBarOrientation = 'horizontal' | 'vertical'
+
 const now = Date.now()
 const tabs = ref<NoteTab[]>([
   {
@@ -64,6 +66,7 @@ const searching = ref(false)
 const alwaysOnTop = ref(false)
 const theme = ref<'system' | 'light' | 'dark'>('system')
 const language = ref<AppLanguage>(initialLanguage())
+const tabBarOrientation = ref<TabBarOrientation>(initialTabBarOrientation())
 const fileInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
 const workspacePath = ref('~/.neopad')
@@ -141,12 +144,24 @@ watch(language, () => {
   }
 })
 
+watch(tabBarOrientation, () => {
+  window.localStorage.setItem('neopad.tabBarOrientation', tabBarOrientation.value)
+})
+
 function initialLanguage(): AppLanguage {
   if (typeof window === 'undefined') {
     return 'en'
   }
 
   return window.localStorage.getItem('neopad.language') === 'zh' ? 'zh' : 'en'
+}
+
+function initialTabBarOrientation(): TabBarOrientation {
+  if (typeof window === 'undefined') {
+    return 'horizontal'
+  }
+
+  return window.localStorage.getItem('neopad.tabBarOrientation') === 'vertical' ? 'vertical' : 'horizontal'
 }
 
 async function selectTab(tabId: string) {
@@ -353,6 +368,10 @@ function openReplacePanel() {
   showSearchPlaceholder()
 }
 
+function toggleTabBarOrientation() {
+  tabBarOrientation.value = tabBarOrientation.value === 'horizontal' ? 'vertical' : 'horizontal'
+}
+
 function showSearchPlaceholder() {
   searchOpen.value = true
   statusMessage.value = t.value.status.search
@@ -532,6 +551,11 @@ function handleKeydown(event: KeyboardEvent) {
     void hideMainWindow()
   }
 
+  if (event.key === 'F10') {
+    event.preventDefault()
+    toggleTabBarOrientation()
+  }
+
   if (event.key.toLowerCase() === 'v' && event.ctrlKey && event.shiftKey) {
     event.preventDefault()
     void saveCurrentClipboard()
@@ -624,11 +648,12 @@ function downloadText(fileName: string, text: string) {
 </script>
 
 <template>
-  <AppShell>
+  <AppShell :tab-orientation="tabBarOrientation">
     <template #title>
       <TitleBar />
       <MenuBar
         :preview-mode="previewMode"
+        :tab-bar-orientation="tabBarOrientation"
         :messages="t.menu"
         @new-note="createLocalTab"
         @save-clipboard="saveCurrentClipboard"
@@ -650,6 +675,8 @@ function downloadText(fileName: string, text: string) {
         @search="showSearchPlaceholder"
         @settings="showSettingsPlaceholder"
         @toggle-pin="togglePin"
+        @toggle-tab-bar-orientation="toggleTabBarOrientation"
+        @update-tab-bar-orientation="tabBarOrientation = $event"
         @update-preview-mode="previewMode = $event"
       />
     </template>

@@ -19,6 +19,26 @@ body {
   box-shadow: none;
 }
 
+.app-shell.tab-vertical {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: 170px minmax(0, 1fr);
+}
+
+.app-shell.tab-vertical .window-chrome,
+.app-shell.tab-vertical .status-bar {
+  grid-column: 1 / -1;
+}
+
+.app-shell.tab-vertical .tab-bar {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.app-shell.tab-vertical .workspace-pane {
+  grid-column: 2;
+  grid-row: 2;
+}
+
 .window-chrome {
   display: grid;
   grid-template-rows: 40px 35px;
@@ -99,6 +119,10 @@ body {
   height: 100%;
 }
 
+.menu-subroot {
+  position: relative;
+}
+
 .menu-title {
   height: 100%;
   padding: 0 6px;
@@ -127,9 +151,20 @@ body {
   box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.18);
 }
 
-.menu-root:hover .menu-popover,
-.menu-root:focus-within .menu-popover {
+.menu-root:hover > .menu-popover,
+.menu-root:focus-within > .menu-popover {
   display: grid;
+}
+
+.menu-subroot:hover > .menu-subpopover,
+.menu-subroot:focus-within > .menu-subpopover {
+  display: grid;
+}
+
+.menu-subpopover {
+  top: -3px;
+  left: calc(100% + 3px);
+  min-width: 230px;
 }
 
 .menu-popover button {
@@ -152,6 +187,12 @@ body {
 
 .menu-shortcut {
   color: inherit;
+}
+
+.menu-arrow {
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
 }
 
 .menu-muted {
@@ -177,7 +218,7 @@ body {
 .menu-popover button.checked::before {
   position: absolute;
   margin-left: -16px;
-  content: "✓";
+  content: "\2022";
 }
 
 .tab-bar {
@@ -253,6 +294,41 @@ body {
   background: #d6d6d4;
   border: 1px solid #a8a8a8;
   box-shadow: inset 1px 1px #eeeeee;
+}
+
+.app-shell.tab-vertical .tab-bar {
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-top: 0;
+  border-right: 1px solid #969696;
+  border-bottom: 0;
+}
+
+.app-shell.tab-vertical .tab-menu,
+.app-shell.tab-vertical .tab-item,
+.app-shell.tab-vertical .tab-add {
+  width: auto;
+  max-width: none;
+  margin: 4px 4px 0;
+  text-align: left;
+}
+
+.app-shell.tab-vertical .tab-menu,
+.app-shell.tab-vertical .tab-add {
+  text-align: center;
+}
+
+.app-shell.tab-vertical .tab-scroll-buttons {
+  display: none;
+}
+
+.app-shell.tab-vertical .search-panel,
+.app-shell.tab-vertical .settings-panel {
+  top: 84px;
 }
 
 .workspace-pane {

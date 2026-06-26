@@ -38,6 +38,11 @@ export type AppMessages = {
     ctrlR: string
     ctrlShiftF: string
     ctrlA: string
+    toggleTabBarDisplay: string
+    tabBarDisplay: string
+    horizontal: string
+    vertical: string
+    f10: string
     editMode: string
     splitMode: string
     previewMode: string
@@ -144,6 +149,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
+      toggleTabBarDisplay: 'Toggle Tab Bar Display(S)',
+      tabBarDisplay: 'Tab Bar Display(T)',
+      horizontal: 'Horizontal(H)',
+      vertical: 'Vertical(V)',
+      f10: 'F10',
       editMode: 'Edit',
       splitMode: 'Split',
       previewMode: 'Preview',
@@ -248,6 +258,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
+      toggleTabBarDisplay: '\u5207\u6362\u6807\u7b7e\u680f\u663e\u793a\u65b9\u5f0f(S)',
+      tabBarDisplay: '\u6807\u7b7e\u680f\u663e\u793a\u65b9\u5f0f(T)',
+      horizontal: '\u6a2a\u5411\u65b9\u5f0f(H)',
+      vertical: '\u7eb5\u5411\u65b9\u5f0f(V)',
+      f10: 'F10',
       editMode: '\u7f16\u8f91',
       splitMode: '\u5206\u5c4f',
       previewMode: '\u9884\u89c8',

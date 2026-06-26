@@ -1,5 +1,11 @@
+<script setup lang="ts">
+defineProps<{
+  tabOrientation: 'horizontal' | 'vertical'
+}>()
+</script>
+
 <template>
-  <main class="app-shell">
+  <main class="app-shell" :class="`tab-${tabOrientation}`">
     <div class="window-chrome">
       <slot name="title" />
     </div>
