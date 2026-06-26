@@ -3,6 +3,7 @@ use neopad_core::{
     rename_note, search_notes, write_note_atomic, NoteContent, NoteTab, SearchResult, Workspace,
 };
 use serde::Serialize;
+use std::process::Command;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Mutex,
@@ -104,6 +105,18 @@ pub fn hide_window_command(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn open_trash_command(state: State<'_, AppState>) -> Result<(), String> {
+    open_path(&state.workspace.trash_dir).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn quit_app_command(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    set_quitting(&state);
+    app.exit(0);
+    Ok(())
+}
+
+#[tauri::command]
 pub fn toggle_window_command(app: AppHandle) -> Result<(), String> {
     crate::window::toggle_main_window(&app).map_err(|error| error.to_string())
 }
@@ -166,6 +179,32 @@ impl From<&Workspace> for WorkspaceInfo {
 
 fn path_to_string(path: &std::path::Path) -> String {
     path.to_string_lossy().to_string()
+}
+
+fn open_path(path: &std::path::Path) -> anyhow::Result<()> {
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        let mut command = Command::new("explorer");
+        command.arg(path);
+        command
+    };
+
+    #[cfg(target_os = "macos")]
+    let mut command = {
+        let mut command = Command::new("open");
+        command.arg(path);
+        command
+    };
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let mut command = {
+        let mut command = Command::new("xdg-open");
+        command.arg(path);
+        command
+    };
+
+    command.spawn()?;
+    Ok(())
 }
 
 pub(crate) fn display_error(error: anyhow::Error) -> String {

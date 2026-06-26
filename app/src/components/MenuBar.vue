@@ -10,6 +10,12 @@ defineProps<{
 defineEmits<{
   newNote: []
   saveClipboard: []
+  loadFile: []
+  saveAsFile: []
+  exportAll: []
+  openTrash: []
+  hideWindow: []
+  exitApp: []
   search: []
   settings: []
   togglePin: []
@@ -22,8 +28,18 @@ defineEmits<{
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.file }}</button>
       <div class="menu-popover">
-        <button type="button" @click="$emit('newNote')">{{ messages.newPage }}</button>
-        <button type="button" @click="$emit('saveClipboard')">{{ messages.saveClipboard }}</button>
+        <button type="button" @click="$emit('loadFile')">{{ messages.loadFromFile }}</button>
+        <button type="button" @click="$emit('saveAsFile')">{{ messages.saveAsFile }}</button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" @click="$emit('exportAll')">{{ messages.exportAll }}</button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" @click="$emit('openTrash')">{{ messages.trash }}</button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" class="menu-command" @click="$emit('hideWindow')">
+          <span>{{ messages.hide }}</span>
+          <span class="menu-shortcut">{{ messages.esc }}</span>
+        </button>
+        <button type="button" @click="$emit('exitApp')">{{ messages.exit }}</button>
       </div>
     </div>
 

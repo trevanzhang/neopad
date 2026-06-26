@@ -120,7 +120,7 @@ body {
   left: 0;
   z-index: 20;
   display: none;
-  min-width: 190px;
+  min-width: 230px;
   padding: 3px;
   background: #f8f8f8;
   border: 1px solid #8c8c8c;
@@ -141,6 +141,23 @@ body {
   border: 0;
   border-radius: 0;
   font-size: 14px;
+}
+
+.menu-popover .menu-command {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: center;
+}
+
+.menu-shortcut {
+  color: inherit;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 4px 8px;
+  background: #d5d5d5;
 }
 
 .menu-popover button:hover:not(:disabled),
@@ -238,6 +255,10 @@ body {
   display: grid;
   min-height: 0;
   background: #ffffff;
+}
+
+.file-loader {
+  display: none;
 }
 
 .workspace-pane.mode-edit,

@@ -45,6 +45,14 @@ export function hideWindow(): Promise<void> {
   return invoke('hide_window_command')
 }
 
+export function openTrash(): Promise<void> {
+  return invoke('open_trash_command')
+}
+
+export function quitApp(): Promise<void> {
+  return invoke('quit_app_command')
+}
+
 export function toggleWindow(): Promise<void> {
   return invoke('toggle_window_command')
 }

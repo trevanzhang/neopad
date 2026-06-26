@@ -16,6 +16,8 @@ import {
   getWorkspace,
   hideWindow,
   listNotes,
+  openTrash,
+  quitApp,
   readNote,
   saveClipboard,
   searchNotes,
@@ -62,6 +64,7 @@ const searching = ref(false)
 const alwaysOnTop = ref(false)
 const theme = ref<'system' | 'light' | 'dark'>('system')
 const language = ref<AppLanguage>(initialLanguage())
+const fileInput = ref<HTMLInputElement | null>(null)
 const workspacePath = ref('~/.neopad')
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
 const t = computed(() => messages[language.value])
@@ -218,6 +221,102 @@ async function saveCurrentClipboard() {
     statusMessage.value = t.value.status.clipboardSaved
   } catch {
     saveState.value = 'Failed'
+  }
+}
+
+function triggerLoadFile() {
+  fileInput.value?.click()
+}
+
+async function loadFileFromInput(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+
+  if (!file) {
+    return
+  }
+
+  try {
+    await forceSave()
+    const fileContent = await file.text()
+    const title = titleFromFileName(file.name)
+
+    if (isTauriRuntime()) {
+      const created = await createNote(title)
+      const saved = await writeNote(created.id, fileContent)
+      upsertTab({
+        id: saved.id,
+        title: saved.title,
+        fileName: saved.fileName,
+        createdAt: saved.updatedAt,
+        updatedAt: saved.updatedAt,
+        pinned: false,
+        deleted: false,
+      })
+      activeTabId.value = saved.id
+      setContentFromLoad(saved.content)
+    } else {
+      createLocalTabFromContent(title, fileContent)
+    }
+
+    saveState.value = 'Saved'
+    statusMessage.value = t.value.status.loadedFromFile
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function saveAsFile() {
+  await forceSave()
+  const title = activeTab.value?.title || 'Untitled'
+  downloadText(`${safeFileName(title)}.md`, content.value)
+  statusMessage.value = t.value.status.savedAsFile
+}
+
+async function exportAllNotes() {
+  await forceSave()
+
+  try {
+    const sections: string[] = []
+    for (const tab of tabs.value) {
+      const noteContent = isTauriRuntime() ? (await readNote(tab.id)).content : tab.id === activeTabId.value ? content.value : ''
+      sections.push(`## ${tab.title}\n\n<!-- file: ${tab.fileName} -->\n\n${noteContent.trimEnd()}\n`)
+    }
+
+    downloadText('neopad-export.md', `# Exported from NeoPad\n\n${sections.join('\n---\n\n')}`)
+    statusMessage.value = t.value.status.exported
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function openTrashFolder() {
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  try {
+    await openTrash()
+    statusMessage.value = t.value.status.trashOpened
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function hideMainWindow() {
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  await forceSave()
+  await hideWindow()
+}
+
+async function exitApp() {
+  await forceSave()
+  if (isTauriRuntime()) {
+    await quitApp()
   }
 }
 
@@ -397,7 +496,7 @@ function forceSaveOnHide() {
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && isTauriRuntime()) {
     event.preventDefault()
-    void hideWindow()
+    void hideMainWindow()
   }
 
   if (event.key.toLowerCase() === 'v' && event.ctrlKey && event.shiftKey) {
@@ -454,6 +553,41 @@ function upsertTab(tab: NoteTab) {
     tabs.value[index] = tab
   }
 }
+
+function createLocalTabFromContent(title: string, nextContent: string) {
+  const createdAt = Date.now()
+  const tab: NoteTab = {
+    id: `draft-${createdAt}`,
+    title,
+    fileName: `${safeFileName(title)}.md`,
+    createdAt,
+    updatedAt: createdAt,
+    pinned: false,
+    deleted: false,
+  }
+
+  tabs.value.push(tab)
+  activeTabId.value = tab.id
+  content.value = nextContent
+}
+
+function titleFromFileName(fileName: string) {
+  const withoutExtension = fileName.replace(/\.[^/.]+$/, '')
+  return withoutExtension.trim() || 'Untitled'
+}
+
+function safeFileName(title: string) {
+  return title.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').replace(/\s+/g, ' ') || 'Untitled'
+}
+
+function downloadText(fileName: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  link.click()
+  URL.revokeObjectURL(url)
+}
 </script>
 
 <template>
@@ -465,6 +599,12 @@ function upsertTab(tab: NoteTab) {
         :messages="t.menu"
         @new-note="createLocalTab"
         @save-clipboard="saveCurrentClipboard"
+        @load-file="triggerLoadFile"
+        @save-as-file="saveAsFile"
+        @export-all="exportAllNotes"
+        @open-trash="openTrashFolder"
+        @hide-window="hideMainWindow"
+        @exit-app="exitApp"
         @search="showSearchPlaceholder"
         @settings="showSettingsPlaceholder"
         @toggle-pin="togglePin"
@@ -482,6 +622,13 @@ function upsertTab(tab: NoteTab) {
     </template>
 
     <div class="workspace-pane" :class="`mode-${previewMode}`">
+      <input
+        ref="fileInput"
+        class="file-loader"
+        type="file"
+        accept=".md,.markdown,.txt,text/markdown,text/plain"
+        @change="loadFileFromInput"
+      />
       <EditorPane
         v-if="previewMode !== 'preview'"
         v-model="content"
