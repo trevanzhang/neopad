@@ -1,11 +1,15 @@
 <script setup lang="ts">
+import type { AppLanguage, AppMessages } from '../lib/i18n'
 import type { PreviewMode } from './ModeSwitch.vue'
 
 defineProps<{
   alwaysOnTop: boolean
   theme: 'system' | 'light' | 'dark'
   previewMode: PreviewMode
+  language: AppLanguage
   workspacePath: string
+  messages: AppMessages['settings']
+  menuMessages: AppMessages['menu']
 }>()
 
 defineEmits<{
@@ -13,76 +17,89 @@ defineEmits<{
   toggleAlwaysOnTop: []
   'update:theme': [theme: 'system' | 'light' | 'dark']
   'update:previewMode': [mode: PreviewMode]
+  'update:language': [language: AppLanguage]
   copyMcpConfig: [allowWrite: boolean]
 }>()
 </script>
 
 <template>
-  <aside class="settings-panel" aria-label="Settings">
+  <aside class="settings-panel" :aria-label="messages.title">
     <header class="settings-header">
-      <strong>Settings</strong>
-      <button type="button" aria-label="Close settings" title="Close" @click="$emit('close')">Close</button>
+      <strong>{{ messages.title }}</strong>
+      <button type="button" :aria-label="messages.close" :title="messages.close" @click="$emit('close')">
+        {{ messages.close }}
+      </button>
     </header>
 
     <section class="settings-section">
-      <h2>General</h2>
+      <h2>{{ messages.general }}</h2>
       <label class="settings-row">
-        <span>Always on top</span>
+        <span>{{ messages.language }}</span>
+        <select
+          :value="language"
+          @change="$emit('update:language', ($event.target as HTMLSelectElement).value as AppLanguage)"
+        >
+          <option value="en">{{ messages.english }}</option>
+          <option value="zh">{{ messages.chinese }}</option>
+        </select>
+      </label>
+      <label class="settings-row">
+        <span>{{ messages.alwaysOnTop }}</span>
         <input :checked="alwaysOnTop" type="checkbox" @change="$emit('toggleAlwaysOnTop')" />
       </label>
       <label class="settings-row">
-        <span>Theme</span>
+        <span>{{ messages.theme }}</span>
         <select
           :value="theme"
           @change="$emit('update:theme', ($event.target as HTMLSelectElement).value as 'system' | 'light' | 'dark')"
         >
-          <option value="system">System</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
+          <option value="system">{{ messages.system }}</option>
+          <option value="light">{{ messages.light }}</option>
+          <option value="dark">{{ messages.dark }}</option>
         </select>
       </label>
     </section>
 
     <section class="settings-section">
-      <h2>Shortcuts</h2>
+      <h2>{{ messages.shortcuts }}</h2>
       <div class="settings-row">
-        <span>Toggle window</span>
+        <span>{{ messages.toggleWindow }}</span>
         <kbd>Alt+Z</kbd>
       </div>
       <div class="settings-row">
-        <span>Save clipboard</span>
+        <span>{{ messages.saveClipboard }}</span>
         <kbd>Ctrl+Shift+V</kbd>
       </div>
       <div class="settings-row">
-        <span>Hide window</span>
+        <span>{{ messages.hideWindow }}</span>
         <kbd>Esc</kbd>
       </div>
     </section>
 
     <section class="settings-section">
-      <h2>Editor</h2>
+      <h2>{{ messages.editor }}</h2>
       <label class="settings-row">
-        <span>Preview mode</span>
+        <span>{{ messages.previewMode }}</span>
         <select
           :value="previewMode"
           @change="$emit('update:previewMode', ($event.target as HTMLSelectElement).value as PreviewMode)"
         >
-          <option value="edit">Edit</option>
-          <option value="preview">Preview</option>
-          <option value="split">Split</option>
+          <option value="edit">{{ menuMessages.editMode }}</option>
+          <option value="preview">{{ menuMessages.previewMode }}</option>
+          <option value="split">{{ menuMessages.splitMode }}</option>
         </select>
       </label>
     </section>
 
     <section class="settings-section">
-      <h2>MCP</h2>
+      <h2>{{ messages.mcp }}</h2>
       <div class="settings-row">
-        <span>Workspace</span>
+        <span>{{ messages.workspace }}</span>
         <code>{{ workspacePath || '~/.neopad' }}</code>
       </div>
       <div class="settings-actions">
-        <button type="button" @click="$emit('copyMcpConfig', false)">Copy read-only config</button>
-        <button type="button" @click="$emit('copyMcpConfig', true)">Copy write config</button>
+        <button type="button" @click="$emit('copyMcpConfig', false)">{{ messages.copyReadOnlyConfig }}</button>
+        <button type="button" @click="$emit('copyMcpConfig', true)">{{ messages.copyWriteConfig }}</button>
       </div>
     </section>
   </aside>

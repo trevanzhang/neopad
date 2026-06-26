@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import type { AppMessages } from '../lib/i18n'
 import type { PreviewMode } from './ModeSwitch.vue'
 
 defineProps<{
   previewMode: PreviewMode
+  messages: AppMessages['menu']
 }>()
 
 defineEmits<{
@@ -18,82 +20,82 @@ defineEmits<{
 <template>
   <nav class="menu-bar" aria-label="Application menu">
     <div class="menu-root">
-      <button type="button" class="menu-title">File(F)</button>
+      <button type="button" class="menu-title">{{ messages.file }}</button>
       <div class="menu-popover">
-        <button type="button" @click="$emit('newNote')">New Page</button>
-        <button type="button" @click="$emit('saveClipboard')">Save Clipboard</button>
+        <button type="button" @click="$emit('newNote')">{{ messages.newPage }}</button>
+        <button type="button" @click="$emit('saveClipboard')">{{ messages.saveClipboard }}</button>
       </div>
     </div>
 
     <div class="menu-root">
-      <button type="button" class="menu-title">Edit(E)</button>
+      <button type="button" class="menu-title">{{ messages.edit }}</button>
       <div class="menu-popover">
-        <button type="button" disabled>Undo</button>
-        <button type="button" disabled>Redo</button>
+        <button type="button" disabled>{{ messages.undo }}</button>
+        <button type="button" disabled>{{ messages.redo }}</button>
       </div>
     </div>
 
     <div class="menu-root">
-      <button type="button" class="menu-title">View(V)</button>
+      <button type="button" class="menu-title">{{ messages.view }}</button>
       <div class="menu-popover">
         <button type="button" :class="{ checked: previewMode === 'edit' }" @click="$emit('updatePreviewMode', 'edit')">
-          Edit
+          {{ messages.editMode }}
         </button>
         <button
           type="button"
           :class="{ checked: previewMode === 'split' }"
           @click="$emit('updatePreviewMode', 'split')"
         >
-          Split
+          {{ messages.splitMode }}
         </button>
         <button
           type="button"
           :class="{ checked: previewMode === 'preview' }"
           @click="$emit('updatePreviewMode', 'preview')"
         >
-          Preview
+          {{ messages.previewMode }}
         </button>
-        <button type="button" @click="$emit('togglePin')">Always on Top</button>
+        <button type="button" @click="$emit('togglePin')">{{ messages.alwaysOnTop }}</button>
       </div>
     </div>
 
     <div class="menu-root">
-      <button type="button" class="menu-title">Page(P)</button>
+      <button type="button" class="menu-title">{{ messages.page }}</button>
       <div class="menu-popover">
-        <button type="button" @click="$emit('newNote')">New Page</button>
-        <button type="button" disabled>Rename Page</button>
-        <button type="button" disabled>Delete Page</button>
+        <button type="button" @click="$emit('newNote')">{{ messages.newPage }}</button>
+        <button type="button" disabled>{{ messages.renamePage }}</button>
+        <button type="button" disabled>{{ messages.deletePage }}</button>
       </div>
     </div>
 
     <div class="menu-root">
-      <button type="button" class="menu-title">Format(O)</button>
+      <button type="button" class="menu-title">{{ messages.format }}</button>
       <div class="menu-popover">
-        <button type="button" disabled>Plain Text</button>
-        <button type="button" disabled>Markdown</button>
+        <button type="button" disabled>{{ messages.plainText }}</button>
+        <button type="button" disabled>{{ messages.markdown }}</button>
       </div>
     </div>
 
     <div class="menu-root">
-      <button type="button" class="menu-title">Insert(I)</button>
+      <button type="button" class="menu-title">{{ messages.insert }}</button>
       <div class="menu-popover">
-        <button type="button" disabled>Date</button>
-        <button type="button" disabled>Separator</button>
+        <button type="button" disabled>{{ messages.date }}</button>
+        <button type="button" disabled>{{ messages.separator }}</button>
       </div>
     </div>
 
     <div class="menu-root">
-      <button type="button" class="menu-title">Tools(T)</button>
+      <button type="button" class="menu-title">{{ messages.tools }}</button>
       <div class="menu-popover">
-        <button type="button" @click="$emit('search')">Search</button>
-        <button type="button" @click="$emit('settings')">Settings</button>
+        <button type="button" @click="$emit('search')">{{ messages.search }}</button>
+        <button type="button" @click="$emit('settings')">{{ messages.settings }}</button>
       </div>
     </div>
 
     <div class="menu-root">
-      <button type="button" class="menu-title">Help(H)</button>
+      <button type="button" class="menu-title">{{ messages.help }}</button>
       <div class="menu-popover">
-        <button type="button" disabled>About NeoPad</button>
+        <button type="button" disabled>{{ messages.about }}</button>
       </div>
     </div>
   </nav>

@@ -22,6 +22,7 @@ import {
   toggleAlwaysOnTop,
   writeNote,
 } from './lib/invoke'
+import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
 import type { NoteTab, SearchResult } from './types/note'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
@@ -60,8 +61,19 @@ const searchResults = ref<SearchResult[]>([])
 const searching = ref(false)
 const alwaysOnTop = ref(false)
 const theme = ref<'system' | 'light' | 'dark'>('system')
+const language = ref<AppLanguage>(initialLanguage())
 const workspacePath = ref('~/.neopad')
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
+const t = computed(() => messages[language.value])
+const localizedSaveState = computed(() => {
+  if (saveState.value === 'Saving') {
+    return t.value.status.saving
+  }
+  if (saveState.value === 'Failed') {
+    return t.value.status.failed
+  }
+  return t.value.status.saved
+})
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null
 let searchTimer: ReturnType<typeof window.setTimeout> | null = null
 let unlistenNotesChanged: UnlistenFn | null = null
@@ -113,6 +125,25 @@ watch(searchQuery, () => {
 
   scheduleSearch()
 })
+
+watch(language, () => {
+  window.localStorage.setItem('neopad.language', language.value)
+  if (settingsOpen.value) {
+    statusMessage.value = t.value.status.settings
+  } else if (searchOpen.value) {
+    statusMessage.value = t.value.status.search
+  } else {
+    statusMessage.value = t.value.status.markdown
+  }
+})
+
+function initialLanguage(): AppLanguage {
+  if (typeof window === 'undefined') {
+    return 'en'
+  }
+
+  return window.localStorage.getItem('neopad.language') === 'zh' ? 'zh' : 'en'
+}
 
 async function selectTab(tabId: string) {
   if (tabId === activeTabId.value) {
@@ -166,7 +197,7 @@ async function createLocalTab() {
 
 async function saveCurrentClipboard() {
   if (!isTauriRuntime()) {
-    statusMessage.value = 'Clipboard'
+    statusMessage.value = t.value.status.clipboard
     return
   }
 
@@ -184,7 +215,7 @@ async function saveCurrentClipboard() {
     })
     activeTabId.value = note.id
     setContentFromLoad(note.content)
-    statusMessage.value = 'Clipboard saved'
+    statusMessage.value = t.value.status.clipboardSaved
   } catch {
     saveState.value = 'Failed'
   }
@@ -192,7 +223,7 @@ async function saveCurrentClipboard() {
 
 function showSearchPlaceholder() {
   searchOpen.value = true
-  statusMessage.value = 'Search'
+  statusMessage.value = t.value.status.search
   if (searchQuery.value.trim()) {
     scheduleSearch()
   }
@@ -217,7 +248,7 @@ async function selectSearchResult(result: SearchResult) {
 
 function openSettings() {
   settingsOpen.value = true
-  statusMessage.value = 'Settings'
+  statusMessage.value = t.value.status.settings
 }
 
 function closeSettings() {
@@ -227,14 +258,14 @@ function closeSettings() {
 async function togglePin() {
   if (!isTauriRuntime()) {
     alwaysOnTop.value = !alwaysOnTop.value
-    statusMessage.value = 'Always on top'
+    statusMessage.value = t.value.status.alwaysOnTop
     return
   }
 
   try {
     const enabled = await toggleAlwaysOnTop()
     alwaysOnTop.value = enabled
-    statusMessage.value = enabled ? 'Pinned' : 'Unpinned'
+    statusMessage.value = enabled ? t.value.status.pinned : t.value.status.unpinned
   } catch {
     saveState.value = 'Failed'
   }
@@ -257,7 +288,7 @@ async function copyMcpConfig(allowWrite: boolean) {
 
   try {
     await navigator.clipboard.writeText(JSON.stringify(config, null, 2))
-    statusMessage.value = allowWrite ? 'MCP write config copied' : 'MCP read-only config copied'
+    statusMessage.value = allowWrite ? t.value.status.mcpWriteCopied : t.value.status.mcpReadOnlyCopied
   } catch {
     saveState.value = 'Failed'
   }
@@ -431,6 +462,7 @@ function upsertTab(tab: NoteTab) {
       <TitleBar />
       <MenuBar
         :preview-mode="previewMode"
+        :messages="t.menu"
         @new-note="createLocalTab"
         @save-clipboard="saveCurrentClipboard"
         @search="showSearchPlaceholder"
@@ -463,6 +495,7 @@ function upsertTab(tab: NoteTab) {
       v-model:query="searchQuery"
       :results="searchResults"
       :searching="searching"
+      :messages="t.search"
       @close="closeSearch"
       @select="selectSearchResult"
     />
@@ -472,16 +505,25 @@ function upsertTab(tab: NoteTab) {
       :always-on-top="alwaysOnTop"
       :theme="theme"
       :preview-mode="previewMode"
+      :language="language"
       :workspace-path="workspacePath"
+      :messages="t.settings"
+      :menu-messages="t.menu"
       @close="closeSettings"
       @toggle-always-on-top="togglePin"
       @update:theme="theme = $event"
       @update:preview-mode="previewMode = $event"
+      @update:language="language = $event"
       @copy-mcp-config="copyMcpConfig"
     />
 
     <template #status>
-      <StatusBar :state="saveState" :characters="content.length" :mode="statusMessage" />
+      <StatusBar
+        :state="localizedSaveState"
+        :characters="content.length"
+        :mode="statusMessage"
+        :chars-label="t.status.chars"
+      />
     </template>
   </AppShell>
 </template>
