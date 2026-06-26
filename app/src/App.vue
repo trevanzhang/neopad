@@ -2,7 +2,8 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppShell from './components/AppShell.vue'
 import EditorPane from './components/EditorPane.vue'
-import ModeSwitch, { type PreviewMode } from './components/ModeSwitch.vue'
+import MenuBar from './components/MenuBar.vue'
+import type { PreviewMode } from './components/ModeSwitch.vue'
 import PreviewPane from './components/PreviewPane.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
@@ -427,10 +428,15 @@ function upsertTab(tab: NoteTab) {
 <template>
   <AppShell>
     <template #title>
-      <TitleBar
-        @pin="togglePin"
+      <TitleBar />
+      <MenuBar
+        :preview-mode="previewMode"
+        @new-note="createLocalTab"
+        @save-clipboard="saveCurrentClipboard"
         @search="showSearchPlaceholder"
         @settings="showSettingsPlaceholder"
+        @toggle-pin="togglePin"
+        @update-preview-mode="previewMode = $event"
       />
     </template>
 
@@ -475,9 +481,7 @@ function upsertTab(tab: NoteTab) {
     />
 
     <template #status>
-      <StatusBar :state="saveState" :characters="content.length" :mode="statusMessage">
-        <ModeSwitch v-model="previewMode" />
-      </StatusBar>
+      <StatusBar :state="saveState" :characters="content.length" :mode="statusMessage" />
     </template>
   </AppShell>
 </template>

@@ -14,6 +14,7 @@ defineEmits<{
 
 <template>
   <nav class="tab-bar" aria-label="Pages">
+    <button class="tab-menu" type="button" title="Pages" aria-label="Pages">≡</button>
     <button
       v-for="tab in tabs"
       :key="tab.id"
@@ -27,5 +28,9 @@ defineEmits<{
     <button class="tab-add" type="button" title="New note" aria-label="New note" @click="$emit('newTab')">
       +
     </button>
+    <div class="tab-scroll-buttons" aria-hidden="true">
+      <span>‹</span>
+      <span>›</span>
+    </div>
   </nav>
 </template>

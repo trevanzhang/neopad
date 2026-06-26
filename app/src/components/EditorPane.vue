@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
-import { bracketMatching, defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import { bracketMatching } from '@codemirror/language'
 import { Compartment, EditorState } from '@codemirror/state'
 import {
   drawSelection,
@@ -9,7 +9,6 @@ import {
   EditorView,
   highlightActiveLine,
   keymap,
-  lineNumbers,
 } from '@codemirror/view'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
@@ -23,13 +22,11 @@ let editorView: EditorView | null = null
 const editable = new Compartment()
 
 const extensions = [
-  lineNumbers(),
   history(),
   drawSelection(),
   dropCursor(),
   bracketMatching(),
   highlightActiveLine(),
-  syntaxHighlighting(defaultHighlightStyle),
   markdown(),
   keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
   editable.of(EditorView.editable.of(true)),
@@ -48,16 +45,21 @@ const extensions = [
     '&': {
       height: '100%',
       color: 'var(--np-text)',
-      backgroundColor: 'transparent',
-      fontSize: '14px',
+      backgroundColor: '#ffffff',
+      fontSize: '15px',
     },
     '.cm-scroller': {
-      fontFamily:
-        'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
-      lineHeight: '1.55',
+      fontFamily: '"Segoe UI", Arial, sans-serif',
+      lineHeight: '1.45',
     },
     '.cm-content': {
-      padding: '0',
+      padding: '10px 12px',
+      minHeight: '100%',
+    },
+    '.cm-line': {
+      color: '#111111',
+      textDecoration: 'none',
+      fontWeight: '400',
     },
     '.cm-gutters': {
       backgroundColor: 'transparent',
@@ -65,10 +67,7 @@ const extensions = [
       border: '0',
     },
     '.cm-activeLine': {
-      backgroundColor: '#eef4f8',
-    },
-    '.cm-activeLineGutter': {
-      backgroundColor: '#eef4f8',
+      backgroundColor: 'transparent',
     },
     '.cm-focused': {
       outline: '0',
