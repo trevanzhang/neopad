@@ -96,6 +96,9 @@ export type AppMessages = {
     f8: string
     search: string
     settings: string
+    softwareHelp: string
+    shortcutList: string
+    expressionGuide: string
     about: string
   }
   settings: {
@@ -256,6 +259,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f8: 'F8',
       search: 'Search',
       settings: 'Settings',
+      softwareHelp: 'Software Help(R)...',
+      shortcutList: 'Shortcut List(S)...',
+      expressionGuide: 'Expression Guide(E)...',
       about: 'About NeoPad',
     },
     settings: {
@@ -414,6 +420,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f8: 'F8',
       search: '\u641c\u7d22',
       settings: '\u8bbe\u7f6e',
+      softwareHelp: '\u8f6f\u4ef6\u8bf4\u660e(R)...',
+      shortcutList: '\u5feb\u6377\u952e\u5217\u8868(S)...',
+      expressionGuide: '\u8868\u8fbe\u5f0f\u8ba1\u7b97\u6307\u5357(E)...',
       about: '\u5173\u4e8e NeoPad',
     },
     settings: {

@@ -327,7 +327,8 @@ body {
 }
 
 .app-shell.tab-vertical .search-panel,
-.app-shell.tab-vertical .settings-panel {
+.app-shell.tab-vertical .settings-panel,
+.app-shell.tab-vertical .help-panel {
   top: 84px;
 }
 
@@ -515,6 +516,7 @@ body {
 
 .search-header button,
 .settings-header button,
+.help-header button,
 .settings-actions button {
   height: 30px;
   padding: 0 10px;
@@ -567,7 +569,8 @@ body {
   white-space: nowrap;
 }
 
-.settings-panel {
+.settings-panel,
+.help-panel {
   position: absolute;
   top: 116px;
   right: 12px;
@@ -584,16 +587,31 @@ body {
 }
 
 .settings-header,
+.help-header,
 .settings-section {
   padding: 10px 12px;
   border-bottom: 1px solid #b7b7b7;
 }
 
-.settings-header {
+.settings-header,
+.help-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: #efefef;
+}
+
+.help-body {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  color: #111111;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.help-body p {
+  margin: 0;
 }
 
 .settings-section h2 {

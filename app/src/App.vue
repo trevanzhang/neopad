@@ -30,6 +30,7 @@ import type { NoteTab, SearchResult } from './types/note'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
 type TabBarOrientation = 'horizontal' | 'vertical'
+type HelpTopic = 'software' | 'shortcuts' | 'expression' | 'about'
 
 const now = Date.now()
 const tabs = ref<NoteTab[]>([
@@ -60,6 +61,7 @@ const statusMessage = ref('Markdown')
 const previewMode = ref<PreviewMode>('edit')
 const searchOpen = ref(false)
 const settingsOpen = ref(false)
+const helpTopic = ref<HelpTopic | null>(null)
 const searchQuery = ref('')
 const searchResults = ref<SearchResult[]>([])
 const searching = ref(false)
@@ -86,6 +88,7 @@ const localizedSaveState = computed(() => {
   }
   return t.value.status.saved
 })
+const helpContent = computed(() => getHelpContent(helpTopic.value, language.value))
 let saveTimer: ReturnType<typeof window.setTimeout> | null = null
 let searchTimer: ReturnType<typeof window.setTimeout> | null = null
 let unlistenNotesChanged: UnlistenFn | null = null
@@ -493,6 +496,14 @@ function openSettings() {
 
 function closeSettings() {
   settingsOpen.value = false
+}
+
+function openHelpTopic(topic: HelpTopic) {
+  helpTopic.value = topic
+}
+
+function closeHelp() {
+  helpTopic.value = null
 }
 
 async function togglePin() {
@@ -1118,6 +1129,75 @@ const simplifiedToTraditionalMap: Record<string, string> = {
 }
 
 const traditionalToSimplifiedMap = Object.fromEntries(Object.entries(simplifiedToTraditionalMap).map(([key, value]) => [value, key]))
+
+function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
+  const zh = currentLanguage === 'zh'
+
+  if (topic === 'shortcuts') {
+    return {
+      title: zh ? '\u5feb\u6377\u952e\u5217\u8868' : 'Shortcut List',
+      lines: [
+        'Ctrl+F - ' + (zh ? '\u67e5\u627e' : 'Find'),
+        'Ctrl+Shift+F - ' + (zh ? '\u5168\u5c40\u641c\u7d22' : 'Global search'),
+        'Ctrl+D - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4' : 'Insert date time'),
+        'Ctrl+- - ' + (zh ? '\u63d2\u5165\u5206\u9694\u884c' : 'Insert separator'),
+        'Ctrl+Shift+- - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4\u5206\u9694\u884c' : 'Insert date time separator'),
+        'Ctrl+E - ' + (zh ? '\u63d2\u5165\u63d0\u9192' : 'Insert reminder'),
+        'Ctrl+W - ' + (zh ? '\u5207\u6362\u81ea\u52a8\u6362\u884c' : 'Toggle word wrap'),
+        'F6 - ' + (zh ? '\u5207\u6362\u7a97\u53e3\u7f6e\u9876' : 'Toggle window on top'),
+        'F8 - ' + (zh ? '\u6253\u5f00\u8bbe\u7f6e' : 'Open settings'),
+        'F10 - ' + (zh ? '\u5207\u6362\u6807\u7b7e\u680f\u65b9\u5411' : 'Toggle tab bar orientation'),
+        'Esc - ' + (zh ? '\u9690\u85cf\u7a97\u53e3' : 'Hide window'),
+      ],
+    }
+  }
+
+  if (topic === 'expression') {
+    return {
+      title: zh ? '\u8868\u8fbe\u5f0f\u8ba1\u7b97\u6307\u5357' : 'Expression Guide',
+      lines: zh
+        ? [
+            '\u5f53\u524d\u7248\u672c\u5c1a\u672a\u63d0\u4f9b\u72ec\u7acb\u8868\u8fbe\u5f0f\u8ba1\u7b97\u5668\u3002',
+            '\u53ef\u4ee5\u5148\u4f7f\u7528\u6587\u672c\u5904\u7406\u4e2d\u7684 URL/Base64/Hash \u5de5\u5177\u5904\u7406\u9009\u4e2d\u6587\u672c\u3002',
+            '\u540e\u7eed\u53ef\u5728\u6b64\u5904\u63a5\u5165\u7b97\u672f\u8868\u8fbe\u5f0f\u3001\u65e5\u671f\u8868\u8fbe\u5f0f\u548c\u6587\u672c\u51fd\u6570\u6307\u5357\u3002',
+          ]
+        : [
+            'This version does not include a standalone expression calculator yet.',
+            'Use the Text Processing tools for URL, Base64, and hash operations on selected text.',
+            'This page can later host arithmetic, date, and text function references.',
+          ],
+    }
+  }
+
+  if (topic === 'about') {
+    return {
+      title: zh ? '\u5173\u4e8e NeoPad' : 'About NeoPad',
+      lines: [
+        'NeoPad',
+        zh ? '\u672c\u5730\u4f18\u5148\u7684 Markdown \u7b14\u8bb0\u5de5\u5177\u3002' : 'Local-first markdown notes.',
+        zh ? '\u9879\u76ee\u540d\u79f0\uff1aNeoPad / neopad' : 'Project name: NeoPad / neopad',
+        zh ? '\u6280\u672f\u6808\uff1aTauri 2, Vue 3, Rust' : 'Stack: Tauri 2, Vue 3, Rust',
+      ],
+    }
+  }
+
+  return {
+    title: zh ? '\u8f6f\u4ef6\u8bf4\u660e' : 'Software Help',
+    lines: zh
+      ? [
+          'NeoPad \u662f\u4e00\u4e2a\u672c\u5730\u4f18\u5148\u7684 Markdown \u7b14\u8bb0\u5de5\u5177\u3002',
+          '\u5de6\u4e0a\u65b9\u83dc\u5355\u63d0\u4f9b\u6587\u4ef6\u3001\u7f16\u8f91\u3001\u89c6\u56fe\u3001\u9875\u9762\u3001\u683c\u5f0f\u3001\u63d2\u5165\u3001\u5de5\u5177\u548c\u5e2e\u52a9\u529f\u80fd\u3002',
+          '\u7b14\u8bb0\u4fdd\u5b58\u5728\u672c\u5730\u5de5\u4f5c\u533a\uff0c\u53ef\u4ee5\u901a\u8fc7\u8bbe\u7f6e\u67e5\u770b\u5de5\u4f5c\u533a\u8def\u5f84\u3002',
+          '\u5e38\u7528\u64cd\u4f5c\u53ef\u4ee5\u901a\u8fc7\u83dc\u5355\u6216\u5feb\u6377\u952e\u5b8c\u6210\u3002',
+        ]
+      : [
+          'NeoPad is a local-first markdown note tool.',
+          'The menu bar provides file, edit, view, page, format, insert, tools, and help actions.',
+          'Notes are stored in the local workspace. Open Settings to inspect the workspace path.',
+          'Common actions are available through menus and keyboard shortcuts.',
+        ],
+  }
+}
 </script>
 
 <template>
@@ -1163,6 +1243,7 @@ const traditionalToSimplifiedMap = Object.fromEntries(Object.entries(simplifiedT
         @window-opacity="promptWindowOpacity"
         @reminder-list="openReminderList"
         @process-text="processEditorText"
+        @help-topic="openHelpTopic"
         @update-preview-mode="previewMode = $event"
       />
     </template>
@@ -1229,6 +1310,16 @@ const traditionalToSimplifiedMap = Object.fromEntries(Object.entries(simplifiedT
       @update:language="language = $event"
       @copy-mcp-config="copyMcpConfig"
     />
+
+    <section v-if="helpTopic" class="help-panel" role="dialog" aria-modal="true" :aria-label="helpContent.title">
+      <header class="help-header">
+        <strong>{{ helpContent.title }}</strong>
+        <button type="button" @click="closeHelp">{{ t.settings.close }}</button>
+      </header>
+      <div class="help-body">
+        <p v-for="line in helpContent.lines" :key="line">{{ line }}</p>
+      </div>
+    </section>
 
     <template #status>
       <StatusBar

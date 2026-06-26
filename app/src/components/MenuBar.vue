@@ -44,6 +44,7 @@ defineEmits<{
   windowOpacity: []
   reminderList: []
   processText: [action: string]
+  helpTopic: [topic: 'software' | 'shortcuts' | 'expression' | 'about']
   updatePreviewMode: [mode: PreviewMode]
 }>()
 </script>
@@ -248,7 +249,11 @@ defineEmits<{
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.help }}</button>
       <div class="menu-popover">
-        <button type="button" disabled>{{ messages.about }}</button>
+        <button type="button" @click="$emit('helpTopic', 'software')">{{ messages.softwareHelp }}</button>
+        <button type="button" @click="$emit('helpTopic', 'shortcuts')">{{ messages.shortcutList }}</button>
+        <button type="button" @click="$emit('helpTopic', 'expression')">{{ messages.expressionGuide }}</button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" @click="$emit('helpTopic', 'about')">{{ messages.about }}</button>
       </div>
     </div>
   </nav>
