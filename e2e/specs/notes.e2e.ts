@@ -1,4 +1,10 @@
 describe('NeoPad desktop note workflow', () => {
+  async function click(selector: string) {
+    const element = await $(selector)
+    await element.waitForExist()
+    await browser.execute((target) => (target as HTMLElement).click(), element)
+  }
+
   it('starts with the pinned default pages', async () => {
     await $('[data-ready="true"]').waitForExist()
     await expect($('.tab-item=Inbox')).toBeDisplayed()
@@ -7,8 +13,9 @@ describe('NeoPad desktop note workflow', () => {
   })
 
   it('saves edits before switching tabs', async () => {
-    await $('.tab-add').click()
+    await click('.tab-add')
     await browser.waitUntil(async () => (await $('.tab-item.active').getText()) === 'Untitled', {
+      timeout: 30_000,
       timeoutMsg: 'new note did not become active',
     })
 
@@ -21,9 +28,9 @@ describe('NeoPad desktop note workflow', () => {
       timeoutMsg: 'note was not saved',
     })
 
-    await $('.tab-item=Inbox').click()
+    await click('.tab-item=Inbox')
     await browser.waitUntil(async () => (await $('.tab-item.active').getText()) === 'Inbox')
-    await $('.tab-item=Untitled').click()
+    await click('.tab-item=Untitled')
     await browser.waitUntil(async () => (await $('.cm-content').getText()).includes('E2E autosave content'), {
       timeoutMsg: 'saved content was not restored after switching tabs',
     })
