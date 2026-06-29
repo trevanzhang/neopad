@@ -114,6 +114,7 @@ const localizedSaveState = computed(() => {
 const helpContent = computed(() => getHelpContent(helpTopic.value, language.value))
 let searchTimer: number | null = null
 let uiConfigTimer: number | null = null
+let nativeSettingsTimer: number | null = null
 let unlistenNewNoteRequested: UnlistenFn | null = null
 let unlistenSaveClipboardRequested: UnlistenFn | null = null
 let unlistenOpenSettings: UnlistenFn | null = null
@@ -147,7 +148,10 @@ onMounted(async () => {
   window.addEventListener('beforeunload', forceSaveOnExit)
   document.addEventListener('visibilitychange', forceSaveOnHide)
   appReady.value = true
-  void syncNativeSettings()
+  nativeSettingsTimer = window.setTimeout(() => {
+    nativeSettingsTimer = null
+    void syncNativeSettings()
+  }, 5000)
   void registerNativeEventListeners()
 })
 
@@ -184,6 +188,7 @@ onBeforeUnmount(() => {
   autosave.dispose()
   clearSearchTimer()
   if (uiConfigTimer) window.clearTimeout(uiConfigTimer)
+  if (nativeSettingsTimer) window.clearTimeout(nativeSettingsTimer)
   void unlistenNewNoteRequested?.()
   void unlistenSaveClipboardRequested?.()
   void unlistenOpenSettings?.()
