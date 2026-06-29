@@ -55,6 +55,10 @@ The app presents notes as tabs. The durable source of note content is always a
 Markdown file in `notes/`. `tabs.json` stores tab metadata such as title, file
 name, timestamps, pinned state, and active tab.
 
+Desktop preferences are persisted in `config.json`. Browser `localStorage` is
+kept only as a compatibility cache for installations created before config
+version 2; the native config is authoritative once migrated.
+
 ## Core Responsibilities
 
 `neopad-core` owns:

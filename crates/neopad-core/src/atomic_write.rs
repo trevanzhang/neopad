@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -11,8 +12,15 @@ pub fn write_atomic(path: &Path, contents: &str) -> Result<()> {
         .with_context(|| format!("failed to create parent directory {}", parent.display()))?;
 
     let tmp_path = temp_path(path)?;
-    fs::write(&tmp_path, contents)
+    let mut tmp_file = fs::File::create(&tmp_path)
+        .with_context(|| format!("failed to create temp file {}", tmp_path.display()))?;
+    tmp_file
+        .write_all(contents.as_bytes())
         .with_context(|| format!("failed to write temp file {}", tmp_path.display()))?;
+    tmp_file
+        .sync_all()
+        .with_context(|| format!("failed to flush temp file {}", tmp_path.display()))?;
+    drop(tmp_file);
 
     match replace_file(&tmp_path, path) {
         Ok(()) => Ok(()),
@@ -29,14 +37,51 @@ pub fn write_atomic(path: &Path, contents: &str) -> Result<()> {
     }
 }
 
+#[cfg(not(windows))]
 fn replace_file(tmp_path: &Path, target_path: &Path) -> std::io::Result<()> {
-    match fs::rename(tmp_path, target_path) {
-        Ok(()) => Ok(()),
-        Err(first_error) if target_path.exists() => {
-            fs::remove_file(target_path)?;
-            fs::rename(tmp_path, target_path).map_err(|_| first_error)
+    fs::rename(tmp_path, target_path)
+}
+
+#[cfg(windows)]
+fn replace_file(tmp_path: &Path, target_path: &Path) -> std::io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{
+        MoveFileExW, ReplaceFileW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
+        REPLACEFILE_WRITE_THROUGH,
+    };
+
+    let wide = |path: &Path| {
+        path.as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect::<Vec<_>>()
+    };
+    let source = wide(tmp_path);
+    let target = wide(target_path);
+
+    let result = unsafe {
+        if target_path.exists() {
+            ReplaceFileW(
+                target.as_ptr(),
+                source.as_ptr(),
+                std::ptr::null(),
+                REPLACEFILE_WRITE_THROUGH,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            )
+        } else {
+            MoveFileExW(
+                source.as_ptr(),
+                target.as_ptr(),
+                MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+            )
         }
-        Err(error) => Err(error),
+    };
+
+    if result == 0 {
+        Err(std::io::Error::last_os_error())
+    } else {
+        Ok(())
     }
 }
 

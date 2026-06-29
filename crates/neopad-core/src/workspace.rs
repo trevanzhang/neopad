@@ -1,7 +1,7 @@
 use crate::{AppConfig, TabsState};
 use anyhow::{Context, Result};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,7 +84,7 @@ pub fn ensure_workspace_layout(workspace: &Workspace) -> Result<()> {
     Ok(())
 }
 
-fn write_file_if_missing(path: &PathBuf, contents: &str) -> Result<()> {
+fn write_file_if_missing(path: &Path, contents: &str) -> Result<()> {
     if path.exists() {
         return Ok(());
     }
@@ -115,7 +115,7 @@ fn now_ms() -> Result<i64> {
     Ok(duration.as_millis() as i64)
 }
 
-fn ensure_writable(path: &PathBuf) -> Result<()> {
+fn ensure_writable(path: &Path) -> Result<()> {
     let probe_path = path.join(".neopad-write-test");
     fs::write(&probe_path, b"ok")
         .with_context(|| format!("workspace is not writable at {}", path.display()))?;
@@ -153,7 +153,7 @@ mod tests {
         let config: AppConfig =
             serde_json::from_str(&fs::read_to_string(&workspace.config_path).expect("config"))
                 .expect("config json");
-        assert_eq!(config.version, 1);
+        assert_eq!(config.version, 2);
         assert_eq!(config.workspace_dir, root.to_string_lossy());
         assert_eq!(config.theme, Theme::System);
         assert_eq!(config.default_hotkey, "Alt+Z");

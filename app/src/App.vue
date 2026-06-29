@@ -13,6 +13,7 @@ import {
   createNote,
   deleteNote,
   getShortcutWarnings,
+  getUiConfig,
   getWorkspace,
   hideWindow,
   listNotes,
@@ -21,6 +22,7 @@ import {
   readNote,
   renameNote,
   saveClipboard,
+  saveUiConfig,
   searchNotes,
   setAutostart,
   setCloseToMinimize,
@@ -32,6 +34,7 @@ import {
 } from './lib/invoke'
 import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
+import { AutosaveCoordinator } from './lib/autosave'
 import type { NoteTab, SearchResult } from './types/note'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
@@ -64,6 +67,7 @@ const tabs = ref<NoteTab[]>([
 const activeTabId = ref('inbox')
 const content = ref('# Inbox\n\nStart typing...')
 const saveState = ref<'Saved' | 'Saving' | 'Failed'>('Saved')
+const appReady = ref(false)
 const isLoadingNote = ref(false)
 const statusMessage = ref('Markdown')
 const previewMode = ref<PreviewMode>('edit')
@@ -81,7 +85,7 @@ const wordWrap = ref(initialBooleanSetting('neopad.wordWrap', true))
 const editorFontFamily = ref(initialStringSetting('neopad.editorFontFamily', '"Segoe UI", Arial, sans-serif'))
 const editorBackgroundColor = ref(initialStringSetting('neopad.editorBackgroundColor', '#ffffff'))
 const windowOpacity = ref(Number(initialStringSetting('neopad.windowOpacity', '1')))
-const runAtStartup = ref(initialBooleanSetting('neopad.runAtStartup', true))
+const runAtStartup = ref(initialBooleanSetting('neopad.runAtStartup', false))
 const closeToMinimize = ref(initialBooleanSetting('neopad.closeToMinimize', true))
 const snapToEdges = ref(initialBooleanSetting('neopad.snapToEdges', false))
 const transparencyEnabled = ref(initialBooleanSetting('neopad.transparencyEnabled', true))
@@ -108,14 +112,29 @@ const localizedSaveState = computed(() => {
   return t.value.status.saved
 })
 const helpContent = computed(() => getHelpContent(helpTopic.value, language.value))
-let saveTimer: ReturnType<typeof window.setTimeout> | null = null
-let searchTimer: ReturnType<typeof window.setTimeout> | null = null
-let unlistenNotesChanged: UnlistenFn | null = null
+let searchTimer: number | null = null
+let uiConfigTimer: number | null = null
+let unlistenNewNoteRequested: UnlistenFn | null = null
+let unlistenSaveClipboardRequested: UnlistenFn | null = null
 let unlistenOpenSettings: UnlistenFn | null = null
+let suppressedLoadedContent: string | null = null
+let uiConfigLoaded = false
+const autosave = new AutosaveCoordinator({
+  delayMs: 500,
+  save: ({ noteId, content: nextContent }: { noteId: string; content: string }) => writeNote(noteId, nextContent),
+  onSaved: ({ noteId }, saved) => {
+    const tab = tabs.value.find((item) => item.id === noteId)
+    if (tab) tab.updatedAt = saved.updatedAt
+  },
+  onStateChange: (state) => {
+    saveState.value = state
+  },
+})
 
 onMounted(async () => {
   if (!isTauriRuntime()) {
     window.addEventListener('keydown', handleKeydown, { capture: true })
+    appReady.value = true
     return
   }
 
@@ -123,9 +142,13 @@ onMounted(async () => {
   await loadInitialNotes()
   await loadWorkspacePath()
   await loadShortcutWarnings()
+  await loadNativeUiConfig()
   await syncNativeSettings()
-  unlistenNotesChanged = await listen('neopad://notes-changed', async () => {
-    await loadInitialNotes()
+  unlistenNewNoteRequested = await listen('neopad://new-note-requested', () => {
+    void createLocalTab()
+  })
+  unlistenSaveClipboardRequested = await listen('neopad://save-clipboard-requested', () => {
+    void saveCurrentClipboard()
   })
   unlistenOpenSettings = await listen('neopad://open-settings', () => {
     openSettings()
@@ -133,6 +156,7 @@ onMounted(async () => {
   window.addEventListener('keydown', handleKeydown, { capture: true })
   window.addEventListener('beforeunload', forceSaveOnExit)
   document.addEventListener('visibilitychange', forceSaveOnHide)
+  appReady.value = true
 })
 
 async function resetWebviewZoom() {
@@ -144,21 +168,30 @@ async function resetWebviewZoom() {
 }
 
 onBeforeUnmount(() => {
-  clearSaveTimer()
+  autosave.dispose()
   clearSearchTimer()
-  void unlistenNotesChanged?.()
+  if (uiConfigTimer) window.clearTimeout(uiConfigTimer)
+  void unlistenNewNoteRequested?.()
+  void unlistenSaveClipboardRequested?.()
   void unlistenOpenSettings?.()
   window.removeEventListener('keydown', handleKeydown, { capture: true })
   window.removeEventListener('beforeunload', forceSaveOnExit)
   document.removeEventListener('visibilitychange', forceSaveOnHide)
 })
 
-watch(content, () => {
+watch(content, (nextContent) => {
+  if (suppressedLoadedContent === nextContent) {
+    suppressedLoadedContent = null
+    return
+  }
   if (isLoadingNote.value || !isTauriRuntime()) {
     return
   }
 
-  scheduleSave()
+  const tab = activeTab.value
+  if (tab) {
+    autosave.markChanged({ noteId: tab.id, content: content.value })
+  }
 })
 
 watch(searchQuery, () => {
@@ -252,6 +285,34 @@ watch(insertDateTimeSeparatorTemplate, () => {
 watch(customInsertTexts, () => {
   window.localStorage.setItem('neopad.customInsertTexts', JSON.stringify(customInsertTexts.value))
 }, { deep: true })
+
+watch(
+  [
+    language,
+    tabBarOrientation,
+    wordWrap,
+    editorFontFamily,
+    editorBackgroundColor,
+    windowOpacity,
+    runAtStartup,
+    closeToMinimize,
+    snapToEdges,
+    transparencyEnabled,
+    titleDoubleClickAction,
+    shortcutBaseKey,
+    shortcutModifiers,
+    insertSeparatorTemplate,
+    insertDateTimeTemplate,
+    insertDateTimeSeparatorTemplate,
+    customInsertTexts,
+  ],
+  () => {
+    if (uiConfigLoaded && isTauriRuntime()) {
+      void persistUiConfig()
+    }
+  },
+  { deep: true },
+)
 
 function initialLanguage(): AppLanguage {
   if (typeof window === 'undefined') {
@@ -828,6 +889,77 @@ async function loadWorkspacePath() {
   }
 }
 
+async function loadNativeUiConfig() {
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  try {
+    const stored = await getUiConfig()
+    if (!stored.initialized) {
+      uiConfigLoaded = true
+      persistUiConfig()
+      return
+    }
+    const ui = stored.ui
+    language.value = ui.language === 'zh' ? 'zh' : 'en'
+    tabBarOrientation.value = ui.tabBarOrientation === 'vertical' ? 'vertical' : 'horizontal'
+    wordWrap.value = ui.wordWrap
+    editorFontFamily.value = ui.editorFontFamily
+    editorBackgroundColor.value = ui.editorBackgroundColor
+    windowOpacity.value = Math.min(1, Math.max(0.2, ui.windowOpacity))
+    runAtStartup.value = ui.runAtStartup
+    closeToMinimize.value = ui.closeToMinimize
+    snapToEdges.value = ui.snapToEdges
+    transparencyEnabled.value = ui.transparencyEnabled
+    titleDoubleClickAction.value =
+      ui.titleDoubleClickAction === 'none' || ui.titleDoubleClickAction === 'delete'
+        ? ui.titleDoubleClickAction
+        : 'rename'
+    shortcutBaseKey.value = ui.shortcutBaseKey
+    shortcutModifiers.value = ui.shortcutModifiers
+    insertSeparatorTemplate.value = ui.insertSeparatorTemplate
+    insertDateTimeTemplate.value = ui.insertDateTimeTemplate
+    insertDateTimeSeparatorTemplate.value = ui.insertDateTimeSeparatorTemplate
+    customInsertTexts.value = ui.customInsertTexts
+    uiConfigLoaded = true
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+function persistUiConfig() {
+  if (uiConfigTimer) {
+    window.clearTimeout(uiConfigTimer)
+  }
+  uiConfigTimer = window.setTimeout(async () => {
+    uiConfigTimer = null
+    try {
+      await saveUiConfig({
+        language: language.value,
+        tabBarOrientation: tabBarOrientation.value,
+        wordWrap: wordWrap.value,
+        editorFontFamily: editorFontFamily.value,
+        editorBackgroundColor: editorBackgroundColor.value,
+        windowOpacity: windowOpacity.value,
+        runAtStartup: runAtStartup.value,
+        closeToMinimize: closeToMinimize.value,
+        snapToEdges: snapToEdges.value,
+        transparencyEnabled: transparencyEnabled.value,
+        titleDoubleClickAction: titleDoubleClickAction.value,
+        shortcutBaseKey: shortcutBaseKey.value,
+        shortcutModifiers: shortcutModifiers.value,
+        insertSeparatorTemplate: insertSeparatorTemplate.value,
+        insertDateTimeTemplate: insertDateTimeTemplate.value,
+        insertDateTimeSeparatorTemplate: insertDateTimeSeparatorTemplate.value,
+        customInsertTexts: customInsertTexts.value,
+      })
+    } catch {
+      saveState.value = 'Failed'
+    }
+  }, 150)
+}
+
 async function syncNativeSettings() {
   if (!isTauriRuntime()) {
     return
@@ -921,38 +1053,19 @@ async function loadActiveNote() {
 }
 
 function setContentFromLoad(nextContent: string) {
-  clearSaveTimer()
+  if (content.value !== nextContent) {
+    suppressedLoadedContent = nextContent
+  }
   content.value = nextContent
-}
-
-function scheduleSave() {
-  clearSaveTimer()
-  saveState.value = 'Saving'
-  saveTimer = window.setTimeout(() => {
-    void forceSave()
-  }, 500)
+  autosave.markLoaded()
 }
 
 async function forceSave() {
-  clearSaveTimer()
   if (!isTauriRuntime()) {
     saveState.value = 'Saved'
     return
   }
-
-  const tab = activeTab.value
-  if (!tab) {
-    return
-  }
-
-  saveState.value = 'Saving'
-  try {
-    const saved = await writeNote(tab.id, content.value)
-    tab.updatedAt = saved.updatedAt
-    saveState.value = 'Saved'
-  } catch {
-    saveState.value = 'Failed'
-  }
+  await autosave.flush()
 }
 
 function forceSaveOnExit() {
@@ -1019,13 +1132,6 @@ function handleKeydown(event: KeyboardEvent) {
   if (event.key.toLowerCase() === 'v' && event.ctrlKey && event.shiftKey) {
     event.preventDefault()
     void saveCurrentClipboard()
-  }
-}
-
-function clearSaveTimer() {
-  if (saveTimer) {
-    window.clearTimeout(saveTimer)
-    saveTimer = null
   }
 }
 
@@ -1480,7 +1586,11 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
 </script>
 
 <template>
-  <AppShell :tab-orientation="tabBarOrientation" :window-opacity="transparencyEnabled ? windowOpacity : 1">
+  <AppShell
+    :tab-orientation="tabBarOrientation"
+    :window-opacity="transparencyEnabled ? windowOpacity : 1"
+    :data-ready="appReady ? 'true' : 'false'"
+  >
     <template #title>
       <MenuBar
         :preview-mode="previewMode"

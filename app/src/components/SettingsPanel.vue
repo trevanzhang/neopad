@@ -285,7 +285,6 @@ function deleteCustomText(current: string[]) {
 
     <footer class="settings-footer">
       <button type="button" @click="$emit('close')">{{ messages.ok }}</button>
-      <button type="button" @click="$emit('close')">{{ messages.cancel }}</button>
     </footer>
   </aside>
 </template>

@@ -14,15 +14,20 @@ This file tracks the implemented MVP relative to the original task plan.
   - `config.json`
 - Note CRUD and trash move behavior.
 - Atomic writes and mtime-checked writes.
+- Cross-process write locking for desktop and write-enabled MCP operations.
 - Tauri command bridge.
 - Vue app shell with tabs, editor, preview, search, settings, and status bar.
 - CodeMirror 6 Markdown editor.
 - Autosave from the UI.
+- Serialized autosave and tray/global-command handling that preserves pending
+  edits, with deterministic frontend tests.
 - Tray menu and close-to-hide behavior.
 - Global shortcuts for toggle window and clipboard capture.
 - Full-text search.
 - Manual clipboard capture to `clipboard.md`.
 - Standalone `neopad-mcp` read and write tools.
+- MCP stdio child-process integration tests.
+- Windows Tauri WebDriver smoke tests for the critical note workflow.
 - Windows icon, tray/taskbar icon, MSI branding, desktop shortcut icon, and
   hidden release console window.
 
@@ -33,15 +38,15 @@ This file tracks the implemented MVP relative to the original task plan.
 
 ## Recommended Next Tasks
 
-1. Replace the generated or broken-encoding `TASK.md` with a clean UTF-8 product
-   specification.
-2. Add integration tests for MCP JSON-RPC tool calls.
-3. Add frontend tests or smoke tests for autosave, tab switching, and search.
-4. Review the custom WiX template for portability before moving the repository
+1. Expand frontend coverage to search, settings validation, and editor
+   transformations.
+2. Add Windows-native automation for tray menus, global shortcuts, and MSI
+   install/uninstall behavior.
+3. Review the custom WiX template for portability before moving the repository
    path or building on CI.
-5. Decide whether `neopad-mcp` should be bundled as a sidecar or distributed as
+4. Decide whether `neopad-mcp` should be bundled as a sidecar or distributed as
    a separate binary.
-6. Add release notes and versioning policy before publishing installers.
+5. Add release notes and versioning policy before publishing installers.
 
 ## Non-Goals for the MVP
 

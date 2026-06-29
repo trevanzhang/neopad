@@ -1,8 +1,8 @@
 use anyhow::{bail, Context, Result};
 use neopad_core::{
     append_to_clipboard_note, append_to_note, create_note, delete_note_to_trash, init_workspace,
-    list_notes, path::note_file_path, read_note, search_notes, write_note_atomic,
-    write_note_atomic_checked, Workspace,
+    list_notes, lock_workspace_for_write, path::note_file_path, read_note, search_notes,
+    write_note_atomic, write_note_atomic_checked, Workspace,
 };
 use serde_json::{json, Value};
 use std::io::{self, BufRead, Write};
@@ -326,6 +326,7 @@ impl Server {
         if !self.allow_write {
             bail!("write tools require --allow-write");
         }
+        let _lock = lock_workspace_for_write(&self.workspace)?;
         operation()
     }
 }
@@ -424,4 +425,61 @@ fn required_i64(arguments: &Value, key: &str) -> Result<i64> {
         .get(key)
         .and_then(Value::as_i64)
         .with_context(|| format!("missing integer argument: {key}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn server(allow_write: bool) -> (tempfile::TempDir, Server) {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp.path().join("workspace"))).expect("workspace");
+        (
+            temp,
+            Server {
+                workspace,
+                allow_write,
+            },
+        )
+    }
+
+    #[test]
+    fn tools_list_hides_write_tools_by_default() {
+        let (_temp, server) = server(false);
+        let response = server.handle_request(json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list"
+        }));
+        let tools = response["result"]["tools"].as_array().expect("tools");
+        assert!(tools.iter().any(|tool| tool["name"] == "read_page"));
+        assert!(!tools.iter().any(|tool| tool["name"] == "update_page"));
+    }
+
+    #[test]
+    fn write_enabled_tool_call_round_trips_page_content() {
+        let (_temp, server) = server(true);
+        let created = server.handle_request(json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "create_page",
+                "arguments": { "title": "MCP", "content": "hello" }
+            }
+        }));
+        assert_eq!(created["result"]["isError"], false);
+
+        let pages = server.list_pages().expect("list pages");
+        let page = pages["pages"]
+            .as_array()
+            .expect("pages")
+            .iter()
+            .find(|page| page["title"] == "MCP")
+            .expect("created page");
+        let read = server
+            .read_page(page["id"].as_str().expect("page id").to_owned())
+            .expect("read page");
+        assert_eq!(read["content"], "hello");
+    }
 }

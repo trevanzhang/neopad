@@ -5,18 +5,20 @@ mod window;
 
 use commands::{
     app_version, create_note_command, delete_note_command, get_shortcut_warnings_command,
-    get_workspace_command, hide_window_command, list_notes_command, open_trash_command,
-    quit_app_command, read_note_command, rename_note_command, save_clipboard_command,
-    search_notes_command, set_autostart_command, set_close_to_minimize_command,
-    set_snap_to_edges_command, show_window_command, toggle_always_on_top_command,
-    toggle_window_command, update_toggle_shortcut_command, write_note_command, AppState,
+    get_ui_config_command, get_workspace_command, hide_window_command, list_notes_command,
+    open_trash_command, quit_app_command, read_note_command, rename_note_command,
+    save_clipboard_command, save_ui_config_command, search_notes_command, set_autostart_command,
+    set_close_to_minimize_command, set_snap_to_edges_command, show_window_command,
+    toggle_always_on_top_command, toggle_window_command, update_toggle_shortcut_command,
+    write_note_command, AppState,
 };
 use neopad_core::init_workspace;
 use std::sync::{atomic::AtomicBool, Mutex};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 
 fn build_state() -> AppState {
-    let workspace = init_workspace(None).expect("failed to initialize NeoPad workspace");
+    let workspace_path = std::env::var_os("NEOPAD_WORKSPACE").map(std::path::PathBuf::from);
+    let workspace = init_workspace(workspace_path).expect("failed to initialize NeoPad workspace");
     AppState {
         workspace,
         shortcut_warnings: Mutex::new(Vec::new()),
@@ -48,6 +50,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             app_version,
             get_workspace_command,
+            get_ui_config_command,
+            save_ui_config_command,
             list_notes_command,
             read_note_command,
             create_note_command,

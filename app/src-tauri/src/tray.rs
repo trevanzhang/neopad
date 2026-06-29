@@ -1,6 +1,5 @@
-use crate::commands::{save_clipboard_text, set_quitting, AppState};
+use crate::commands::{set_quitting, AppState};
 use crate::window::{hide_main_window, show_main_window};
-use neopad_core::create_note;
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
@@ -46,17 +45,11 @@ pub fn create_tray(app: &App) -> tauri::Result<()> {
                 let _ = hide_main_window(app);
             }
             "new_note" => {
-                let state = app.state::<AppState>();
-                if create_note(&state.workspace, None).is_ok() {
-                    let _ = app.emit("neopad://notes-changed", ());
-                    let _ = show_main_window(app);
-                }
+                let _ = app.emit("neopad://new-note-requested", ());
+                let _ = show_main_window(app);
             }
             "save_clipboard" => {
-                let state = app.state::<AppState>();
-                if save_clipboard_text(app, &state).is_ok() {
-                    let _ = app.emit("neopad://notes-changed", ());
-                }
+                let _ = app.emit("neopad://save-clipboard-requested", ());
             }
             "settings" => {
                 let _ = app.emit("neopad://open-settings", ());

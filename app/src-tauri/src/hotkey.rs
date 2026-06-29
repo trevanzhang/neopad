@@ -1,5 +1,5 @@
-use crate::commands::{save_clipboard_text, AppState};
-use crate::window::{hide_main_window, toggle_main_window};
+use crate::commands::AppState;
+use crate::window::toggle_main_window;
 use anyhow::{bail, Result};
 use tauri::{App, Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
@@ -7,7 +7,6 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 pub fn register_global_shortcuts(app: &App) {
     register_shortcut(app, toggle_window_shortcut(), "Alt+Z");
     register_shortcut(app, save_clipboard_shortcut(), "Ctrl+Shift+V");
-    register_shortcut(app, hide_window_shortcut(), "Escape");
 }
 
 pub fn handle_global_shortcut(
@@ -29,11 +28,7 @@ pub fn handle_global_shortcut(
     if shortcut == &toggle_shortcut {
         let _ = toggle_main_window(app);
     } else if shortcut == &save_clipboard_shortcut() {
-        if save_clipboard_text(app, &state).is_ok() {
-            let _ = app.emit("neopad://notes-changed", ());
-        }
-    } else if shortcut == &hide_window_shortcut() {
-        let _ = hide_main_window(app);
+        let _ = app.emit("neopad://save-clipboard-requested", ());
     }
 }
 
@@ -82,10 +77,6 @@ fn toggle_window_shortcut() -> Shortcut {
 
 fn save_clipboard_shortcut() -> Shortcut {
     Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyV)
-}
-
-fn hide_window_shortcut() -> Shortcut {
-    Shortcut::new(None, Code::Escape)
 }
 
 fn shortcut_from_parts(base_key: &str, modifiers: &[String]) -> Result<Shortcut> {

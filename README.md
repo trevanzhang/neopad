@@ -80,6 +80,20 @@ Run Rust tests:
 cargo test
 ```
 
+Run Rust and frontend unit/integration tests:
+
+```powershell
+pnpm test:all
+```
+
+Run the real Windows desktop interaction suite:
+
+```powershell
+pnpm test:e2e
+```
+
+Desktop tests use an isolated workspace under `target/e2e-workspace`.
+
 Build all Rust crates:
 
 ```powershell
@@ -95,7 +109,7 @@ pnpm tauri:build
 The MSI is written to:
 
 ```text
-target/release/bundle/msi/neopad_0.1.0_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.1.0_x64_en-US.msi
 ```
 
 ## MCP Server

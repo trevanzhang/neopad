@@ -54,6 +54,18 @@ Run Rust tests:
 cargo test
 ```
 
+Run frontend unit tests:
+
+```powershell
+pnpm test:frontend
+```
+
+Run all fast tests:
+
+```powershell
+pnpm test:all
+```
+
 Build all Rust crates:
 
 ```powershell
@@ -72,12 +84,40 @@ Build the desktop app and MSI:
 pnpm tauri:build
 ```
 
+## Desktop End-to-End Tests
+
+The Windows desktop suite drives the compiled Tauri WebView2 application with
+`tauri-driver` and WebdriverIO. Test data is isolated under
+`target/e2e-workspace`; it never uses the normal `~/.neopad` workspace.
+
+Install or refresh the matching drivers and run the suite:
+
+```powershell
+pnpm test:e2e
+```
+
+The setup script installs `tauri-driver` and `msedgedriver-tool` when missing.
+The Microsoft Edge driver is downloaded to `target/tools/`, matching the local
+WebView2 runtime. The suite then builds `neopad-app.exe` without an installer
+bundle and exercises note creation, autosave across tab switches, and settings.
+
+Relevant files:
+
+```text
+app/src/lib/autosave.test.ts  Frontend autosave unit tests
+mcp-server/tests/stdio.rs     MCP child-process protocol tests
+e2e/wdio.conf.ts              Desktop WebDriver configuration
+e2e/specs/                    Desktop interaction specifications
+scripts/setup-e2e.ps1         Windows driver setup
+```
+
 ## Verification Checklist
 
 Use this baseline before handing off functional changes:
 
 ```powershell
 cargo test
+pnpm test:frontend
 pnpm build
 pnpm tauri:build
 ```

@@ -104,6 +104,5 @@ Desktop and start-menu shortcuts should both use `ProductIcon` and
 - Prefer ASCII unless non-ASCII content is required.
 - Update `README.md` and `docs/` when commands, packaging, or user-visible
   behavior changes.
-- `TASK.md` is currently not reliable as human-readable documentation because
-  its encoding is corrupted. Use the code and `docs/` as the current source of
-  truth unless the task explicitly asks to repair `TASK.md`.
+- `TASK.md` is the UTF-8 product brief. Keep it aligned with the code and
+  human-facing documentation under `docs/`.

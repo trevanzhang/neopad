@@ -1,12 +1,40 @@
 import { invoke } from '@tauri-apps/api/core'
 import type { NoteContent, NoteTab, SearchResult, WorkspaceInfo } from '../types/note'
 
+export interface UiConfig {
+  language: string
+  tabBarOrientation: string
+  wordWrap: boolean
+  editorFontFamily: string
+  editorBackgroundColor: string
+  windowOpacity: number
+  runAtStartup: boolean
+  closeToMinimize: boolean
+  snapToEdges: boolean
+  transparencyEnabled: boolean
+  titleDoubleClickAction: string
+  shortcutBaseKey: string
+  shortcutModifiers: string[]
+  insertSeparatorTemplate: string
+  insertDateTimeTemplate: string
+  insertDateTimeSeparatorTemplate: string
+  customInsertTexts: string[]
+}
+
 export function getAppVersion(): Promise<string> {
   return invoke('app_version')
 }
 
 export function getWorkspace(): Promise<WorkspaceInfo> {
   return invoke('get_workspace_command')
+}
+
+export function getUiConfig(): Promise<{ initialized: boolean; ui: UiConfig }> {
+  return invoke('get_ui_config_command')
+}
+
+export function saveUiConfig(ui: UiConfig): Promise<void> {
+  return invoke('save_ui_config_command', { ui })
 }
 
 export function listNotes(): Promise<NoteTab[]> {

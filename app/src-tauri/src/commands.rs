@@ -1,6 +1,7 @@
 use neopad_core::{
-    append_to_clipboard_note, create_note, delete_note_to_trash, list_notes, read_note,
-    rename_note, search_notes, write_note_atomic, NoteContent, NoteTab, SearchResult, Workspace,
+    append_to_clipboard_note, create_note, delete_note_to_trash, list_notes, load_config,
+    lock_workspace_for_write, read_note, rename_note, save_config, search_notes, write_note_atomic,
+    NoteContent, NoteTab, SearchResult, UiConfig, Workspace,
 };
 use serde::Serialize;
 use std::process::Command;
@@ -35,6 +36,13 @@ pub struct WorkspaceInfo {
     pub tabs_path: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UiConfigInfo {
+    pub initialized: bool,
+    pub ui: UiConfig,
+}
+
 #[tauri::command]
 pub fn app_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
@@ -43,6 +51,26 @@ pub fn app_version() -> &'static str {
 #[tauri::command]
 pub fn get_workspace_command(state: State<'_, AppState>) -> WorkspaceInfo {
     WorkspaceInfo::from(&state.workspace)
+}
+
+#[tauri::command]
+pub fn get_ui_config_command(state: State<'_, AppState>) -> Result<UiConfigInfo, String> {
+    load_config(&state.workspace)
+        .map(|config| UiConfigInfo {
+            initialized: config.version >= 2,
+            ui: config.ui,
+        })
+        .map_err(display_error)
+}
+
+#[tauri::command]
+pub fn save_ui_config_command(state: State<'_, AppState>, ui: UiConfig) -> Result<(), String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    let mut config = load_config(&state.workspace).map_err(display_error)?;
+    config.version = 2;
+    config.start_at_login = ui.run_at_startup;
+    config.ui = ui;
+    save_config(&state.workspace, &config).map_err(display_error)
 }
 
 #[tauri::command]
@@ -63,6 +91,7 @@ pub fn create_note_command(
     state: State<'_, AppState>,
     title: Option<String>,
 ) -> Result<NoteContent, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     create_note(&state.workspace, title).map_err(display_error)
 }
 
@@ -72,6 +101,7 @@ pub fn write_note_command(
     note_id: String,
     content: String,
 ) -> Result<NoteContent, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     write_note_atomic(&state.workspace, &note_id, &content).map_err(display_error)
 }
 
@@ -81,11 +111,13 @@ pub fn rename_note_command(
     note_id: String,
     title: String,
 ) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     rename_note(&state.workspace, &note_id, title).map_err(display_error)
 }
 
 #[tauri::command]
 pub fn delete_note_command(state: State<'_, AppState>, note_id: String) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     delete_note_to_trash(&state.workspace, &note_id).map_err(display_error)
 }
 
@@ -191,6 +223,7 @@ pub fn save_clipboard_text(app: &AppHandle, state: &AppState) -> Result<NoteCont
         .read_text()
         .map_err(|error| format!("failed to read text clipboard: {error}"))?;
 
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     append_to_clipboard_note(&state.workspace, &text).map_err(display_error)
 }
 
