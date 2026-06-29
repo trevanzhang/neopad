@@ -66,7 +66,8 @@ pub fn run() {
             toggle_window_command,
             toggle_always_on_top_command,
             save_clipboard_command,
-            get_shortcut_warnings_command
+            get_shortcut_warnings_command,
+            tray::set_tray_language_command
         ])
         .run(tauri::generate_context!())
         .expect("failed to run NeoPad");

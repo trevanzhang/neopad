@@ -9,7 +9,6 @@ import SearchPanel from './components/SearchPanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import TabBar from './components/TabBar.vue'
-import TitleBar from './components/TitleBar.vue'
 import {
   createNote,
   deleteNote,
@@ -26,6 +25,7 @@ import {
   setAutostart,
   setCloseToMinimize,
   setSnapToEdges,
+  setTrayLanguage,
   toggleAlwaysOnTop,
   updateToggleShortcut,
   writeNote,
@@ -34,6 +34,7 @@ import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
 import type { NoteTab, SearchResult } from './types/note'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { getCurrentWebview } from '@tauri-apps/api/webview'
 
 type TabBarOrientation = 'horizontal' | 'vertical'
 type HelpTopic = 'software' | 'shortcuts' | 'expression' | 'about'
@@ -114,10 +115,11 @@ let unlistenOpenSettings: UnlistenFn | null = null
 
 onMounted(async () => {
   if (!isTauriRuntime()) {
-    window.addEventListener('keydown', handleKeydown)
+    window.addEventListener('keydown', handleKeydown, { capture: true })
     return
   }
 
+  await resetWebviewZoom()
   await loadInitialNotes()
   await loadWorkspacePath()
   await loadShortcutWarnings()
@@ -128,17 +130,25 @@ onMounted(async () => {
   unlistenOpenSettings = await listen('neopad://open-settings', () => {
     openSettings()
   })
-  window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('keydown', handleKeydown, { capture: true })
   window.addEventListener('beforeunload', forceSaveOnExit)
   document.addEventListener('visibilitychange', forceSaveOnHide)
 })
+
+async function resetWebviewZoom() {
+  try {
+    await getCurrentWebview().setZoom(1)
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
 
 onBeforeUnmount(() => {
   clearSaveTimer()
   clearSearchTimer()
   void unlistenNotesChanged?.()
   void unlistenOpenSettings?.()
-  window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('keydown', handleKeydown, { capture: true })
   window.removeEventListener('beforeunload', forceSaveOnExit)
   document.removeEventListener('visibilitychange', forceSaveOnHide)
 })
@@ -162,6 +172,9 @@ watch(searchQuery, () => {
 
 watch(language, () => {
   window.localStorage.setItem('neopad.language', language.value)
+  if (isTauriRuntime()) {
+    void syncTrayLanguage()
+  }
   if (settingsOpen.value) {
     statusMessage.value = t.value.status.settings
   } else if (searchOpen.value) {
@@ -824,8 +837,21 @@ async function syncNativeSettings() {
     syncAutostart(),
     syncCloseToMinimize(),
     syncSnapToEdges(),
+    syncTrayLanguage(),
     syncToggleShortcut(),
   ])
+}
+
+async function syncTrayLanguage() {
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  try {
+    await setTrayLanguage(language.value)
+  } catch {
+    saveState.value = 'Failed'
+  }
 }
 
 async function syncAutostart() {
@@ -942,6 +968,7 @@ function forceSaveOnHide() {
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter' && event.ctrlKey) {
     event.preventDefault()
+    event.stopPropagation()
     calculateCurrentLineExpression()
     return
   }
@@ -1455,7 +1482,6 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
 <template>
   <AppShell :tab-orientation="tabBarOrientation" :window-opacity="transparencyEnabled ? windowOpacity : 1">
     <template #title>
-      <TitleBar />
       <MenuBar
         :preview-mode="previewMode"
         :tab-bar-orientation="tabBarOrientation"
@@ -1507,6 +1533,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         @select-tab="selectTab"
         @title-double-click="handleTabTitleDoubleClick"
         @new-tab="createLocalTab"
+        @toggle-orientation="toggleTabBarOrientation"
       />
     </template>
 

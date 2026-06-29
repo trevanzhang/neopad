@@ -5,10 +5,19 @@ use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    App, Emitter, Manager,
+    App, AppHandle, Emitter, Manager, Wry,
 };
 
 const APP_ICON: &[u8] = include_bytes!("../../src/assets/neopad-logo-small.png");
+
+pub struct TrayMenuItems {
+    show: MenuItem<Wry>,
+    hide: MenuItem<Wry>,
+    new_note: MenuItem<Wry>,
+    save_clipboard: MenuItem<Wry>,
+    settings: MenuItem<Wry>,
+    quit: MenuItem<Wry>,
+}
 
 pub fn create_tray(app: &App) -> tauri::Result<()> {
     let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
@@ -62,5 +71,46 @@ pub fn create_tray(app: &App) -> tauri::Result<()> {
         })
         .build(app)?;
 
+    app.manage(TrayMenuItems {
+        show,
+        hide,
+        new_note,
+        save_clipboard,
+        settings,
+        quit,
+    });
+
     Ok(())
+}
+
+#[tauri::command]
+pub fn set_tray_language_command(app: AppHandle, language: String) -> Result<(), String> {
+    let items = app.state::<TrayMenuItems>();
+    let labels = if language == "zh" {
+        ["显示", "隐藏", "新建笔记", "保存剪贴板", "设置", "退出"]
+    } else {
+        [
+            "Show",
+            "Hide",
+            "New Note",
+            "Save Clipboard",
+            "Settings",
+            "Quit",
+        ]
+    };
+
+    items.show.set_text(labels[0]).map_err(display_error)?;
+    items.hide.set_text(labels[1]).map_err(display_error)?;
+    items.new_note.set_text(labels[2]).map_err(display_error)?;
+    items
+        .save_clipboard
+        .set_text(labels[3])
+        .map_err(display_error)?;
+    items.settings.set_text(labels[4]).map_err(display_error)?;
+    items.quit.set_text(labels[5]).map_err(display_error)?;
+    Ok(())
+}
+
+fn display_error(error: impl std::fmt::Display) -> String {
+    error.to_string()
 }

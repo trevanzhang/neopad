@@ -84,3 +84,7 @@ export function saveClipboard(): Promise<NoteContent> {
 export function getShortcutWarnings(): Promise<string[]> {
   return invoke('get_shortcut_warnings_command')
 }
+
+export function setTrayLanguage(language: 'en' | 'zh'): Promise<void> {
+  return invoke('set_tray_language_command', { language })
+}

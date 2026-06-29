@@ -19,7 +19,8 @@
         "minHeight": 360,
         "resizable": true,
         "center": true,
-        "decorations": false
+        "decorations": true,
+        "zoomHotkeysEnabled": false
       }
     ],
     "security": {

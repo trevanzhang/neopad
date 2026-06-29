@@ -10,12 +10,21 @@ defineEmits<{
   selectTab: [tabId: string]
   titleDoubleClick: [tabId: string]
   newTab: []
+  toggleOrientation: []
 }>()
 </script>
 
 <template>
   <nav class="tab-bar" aria-label="Pages">
-    <button class="tab-menu" type="button" title="Pages" aria-label="Pages">≡</button>
+    <button
+      class="tab-menu"
+      type="button"
+      title="Toggle tab bar display"
+      aria-label="Toggle tab bar display"
+      @click="$emit('toggleOrientation')"
+    >
+      ≡
+    </button>
     <button
       v-for="tab in tabs"
       :key="tab.id"

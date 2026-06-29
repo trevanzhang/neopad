@@ -47,10 +47,25 @@ defineEmits<{
   helpTopic: [topic: 'software' | 'shortcuts' | 'expression' | 'about']
   updatePreviewMode: [mode: PreviewMode]
 }>()
+
+function handleMenuClick(event: MouseEvent) {
+  const button = (event.target as Element | null)?.closest<HTMLButtonElement>('.menu-popover button')
+  if (!button || button.disabled || button.parentElement?.classList.contains('menu-subroot')) {
+    return
+  }
+
+  button.blur()
+}
+
+function closeMenu(event: KeyboardEvent) {
+  event.preventDefault()
+  event.stopPropagation()
+  ;(document.activeElement as HTMLElement | null)?.blur()
+}
 </script>
 
 <template>
-  <nav class="menu-bar" aria-label="Application menu">
+  <nav class="menu-bar" aria-label="Application menu" @click="handleMenuClick" @keydown.esc="closeMenu">
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.file }}</button>
       <div class="menu-popover">
