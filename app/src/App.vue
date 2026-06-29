@@ -143,21 +143,34 @@ onMounted(async () => {
   await loadWorkspacePath()
   await loadShortcutWarnings()
   await loadNativeUiConfig()
-  await syncNativeSettings()
-  unlistenNewNoteRequested = await listen('neopad://new-note-requested', () => {
-    void createLocalTab()
-  })
-  unlistenSaveClipboardRequested = await listen('neopad://save-clipboard-requested', () => {
-    void saveCurrentClipboard()
-  })
-  unlistenOpenSettings = await listen('neopad://open-settings', () => {
-    openSettings()
-  })
   window.addEventListener('keydown', handleKeydown, { capture: true })
   window.addEventListener('beforeunload', forceSaveOnExit)
   document.addEventListener('visibilitychange', forceSaveOnHide)
   appReady.value = true
+  void syncNativeSettings()
+  void registerNativeEventListeners()
 })
+
+async function registerNativeEventListeners() {
+  try {
+    const [newNote, saveClipboardRequest, openSettingsRequest] = await Promise.all([
+      listen('neopad://new-note-requested', () => {
+        void createLocalTab()
+      }),
+      listen('neopad://save-clipboard-requested', () => {
+        void saveCurrentClipboard()
+      }),
+      listen('neopad://open-settings', () => {
+        openSettings()
+      }),
+    ])
+    unlistenNewNoteRequested = newNote
+    unlistenSaveClipboardRequested = saveClipboardRequest
+    unlistenOpenSettings = openSettingsRequest
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
 
 async function resetWebviewZoom() {
   try {
