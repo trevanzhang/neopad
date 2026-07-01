@@ -5,6 +5,7 @@ import type { EditorMode, EditorModeShortcut } from '../types/editor'
 export interface UiConfig {
   language: string
   vimMode: boolean
+  vimUseCtrlShortcuts: boolean
   vimInsertExitKey: string
   tabBarOrientation: string
   wordWrap: boolean

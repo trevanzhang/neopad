@@ -97,6 +97,7 @@ const alwaysOnTop = ref(false)
 const theme = ref<AppTheme>(initialTheme())
 const language = ref<AppLanguage>(initialLanguage())
 const vimMode = ref(initialBooleanSetting('neopad.vimMode', false))
+const vimUseCtrlShortcuts = ref(initialBooleanSetting('neopad.vimUseCtrlShortcuts', true))
 const vimInsertExitKey = ref(initialStringSetting('neopad.vimInsertExitKey', 'jj'))
 const activeVimMode = ref('')
 const tabBarOrientation = ref<TabBarOrientation>(initialTabBarOrientation())
@@ -369,6 +370,10 @@ watch(vimMode, () => {
   window.localStorage.setItem('neopad.vimMode', String(vimMode.value))
 })
 
+watch(vimUseCtrlShortcuts, () => {
+  window.localStorage.setItem('neopad.vimUseCtrlShortcuts', String(vimUseCtrlShortcuts.value))
+})
+
 watch(vimInsertExitKey, () => {
   window.localStorage.setItem('neopad.vimInsertExitKey', vimInsertExitKey.value)
 })
@@ -377,6 +382,7 @@ watch(
   [
     language,
     vimMode,
+    vimUseCtrlShortcuts,
     vimInsertExitKey,
     tabBarOrientation,
     wordWrap,
@@ -1106,6 +1112,7 @@ async function loadNativeUiConfig() {
     defaultEditorMode.value = storedMode
     language.value = ui.language === 'zh' ? 'zh' : 'en'
     vimMode.value = ui.vimMode
+    vimUseCtrlShortcuts.value = ui.vimUseCtrlShortcuts
     vimInsertExitKey.value = ui.vimInsertExitKey
     tabBarOrientation.value = ui.tabBarOrientation === 'vertical' ? 'vertical' : 'horizontal'
     wordWrap.value = ui.wordWrap
@@ -1149,6 +1156,7 @@ function persistUiConfig() {
       await saveUiConfig({
         language: language.value,
         vimMode: vimMode.value,
+        vimUseCtrlShortcuts: vimUseCtrlShortcuts.value,
         vimInsertExitKey: vimInsertExitKey.value,
         tabBarOrientation: tabBarOrientation.value,
         wordWrap: wordWrap.value,
@@ -1427,9 +1435,33 @@ function handleKeydown(event: KeyboardEvent) {
   if (vimMode.value && editorPane.value?.isEditorFocused()) {
     const isApplicationFunctionKey = event.key === 'F6' || event.key === 'F8' || event.key === 'F10'
     const shouldHideFromNormalMode = event.key === 'Escape' && activeVimMode.value === 'normal'
-    if (!isApplicationFunctionKey && !shouldHideFromNormalMode) {
+    const isPreservedCtrlShortcut = vimUseCtrlShortcuts.value && (event.ctrlKey || event.metaKey)
+    if (!isApplicationFunctionKey && !shouldHideFromNormalMode && !isPreservedCtrlShortcut) {
       return
     }
+  }
+
+  if (vimMode.value && vimUseCtrlShortcuts.value && editorPane.value?.isEditorFocused() && event.ctrlKey && !event.altKey) {
+    const key = event.key.toLowerCase()
+    if (key === 'f') {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.shiftKey) showSearchPlaceholder()
+      else openFindPanel()
+      return
+    }
+    if (key === 'c') { event.preventDefault(); void copyEditorSelection(); return }
+    if (key === 'x') { event.preventDefault(); void cutEditorSelection(); return }
+    if (key === 'v' && !event.shiftKey) { event.preventDefault(); void pasteIntoEditor(); return }
+    if (key === 'a') { event.preventDefault(); selectAllEditorText(); return }
+  }
+
+  if (!vimMode.value && event.key.toLowerCase() === 'f' && event.ctrlKey && !event.altKey && !event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.shiftKey) showSearchPlaceholder()
+    else openFindPanel()
+    return
   }
 
   if (event.key === 'Enter' && event.ctrlKey) {
@@ -2074,6 +2106,7 @@ function formatShortcutLabel(baseKey: string, modifiers: string[]) {
       v-if="settingsOpen"
       :always-on-top="alwaysOnTop"
       :vim-mode="vimMode"
+      :vim-use-ctrl-shortcuts="vimUseCtrlShortcuts"
       :vim-insert-exit-key="vimInsertExitKey"
       :preview-mode="defaultEditorMode"
       :editor-mode-shortcut="editorModeShortcut"
@@ -2098,6 +2131,7 @@ function formatShortcutLabel(baseKey: string, modifiers: string[]) {
       @close="closeSettings"
       @toggle-always-on-top="togglePin"
       @update:vim-mode="vimMode = $event"
+      @update:vim-use-ctrl-shortcuts="vimUseCtrlShortcuts = $event"
       @update:vim-insert-exit-key="setVimInsertExitKey"
       @update:preview-mode="setDefaultEditorMode"
       @update:editor-mode-shortcut="editorModeShortcut = $event"

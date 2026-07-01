@@ -16,6 +16,7 @@ use commands::{
 use neopad_core::init_workspace;
 use std::sync::{atomic::AtomicBool, Mutex};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
+use tauri_plugin_window_state::StateFlags;
 
 fn build_state() -> AppState {
     let workspace_path = std::env::var_os("NEOPAD_WORKSPACE").map(std::path::PathBuf::from);
@@ -38,6 +39,14 @@ fn build_state() -> AppState {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            let _ = window::show_main_window(app);
+        }))
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_state_flags(StateFlags::POSITION)
+                .build(),
+        )
         .manage(build_state())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(
@@ -47,6 +56,7 @@ pub fn run() {
         )
         .setup(|app| {
             window::install_main_window_icon(app);
+            window::place_main_window_at_bottom_right(app);
             window::install_close_to_hide_handler(app);
             tray::create_tray(app)?;
             hotkey::register_global_shortcuts(app);

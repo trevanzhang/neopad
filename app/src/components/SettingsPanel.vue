@@ -9,6 +9,7 @@ type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
 defineProps<{
   alwaysOnTop: boolean
   vimMode: boolean
+  vimUseCtrlShortcuts: boolean
   vimInsertExitKey: string
   previewMode: EditorMode
   editorModeShortcut: EditorModeShortcut
@@ -36,6 +37,7 @@ const emit = defineEmits<{
   close: []
   toggleAlwaysOnTop: []
   'update:vimMode': [enabled: boolean]
+  'update:vimUseCtrlShortcuts': [enabled: boolean]
   'update:vimInsertExitKey': [key: string]
   'update:previewMode': [mode: EditorMode]
   'update:editorModeShortcut': [shortcut: EditorModeShortcut]
@@ -360,6 +362,7 @@ function deleteCustomText(current: string[]) {
       <template v-else>
         <fieldset class="settings-fieldset">
           <legend>{{ messages.vimSettings }}</legend>
+          <p class="settings-description">{{ messages.vimModeDescription }}</p>
           <label class="settings-check-row">
             <input
               :checked="vimMode"
@@ -367,6 +370,15 @@ function deleteCustomText(current: string[]) {
               @change="$emit('update:vimMode', ($event.target as HTMLInputElement).checked)"
             />
             <span>{{ messages.vimMode }}</span>
+          </label>
+          <label class="settings-check-row">
+            <input
+              :checked="vimUseCtrlShortcuts"
+              :disabled="!vimMode"
+              type="checkbox"
+              @change="$emit('update:vimUseCtrlShortcuts', ($event.target as HTMLInputElement).checked)"
+            />
+            <span>{{ messages.vimUseCtrlShortcuts }}</span>
           </label>
           <label class="settings-form-row">
             <span>{{ messages.vimInsertExitKey }}:</span>

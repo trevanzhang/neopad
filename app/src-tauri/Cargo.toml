@@ -14,6 +14,8 @@ neopad-core = { path = "../../crates/neopad-core" }
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-global-shortcut = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-window-state = "2"
 anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
