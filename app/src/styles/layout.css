@@ -19,6 +19,21 @@ body {
   box-shadow: none;
 }
 
+.app-shell.immersive .window-chrome,
+.app-shell.immersive .tab-bar,
+.app-shell.immersive .status-bar,
+.app-shell.immersive .search-panel,
+.app-shell.immersive .settings-panel,
+.app-shell.immersive .help-panel {
+  display: none;
+}
+
+.app-shell.immersive .workspace-pane {
+  grid-column: 1;
+  grid-row: 1;
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .app-shell.tab-vertical {
   grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-columns: 170px minmax(0, 1fr);
@@ -256,7 +271,7 @@ body {
   padding-right: 5px;
 }
 
-.tab-scroll-buttons span {
+.tab-scroll-buttons button {
   display: grid;
   place-items: center;
   width: 22px;
@@ -266,6 +281,15 @@ body {
   background: #d6d6d4;
   border: 1px solid #a8a8a8;
   box-shadow: inset 1px 1px #eeeeee;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+.tab-scroll-buttons button:hover,
+.tab-scroll-buttons button:focus-visible {
+  color: #000000;
+  background: #eeeeee;
 }
 
 .tab-context-menu {
@@ -519,7 +543,7 @@ body {
 .theme-dark .tab-menu,
 .theme-dark .tab-item,
 .theme-dark .tab-add,
-.theme-dark .tab-scroll-buttons span {
+.theme-dark .tab-scroll-buttons button {
   color: var(--np-text);
   background: var(--np-control);
   border-color: #555d68;

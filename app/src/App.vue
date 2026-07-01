@@ -44,6 +44,7 @@ import type { NoteTab, SearchResult } from './types/note'
 import { isEditorMode, nextEditorMode, type EditorMode, type EditorModeShortcut } from './types/editor'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
 type TabBarOrientation = 'horizontal' | 'vertical'
 type HelpTopic = 'software' | 'shortcuts' | 'expression' | 'about'
@@ -84,6 +85,7 @@ const editorModeShortcut = ref<EditorModeShortcut>(initialEditorModeShortcut())
 const searchOpen = ref(false)
 const settingsOpen = ref(false)
 const helpTopic = ref<HelpTopic | null>(null)
+const immersiveMode = ref(false)
 const searchQuery = ref('')
 const searchResults = ref<SearchResult[]>([])
 const searching = ref(false)
@@ -480,6 +482,14 @@ async function selectTab(tabId: string) {
   await loadActiveNote()
 }
 
+function cycleTab(offset: -1 | 1) {
+  const currentIndex = tabs.value.findIndex((tab) => tab.id === activeTabId.value)
+  if (currentIndex < 0 || tabs.value.length < 2) return
+  const nextIndex = (currentIndex + offset + tabs.value.length) % tabs.value.length
+  const nextTab = tabs.value[nextIndex]
+  if (nextTab) void selectTab(nextTab.id)
+}
+
 async function handleTabTitleDoubleClick(tabId: string) {
   if (titleDoubleClickAction.value === 'none') {
     return
@@ -799,6 +809,27 @@ function toggleWordWrap() {
 
 function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
+}
+
+async function setImmersiveMode(enabled: boolean) {
+  if (enabled) {
+    closeSettings()
+    closeSearch()
+    closeHelp()
+  }
+
+  if (isTauriRuntime()) {
+    await getCurrentWindow().setFullscreen(enabled)
+  }
+  immersiveMode.value = enabled
+  if (enabled) {
+    await nextTick()
+    editorPane.value?.focusEditor()
+  }
+}
+
+function toggleImmersiveMode() {
+  void setImmersiveMode(!immersiveMode.value)
 }
 
 function insertSeparator() {
@@ -1288,7 +1319,35 @@ function matchesEditorModeShortcut(event: KeyboardEvent) {
 }
 
 function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Tab' && event.ctrlKey && !event.altKey && !event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    cycleTab(event.shiftKey ? -1 : 1)
+    return
+  }
+
+  if (event.key === 'F9' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    toggleTheme()
+    return
+  }
+
+  if (event.key === 'F11' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    toggleImmersiveMode()
+    return
+  }
+
   if (event.key === 'Escape') {
+    if (immersiveMode.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      void setImmersiveMode(false)
+      return
+    }
+
     if (settingsOpen.value) {
       event.preventDefault()
       event.stopPropagation()
@@ -1791,6 +1850,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         `${formatShortcutLabel(shortcutBaseKey.value, shortcutModifiers.value)} - ` + (zh ? '\u663e\u793a/\u9690\u85cf\u7a97\u53e3' : 'Show/hide window'),
         `${formatShortcutLabel(clipboardShortcutBaseKey.value, clipboardShortcutModifiers.value)} - ` + (zh ? '\u4fdd\u5b58\u526a\u8d34\u677f' : 'Save clipboard'),
         'Alt+Enter - ' + (zh ? '\u6700\u5927\u5316/\u8fd8\u539f\u7a97\u53e3' : 'Maximize/restore window'),
+        'Ctrl+Tab / Ctrl+Shift+Tab - ' + (zh ? '\u5207\u6362\u4e0b\u4e00\u4e2a/\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875' : 'Switch next/previous tab'),
         'Ctrl+F - ' + (zh ? '\u67e5\u627e' : 'Find'),
         'Ctrl+Shift+F - ' + (zh ? '\u5168\u5c40\u641c\u7d22' : 'Global search'),
         'Ctrl+D - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4' : 'Insert date time'),
@@ -1802,6 +1862,8 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         (editorModeShortcut.value === 'disabled' ? (zh ? '\u672a\u7ed1\u5b9a' : 'Unbound') : editorModeShortcut.value) +
           ' - ' + (zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f' : 'Cycle editor mode'),
         'F8 - ' + (zh ? '\u6253\u5f00\u8bbe\u7f6e' : 'Open settings'),
+        'F9 - ' + (zh ? '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f' : 'Toggle light/dark theme'),
+        'F11 - ' + (zh ? '\u5207\u6362\u6c89\u6d78\u5f0f\u5168\u5c4f' : 'Toggle immersive fullscreen'),
         'F10 - ' + (zh ? '\u5207\u6362\u6807\u7b7e\u680f\u65b9\u5411' : 'Toggle tab bar orientation'),
         'Esc - ' + (zh ? '\u9690\u85cf\u7a97\u53e3' : 'Hide window'),
       ],
@@ -1867,6 +1929,7 @@ function formatShortcutLabel(baseKey: string, modifiers: string[]) {
     :tab-orientation="tabBarOrientation"
     :data-ready="appReady ? 'true' : 'false'"
     :theme="theme"
+    :immersive="immersiveMode"
   >
     <template #title>
       <MenuBar
@@ -1928,10 +1991,12 @@ function formatShortcutLabel(baseKey: string, modifiers: string[]) {
         @update-tab-color="updateTabColor"
         @new-tab="createLocalTab"
         @toggle-orientation="toggleTabBarOrientation"
+        @previous-tab="cycleTab(-1)"
+        @next-tab="cycleTab(1)"
       />
     </template>
 
-    <div class="workspace-pane" :class="`mode-${previewMode}`">
+    <div class="workspace-pane" :class="[`mode-${previewMode}`, { immersive: immersiveMode }]">
       <input
         ref="fileInput"
         class="file-loader"
@@ -1947,7 +2012,7 @@ function formatShortcutLabel(baseKey: string, modifiers: string[]) {
         @input="updateEditorBackground"
       />
       <EditorPane
-        v-show="previewMode !== 'preview'"
+        v-show="immersiveMode || previewMode !== 'preview'"
         ref="editorPane"
         v-model="content"
         :title="activeTab?.title ?? 'Untitled'"
@@ -1958,7 +2023,7 @@ function formatShortcutLabel(baseKey: string, modifiers: string[]) {
         :vim-insert-exit-key="vimInsertExitKey"
         @vim-mode-change="activeVimMode = $event"
       />
-      <PreviewPane v-if="previewMode !== 'edit'" :content="content" />
+      <PreviewPane v-if="!immersiveMode && previewMode !== 'edit'" :content="content" />
     </div>
 
     <SearchPanel

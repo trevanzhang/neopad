@@ -238,6 +238,27 @@ function deleteCustomText(current: string[]) {
 
       <template v-else-if="activeTab === 'shortcuts'">
         <fieldset class="settings-fieldset settings-shortcut-fieldset">
+          <legend>{{ messages.switchTabs }}</legend>
+          <div class="settings-form-row">
+            <span>{{ messages.shortcut }}:</span>
+            <kbd>Ctrl+Tab / Ctrl+Shift+Tab</kbd>
+          </div>
+        </fieldset>
+        <fieldset class="settings-fieldset settings-shortcut-fieldset">
+          <legend>{{ messages.toggleThemeShortcut }}</legend>
+          <div class="settings-form-row">
+            <span>{{ messages.shortcut }}:</span>
+            <kbd>F9</kbd>
+          </div>
+        </fieldset>
+        <fieldset class="settings-fieldset settings-shortcut-fieldset">
+          <legend>{{ messages.immersiveFullscreen }}</legend>
+          <div class="settings-form-row">
+            <span>{{ messages.shortcut }}:</span>
+            <kbd>F11</kbd>
+          </div>
+        </fieldset>
+        <fieldset class="settings-fieldset settings-shortcut-fieldset">
           <legend>{{ messages.cycleEditorMode }}</legend>
           <label class="settings-form-row">
             <span>{{ messages.shortcut }}:</span>

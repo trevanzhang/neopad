@@ -9,6 +9,8 @@ export type AppMessages = {
     delete: string
     color: string
     defaultColor: string
+    previous: string
+    next: string
   }
   menu: {
     file: string
@@ -158,6 +160,9 @@ export type AppMessages = {
     editor: string
     previewMode: string
     cycleEditorMode: string
+    toggleThemeShortcut: string
+    immersiveFullscreen: string
+    switchTabs: string
     shortcut: string
     disabled: string
     mcp: string
@@ -220,6 +225,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       delete: 'Delete',
       color: 'Tab color',
       defaultColor: 'Default',
+      previous: 'Previous tab',
+      next: 'Next tab',
     },
     menu: {
       file: 'File(F)',
@@ -369,6 +376,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       editor: 'Editor',
       previewMode: 'Preview mode',
       cycleEditorMode: 'Cycle editor mode',
+      toggleThemeShortcut: 'Toggle light/dark theme',
+      immersiveFullscreen: 'Immersive fullscreen',
+      switchTabs: 'Switch tabs',
       shortcut: 'Shortcut',
       disabled: 'Disabled',
       mcp: 'MCP',
@@ -429,6 +439,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       delete: '\u5220\u9664',
       color: '\u4fee\u6539\u6807\u7b7e\u9875\u989c\u8272',
       defaultColor: '\u9ed8\u8ba4\u989c\u8272',
+      previous: '\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875',
+      next: '\u4e0b\u4e00\u4e2a\u6807\u7b7e\u9875',
     },
     menu: {
       file: '\u6587\u4ef6(F)',
@@ -578,6 +590,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       editor: '\u7f16\u8f91\u5668',
       previewMode: '\u9884\u89c8\u6a21\u5f0f',
       cycleEditorMode: '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f',
+      toggleThemeShortcut: '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f',
+      immersiveFullscreen: '\u6c89\u6d78\u5f0f\u5168\u5c4f',
+      switchTabs: '\u5207\u6362\u6807\u7b7e\u9875',
       shortcut: '\u5feb\u6377\u952e',
       disabled: '\u7981\u7528',
       mcp: 'MCP',

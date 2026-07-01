@@ -2,11 +2,12 @@
 defineProps<{
   tabOrientation: 'horizontal' | 'vertical'
   theme: 'light' | 'dark'
+  immersive: boolean
 }>()
 </script>
 
 <template>
-  <main class="app-shell" :class="[`tab-${tabOrientation}`, `theme-${theme}`]">
+  <main class="app-shell" :class="[`tab-${tabOrientation}`, `theme-${theme}`, { immersive }]">
     <div class="window-chrome">
       <slot name="title" />
     </div>

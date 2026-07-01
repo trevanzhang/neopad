@@ -8,6 +8,10 @@ patch versions are reserved for compatible fixes.
 
 ### Added
 
+- `Ctrl+Tab` and `Ctrl+Shift+Tab` cycle through note tabs; the tab bar arrow
+  buttons now provide the same previous/next actions for mouse users.
+- `F9` toggles the light/dark theme, while `F11` enters an immersive native
+  fullscreen mode that shows only the editor; Escape exits immersion first.
 - `Alt+Enter` toggles the main window between maximized and restored states.
 - The global clipboard capture shortcut is now configurable in Settings,
   defaulting to `Ctrl+Shift+V`.

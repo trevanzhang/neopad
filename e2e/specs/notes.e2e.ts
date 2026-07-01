@@ -61,6 +61,51 @@ describe('NeoPad desktop note workflow', () => {
     await expect($('.app-shell')).toBeDisplayed()
   })
 
+  it('toggles the theme with F9 and immersive fullscreen with F11', async () => {
+    const shell = await $('.app-shell')
+    const initialTheme = await shell.getAttribute('class')
+    await browser.keys('F9')
+    await browser.waitUntil(async () => (await shell.getAttribute('class')) !== initialTheme, {
+      timeoutMsg: 'F9 did not toggle the theme',
+    })
+
+    await browser.keys('F11')
+    await browser.waitUntil(async () => (await shell.getAttribute('class')).includes('immersive'), {
+      timeoutMsg: 'F11 did not enter immersive mode',
+    })
+    await expect($('.window-chrome')).not.toBeDisplayed()
+    await expect($('.tab-bar')).not.toBeDisplayed()
+    await expect($('.status-bar')).not.toBeDisplayed()
+    await expect($('.code-editor')).toBeDisplayed()
+
+    await browser.keys('F11')
+    await browser.waitUntil(async () => !(await shell.getAttribute('class')).includes('immersive'), {
+      timeoutMsg: 'F11 did not leave immersive mode',
+    })
+
+    await browser.keys('F11')
+    await browser.waitUntil(async () => (await shell.getAttribute('class')).includes('immersive'))
+    await browser.keys('Escape')
+    await browser.waitUntil(async () => !(await shell.getAttribute('class')).includes('immersive'), {
+      timeoutMsg: 'Escape did not leave immersive mode',
+    })
+    await expect($('.app-shell')).toBeDisplayed()
+  })
+
+  it('cycles tabs with keyboard shortcuts and tab bar arrows', async () => {
+    await click('.tab-item=Inbox')
+    await browser.keys(['Control', 'Tab'])
+    await browser.waitUntil(async () => (await $('.tab-item.active').getText()) === 'Clipboard')
+
+    await browser.keys(['Control', 'Shift', 'Tab'])
+    await browser.waitUntil(async () => (await $('.tab-item.active').getText()) === 'Inbox')
+
+    await click('button[aria-label="Next tab"]')
+    await browser.waitUntil(async () => (await $('.tab-item.active').getText()) === 'Clipboard')
+    await click('button[aria-label="Previous tab"]')
+    await browser.waitUntil(async () => (await $('.tab-item.active').getText()) === 'Inbox')
+  })
+
   it('maximizes and restores with Alt+Enter while edge snapping is enabled', async () => {
     await browser.setWindowSize(720, 520)
     await browser.keys('F8')

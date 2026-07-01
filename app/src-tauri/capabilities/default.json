@@ -3,5 +3,9 @@
   "identifier": "default",
   "description": "Default neopad desktop capability",
   "windows": ["main"],
-  "permissions": ["core:default", "core:webview:allow-set-webview-zoom"]
+  "permissions": [
+    "core:default",
+    "core:webview:allow-set-webview-zoom",
+    "core:window:allow-set-fullscreen"
+  ]
 }

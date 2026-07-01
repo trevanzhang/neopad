@@ -17,6 +17,8 @@ const emit = defineEmits<{
   updateTabColor: [tabId: string, color: string | null]
   newTab: []
   toggleOrientation: []
+  previousTab: []
+  nextTab: []
 }>()
 
 const contextMenu = ref<{ tabId: string; x: number; y: number } | null>(null)
@@ -98,9 +100,13 @@ function updateColor(color: string | null) {
     <button class="tab-add" type="button" title="New note" aria-label="New note" @click="$emit('newTab')">
       +
     </button>
-    <div class="tab-scroll-buttons" aria-hidden="true">
-      <span>‹</span>
-      <span>›</span>
+    <div class="tab-scroll-buttons">
+      <button type="button" :title="messages.previous" :aria-label="messages.previous" @click="$emit('previousTab')">
+        &lsaquo;
+      </button>
+      <button type="button" :title="messages.next" :aria-label="messages.next" @click="$emit('nextTab')">
+        &rsaquo;
+      </button>
     </div>
     <div
       v-if="contextMenu"
