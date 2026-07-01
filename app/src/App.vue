@@ -22,6 +22,7 @@ import {
   readNote,
   renameNote,
   saveClipboard,
+  saveMarkdownFile,
   saveUiConfig,
   searchNotes,
   setNoteColor,
@@ -706,8 +707,19 @@ async function loadFileFromInput(event: Event) {
 async function saveAsFile() {
   await forceSave()
   const title = activeTab.value?.title || 'Untitled'
-  downloadText(`${safeFileName(title)}.md`, content.value)
-  statusMessage.value = t.value.status.savedAsFile
+  const fileName = `${safeFileName(title)}.md`
+
+  try {
+    if (isTauriRuntime()) {
+      const saved = await saveMarkdownFile(fileName, content.value)
+      if (!saved) return
+    } else {
+      downloadText(fileName, content.value)
+    }
+    statusMessage.value = t.value.status.savedAsFile
+  } catch {
+    saveState.value = 'Failed'
+  }
 }
 
 async function exportAllNotes() {
@@ -720,7 +732,13 @@ async function exportAllNotes() {
       sections.push(`## ${tab.title}\n\n<!-- file: ${tab.fileName} -->\n\n${noteContent.trimEnd()}\n`)
     }
 
-    downloadText('neopad-export.md', `# Exported from NeoPad\n\n${sections.join('\n---\n\n')}`)
+    const exportContent = `# Exported from NeoPad\n\n${sections.join('\n---\n\n')}`
+    if (isTauriRuntime()) {
+      const saved = await saveMarkdownFile('neopad-export.md', exportContent)
+      if (!saved) return
+    } else {
+      downloadText('neopad-export.md', exportContent)
+    }
     statusMessage.value = t.value.status.exported
   } catch {
     saveState.value = 'Failed'

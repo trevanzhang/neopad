@@ -39,6 +39,8 @@ Implemented MVP capabilities:
 - Native whole-window opacity controlled from an in-app slider.
 - Compact settings that remain usable at the minimum supported window size.
 - Full-text search.
+- Native Save As for exporting the active note or a combined all-notes document
+  to a user-selected Markdown file.
 - Manual clipboard capture into `clipboard.md`.
 - Tray menu.
 - Single-instance startup and persistent main-window position, with a

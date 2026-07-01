@@ -7,11 +7,12 @@ use commands::{
     app_version, create_note_command, delete_note_command, get_shortcut_warnings_command,
     get_ui_config_command, get_workspace_command, hide_window_command, list_notes_command,
     open_trash_command, quit_app_command, read_note_command, rename_note_command,
-    save_clipboard_command, save_ui_config_command, search_notes_command, set_autostart_command,
-    set_close_to_minimize_command, set_note_color_command, set_snap_to_edges_command,
-    set_window_opacity_command, show_window_command, toggle_always_on_top_command,
-    toggle_main_window_maximize_command, toggle_window_command, update_clipboard_shortcut_command,
-    update_toggle_shortcut_command, write_note_command, AppState,
+    save_clipboard_command, save_markdown_file_command, save_ui_config_command,
+    search_notes_command, set_autostart_command, set_close_to_minimize_command,
+    set_note_color_command, set_snap_to_edges_command, set_window_opacity_command,
+    show_window_command, toggle_always_on_top_command, toggle_main_window_maximize_command,
+    toggle_window_command, update_clipboard_shortcut_command, update_toggle_shortcut_command,
+    write_note_command, AppState,
 };
 use neopad_core::init_workspace;
 use std::sync::{atomic::AtomicBool, Mutex};
@@ -75,6 +76,7 @@ pub fn run() {
             delete_note_command,
             set_note_color_command,
             search_notes_command,
+            save_markdown_file_command,
             show_window_command,
             hide_window_command,
             set_autostart_command,
