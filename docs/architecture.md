@@ -82,7 +82,8 @@ the configured workspace.
 - Tauri command bindings to core operations.
 - Vue app shell and note editing workflow.
 - CodeMirror markdown editor with optional Vim key bindings, configurable
-  Insert-mode exit sequence, and visible mode status.
+  Insert-mode exit sequence, visible mode status, and an option to preserve
+  NeoPad Ctrl shortcuts when Vim mappings conflict.
 - Markdown preview and split mode.
 - Persistent light and dark themes.
 - Native Windows whole-window opacity controlled through a Tauri command and
@@ -102,6 +103,8 @@ the configured workspace.
 The two global shortcuts are configurable and re-registered at runtime. NeoPad
 rejects duplicate window and clipboard shortcut combinations.
 - Close-to-hide behavior.
+- Single-instance enforcement and persisted main-window position; the initial
+  position is the active screen's bottom-right work area.
 - Windows runtime icon and release GUI subsystem.
 
 ## MCP Responsibilities

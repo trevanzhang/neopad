@@ -31,6 +31,8 @@ pub struct AppConfig {
 pub struct UiConfig {
     pub language: String,
     pub vim_mode: bool,
+    #[serde(default = "default_true")]
+    pub vim_use_ctrl_shortcuts: bool,
     pub vim_insert_exit_key: String,
     pub tab_bar_orientation: String,
     pub word_wrap: bool,
@@ -58,11 +60,16 @@ fn default_editor_mode_shortcut() -> String {
     "F7".to_owned()
 }
 
+fn default_true() -> bool {
+    true
+}
+
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
             language: "en".to_owned(),
             vim_mode: false,
+            vim_use_ctrl_shortcuts: true,
             vim_insert_exit_key: "jj".to_owned(),
             tab_bar_orientation: "horizontal".to_owned(),
             word_wrap: true,
@@ -201,6 +208,18 @@ mod tests {
 
         let config: UiConfig = serde_json::from_value(value).expect("legacy UI config");
         assert_eq!(config.editor_mode_shortcut, "F7");
+    }
+
+    #[test]
+    fn old_ui_config_keeps_neopad_ctrl_shortcuts_in_vim_mode() {
+        let mut value = serde_json::to_value(UiConfig::default()).expect("serialize UI config");
+        value
+            .as_object_mut()
+            .expect("UI config object")
+            .remove("vimUseCtrlShortcuts");
+
+        let config: UiConfig = serde_json::from_value(value).expect("legacy UI config");
+        assert!(config.vim_use_ctrl_shortcuts);
     }
 
     #[test]

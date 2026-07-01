@@ -35,7 +35,7 @@ body {
 
 .app-shell.tab-vertical {
   grid-template-rows: auto minmax(0, 1fr) auto;
-  grid-template-columns: 170px minmax(0, 1fr);
+  grid-template-columns: 145px minmax(0, 1fr);
 }
 
 .app-shell.tab-vertical .window-chrome,
@@ -253,8 +253,11 @@ body {
 
 .tab-item.active {
   background: #eeeeee;
-  border-bottom-color: #eeeeee;
-  box-shadow: inset 1px 1px #ffffff;
+  border-color: #777777;
+  border-bottom-color: #f7f7f7;
+  box-shadow: inset 0 -3px rgba(0, 0, 0, 0.32), inset 1px 1px #ffffff, 0 1px 2px rgba(0, 0, 0, 0.18);
+  font-weight: 700;
+  transform: translateY(-1px);
 }
 
 .tab-add {
@@ -368,6 +371,8 @@ body {
   width: auto;
   max-width: none;
   margin: 4px 4px 0;
+  padding-right: 8px;
+  padding-left: 8px;
   text-align: left;
 }
 
@@ -552,6 +557,7 @@ body {
 .theme-dark .tab-item.active {
   background: var(--np-control-active);
   border-bottom-color: var(--np-control-active);
+  box-shadow: inset 0 -3px rgba(255, 255, 255, 0.5), inset 1px 1px #454c56, 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 .theme-dark .markdown-preview code,
@@ -1016,6 +1022,82 @@ body {
   margin: 4px 0 2px 26px;
   color: var(--np-muted);
   line-height: 1.4;
+}
+
+.settings-description {
+  margin: 0 0 8px;
+  color: var(--np-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.theme-dark .settings-header,
+.theme-dark .settings-tabs {
+  color: var(--np-text);
+  background: var(--np-chrome);
+  border-color: var(--np-border);
+}
+
+.theme-dark .settings-tabs button {
+  color: var(--np-text);
+  background: var(--np-control);
+  border-color: var(--np-border);
+}
+
+.theme-dark .settings-tabs button.active {
+  background: var(--np-surface);
+  border-color: var(--np-accent);
+}
+
+.theme-dark .settings-content {
+  color: var(--np-text);
+  background: var(--np-surface);
+  border-color: var(--np-border);
+}
+
+.theme-dark .settings-fieldset,
+.theme-dark .settings-shortcut-fieldset,
+.theme-dark .settings-custom-fieldset,
+.theme-dark .settings-modifier-list {
+  color: var(--np-text);
+  border-color: var(--np-border);
+}
+
+.theme-dark .settings-check-row,
+.theme-dark .settings-form-row,
+.theme-dark .settings-radio-row,
+.theme-dark .settings-template-row {
+  color: var(--np-text);
+}
+
+.theme-dark .settings-form-row input[type="text"],
+.theme-dark .settings-template-row input,
+.theme-dark .settings-custom-fieldset select {
+  color: var(--np-text);
+  background: var(--np-code);
+  border-color: var(--np-border);
+}
+
+.theme-dark .settings-footer {
+  color: var(--np-text);
+  background: var(--np-chrome);
+  border-color: var(--np-border);
+}
+
+.theme-dark .settings-custom-actions button,
+.theme-dark .settings-footer button,
+.theme-dark .settings-close {
+  color: var(--np-text);
+  background: var(--np-control);
+  border-color: var(--np-border);
+}
+
+.theme-dark .settings-panel input,
+.theme-dark .settings-panel select,
+.theme-dark .settings-panel textarea {
+  color: var(--np-text);
+  background: var(--np-code);
+  border-color: var(--np-border);
 }
 
 .settings-slider-row {

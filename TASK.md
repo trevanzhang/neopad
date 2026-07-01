@@ -26,7 +26,8 @@ Implemented MVP capabilities:
 - CodeMirror 6 Markdown editor.
 - Optional Vim key bindings with an explicit mode indicator. Vim support stays
   an editor input mode rather than a plugin or Vim runtime system; its small
-  set of options lives under Advanced settings.
+  set of options lives under Advanced settings, including whether NeoPad Ctrl
+  shortcuts take priority over conflicting Vim mappings.
 - Plain Markdown persistence under `~/.neopad/notes/*.md`.
 - Multiple tabs backed by local metadata.
 - Autosave.
@@ -40,6 +41,8 @@ Implemented MVP capabilities:
 - Full-text search.
 - Manual clipboard capture into `clipboard.md`.
 - Tray menu.
+- Single-instance startup and persistent main-window position, with a
+  bottom-right default on first launch.
 - Global shortcuts.
 - Configurable global window and clipboard shortcuts, plus local `Alt+Enter`
   maximize/restore.

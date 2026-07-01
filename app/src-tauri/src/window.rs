@@ -14,6 +14,25 @@ pub fn install_main_window_icon(app: &App) {
     }
 }
 
+pub fn place_main_window_at_bottom_right(app: &App) {
+    let Some(window) = main_window(app.handle()) else {
+        return;
+    };
+    let Ok(Some(monitor)) = window
+        .current_monitor()
+        .or_else(|_| window.primary_monitor())
+    else {
+        return;
+    };
+    let Ok(size) = window.outer_size() else {
+        return;
+    };
+    let work_area = monitor.work_area();
+    let x = work_area.position.x + work_area.size.width.saturating_sub(size.width) as i32;
+    let y = work_area.position.y + work_area.size.height.saturating_sub(size.height) as i32;
+    let _ = window.set_position(PhysicalPosition::new(x, y));
+}
+
 pub fn install_close_to_hide_handler(app: &App) {
     let Some(window) = main_window(app.handle()) else {
         return;

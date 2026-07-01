@@ -18,13 +18,16 @@ The repository currently contains a working Windows-focused MVP:
   trash moves, search, config, tabs, and path safety.
 - System tray menu, close-to-hide behavior, global shortcuts, and clipboard
   append.
+- Single-instance startup, first-launch placement at the screen's bottom-right,
+  and restoration of the last window position on later launches.
 - Configurable global shortcuts for window visibility and clipboard capture,
   plus `Alt+Enter` maximize/restore.
 - Edit, hybrid, and preview editor modes selectable from the View menu, status
   bar, configurable shortcut, and persisted default setting.
 - Optional Vim key bindings for the CodeMirror editor, with persisted settings
   in the Advanced tab, configurable Insert exit sequence, and a visible Normal,
-  Insert, or Visual mode indicator.
+  Insert, or Visual mode indicator. NeoPad Ctrl shortcuts can optionally take
+  priority over conflicting Vim mappings.
 - Persistent light and dark themes available from the Format menu and status
   bar.
 - Tab context menu with rename, trash, and persistent color choices.
