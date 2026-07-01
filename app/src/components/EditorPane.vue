@@ -67,7 +67,7 @@ function baseEditorTheme() {
     '&': {
       height: '100%',
       color: 'var(--np-text)',
-      fontSize: '15px',
+      fontSize: '14px',
     },
     '.cm-scroller': {
       lineHeight: '1.45',
