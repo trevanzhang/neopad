@@ -36,6 +36,24 @@ describe('NeoPad desktop note workflow', () => {
     })
   })
 
+  it('renames a tab with the themed input dialog', async () => {
+    const tab = await $('.tab-item=Untitled')
+    await tab.doubleClick()
+    await expect($('.input-dialog')).toBeDisplayed()
+
+    const input = await $('.input-dialog input')
+    expect(await input.getValue()).toBe('Untitled')
+    await input.setValue('E2E Renamed')
+    await browser.keys('Enter')
+    await expect($('.input-dialog')).not.toBeDisplayed()
+    await expect($('.tab-item=E2E Renamed')).toBeDisplayed()
+
+    await (await $('.tab-item=E2E Renamed')).doubleClick()
+    await browser.keys('Escape')
+    await expect($('.input-dialog')).not.toBeDisplayed()
+    await expect($('.app-shell')).toBeDisplayed()
+  })
+
   it('opens native-backed settings without losing the active note', async () => {
     await browser.keys('F8')
     await expect($('.settings-panel')).toBeDisplayed()

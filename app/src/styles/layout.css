@@ -15,7 +15,6 @@ body {
   color: var(--np-text);
   background: #ffffff;
   border: 1px solid #2d3440;
-  border-radius: 8px;
   box-shadow: none;
 }
 
@@ -812,6 +811,84 @@ body {
 
 .help-body p {
   margin: 0;
+}
+
+.input-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.3);
+}
+
+.input-dialog {
+  display: grid;
+  width: min(430px, 100%);
+  overflow: hidden;
+  color: var(--np-text);
+  background: var(--np-surface);
+  border: 1px solid var(--np-border);
+  border-radius: 8px;
+  box-shadow: var(--np-shadow);
+}
+
+.input-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 6px 10px 6px 14px;
+  background: var(--np-chrome);
+  border-bottom: 1px solid var(--np-border);
+}
+
+.input-dialog-header button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+}
+
+.input-dialog-body {
+  padding: 16px;
+}
+
+.input-dialog-body label {
+  display: grid;
+  gap: 7px;
+}
+
+.input-dialog-body input {
+  width: 100%;
+  height: 32px;
+  padding: 0 9px;
+  color: var(--np-text);
+  background: var(--np-code);
+  border: 1px solid var(--np-border);
+  border-radius: 2px;
+}
+
+.input-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px 14px;
+}
+
+.input-dialog button {
+  min-width: 72px;
+  height: 30px;
+  color: var(--np-text);
+  background: var(--np-control);
+  border: 1px solid var(--np-border);
+  border-radius: 3px;
+}
+
+.input-dialog button.primary {
+  color: #ffffff;
+  background: #2b65c8;
+  border-color: #2b65c8;
 }
 
 .settings-section h2 {

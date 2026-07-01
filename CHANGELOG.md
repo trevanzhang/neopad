@@ -26,6 +26,10 @@ patch versions are reserved for compatible fixes.
 
 ### Fixed
 
+- Browser-native text prompts have been replaced by a compact, theme-aware
+  NeoPad input dialog for tab titles, editor fonts, and custom insert text.
+- The web content no longer applies a second rounded mask inside the native
+  Windows frame, removing visible gaps at all four window corners.
 - Escape now closes settings, menus, search, help, and tab context menus before
   falling back to hiding the main window.
 - Menu popovers now size to their command labels and shortcut columns so long

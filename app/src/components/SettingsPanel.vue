@@ -54,6 +54,7 @@ const emit = defineEmits<{
   'update:insertDateTimeTemplate': [value: string]
   'update:insertDateTimeSeparatorTemplate': [value: string]
   'update:customInsertTexts': [value: string[]]
+  editCustomText: [index: number]
   copyMcpConfig: [allowWrite: boolean]
 }>()
 
@@ -75,19 +76,11 @@ function addCustomText(current: string[]) {
   selectedCustomIndex.value = current.length
 }
 
-function editCustomText(current: string[]) {
+function editCustomText() {
   if (selectedCustomIndex.value === null) {
     return
   }
-
-  const nextValue = window.prompt('', current[selectedCustomIndex.value] ?? '')
-  if (nextValue === null) {
-    return
-  }
-
-  const next = [...current]
-  next[selectedCustomIndex.value] = nextValue
-  emit('update:customInsertTexts', next)
+  emit('editCustomText', selectedCustomIndex.value)
 }
 
 function deleteCustomText(current: string[]) {
@@ -358,7 +351,7 @@ function deleteCustomText(current: string[]) {
           </select>
           <div class="settings-custom-actions">
             <button type="button" @click="addCustomText(customInsertTexts)">{{ messages.add }}</button>
-            <button type="button" @click="editCustomText(customInsertTexts)">{{ messages.edit }}</button>
+            <button type="button" @click="editCustomText">{{ messages.edit }}</button>
             <button type="button" @click="deleteCustomText(customInsertTexts)">{{ messages.delete }}</button>
           </div>
         </fieldset>

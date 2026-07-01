@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppShell from './components/AppShell.vue'
 import EditorPane from './components/EditorPane.vue'
+import InputDialog from './components/InputDialog.vue'
 import MenuBar from './components/MenuBar.vue'
 import PreviewPane from './components/PreviewPane.vue'
 import SearchPanel from './components/SearchPanel.vue'
@@ -49,6 +50,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 type TabBarOrientation = 'horizontal' | 'vertical'
 type HelpTopic = 'software' | 'shortcuts' | 'expression' | 'about'
 type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
+type InputDialogState = { title: string; initialValue: string }
 
 const now = Date.now()
 const tabs = ref<NoteTab[]>([
@@ -85,6 +87,8 @@ const editorModeShortcut = ref<EditorModeShortcut>(initialEditorModeShortcut())
 const searchOpen = ref(false)
 const settingsOpen = ref(false)
 const helpTopic = ref<HelpTopic | null>(null)
+const inputDialog = ref<InputDialogState | null>(null)
+let resolveInputDialog: ((value: string | null) => void) | null = null
 const immersiveMode = ref(false)
 const searchQuery = ref('')
 const searchResults = ref<SearchResult[]>([])
@@ -546,7 +550,7 @@ async function updateTabColor(tabId: string, color: string | null) {
 
 async function renameTab(tab: NoteTab) {
   if (tab.id === 'inbox' || tab.id === 'clipboard') return
-  const nextTitle = window.prompt(t.value.settings.renameTitle, tab.title)?.trim()
+  const nextTitle = (await requestInput(t.value.settings.renameTitle, tab.title))?.trim()
   if (!nextTitle) return
 
   if (isTauriRuntime()) {
@@ -782,14 +786,37 @@ function toggleTabBarOrientation() {
   tabBarOrientation.value = tabBarOrientation.value === 'horizontal' ? 'vertical' : 'horizontal'
 }
 
-function promptEditorFont() {
-  const nextFont = window.prompt(t.value.menu.font, editorFontFamily.value)?.trim()
+async function promptEditorFont() {
+  const nextFont = (await requestInput(t.value.menu.font, editorFontFamily.value))?.trim()
   if (!nextFont) {
     return
   }
 
   editorFontFamily.value = nextFont
   statusMessage.value = t.value.status.fontUpdated
+}
+
+function requestInput(title: string, initialValue: string) {
+  resolveInputDialog?.(null)
+  inputDialog.value = { title, initialValue }
+  return new Promise<string | null>((resolve) => {
+    resolveInputDialog = resolve
+  })
+}
+
+function finishInputDialog(value: string | null) {
+  const resolve = resolveInputDialog
+  resolveInputDialog = null
+  inputDialog.value = null
+  resolve?.(value)
+}
+
+async function editCustomInsertText(index: number) {
+  const value = await requestInput(t.value.settings.custom, customInsertTexts.value[index] ?? '')
+  if (value === null) return
+  const next = [...customInsertTexts.value]
+  next[index] = value
+  customInsertTexts.value = next
 }
 
 function openBackgroundColorPicker() {
@@ -1341,6 +1368,13 @@ function handleKeydown(event: KeyboardEvent) {
   }
 
   if (event.key === 'Escape') {
+    if (inputDialog.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      finishInputDialog(null)
+      return
+    }
+
     if (immersiveMode.value) {
       event.preventDefault()
       event.stopPropagation()
@@ -2082,7 +2116,18 @@ function formatShortcutLabel(baseKey: string, modifiers: string[]) {
       @update:insert-date-time-template="insertDateTimeTemplate = $event"
       @update:insert-date-time-separator-template="insertDateTimeSeparatorTemplate = $event"
       @update:custom-insert-texts="customInsertTexts = $event"
+      @edit-custom-text="editCustomInsertText"
       @copy-mcp-config="copyMcpConfig"
+    />
+
+    <InputDialog
+      v-if="inputDialog"
+      :title="inputDialog.title"
+      :initial-value="inputDialog.initialValue"
+      :confirm-label="t.settings.ok"
+      :cancel-label="t.settings.cancel"
+      @confirm="finishInputDialog"
+      @cancel="finishInputDialog(null)"
     />
 
     <section v-if="helpTopic" class="help-panel" role="dialog" aria-modal="true" :aria-label="helpContent.title">
