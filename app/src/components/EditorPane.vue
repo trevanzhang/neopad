@@ -3,6 +3,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from
 import { markdown } from '@codemirror/lang-markdown'
 import { bracketMatching } from '@codemirror/language'
 import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
+import { getCM, Vim, vim } from '@replit/codemirror-vim'
 import {
   drawSelection,
   dropCursor,
@@ -17,6 +18,12 @@ const props = defineProps<{
   wordWrap: boolean
   fontFamily: string
   backgroundColor: string
+  vimMode: boolean
+  vimInsertExitKey: string
+}>()
+
+const emit = defineEmits<{
+  vimModeChange: [mode: string]
 }>()
 
 const model = defineModel<string>({ required: true })
@@ -25,9 +32,13 @@ let editorView: EditorView | null = null
 const editable = new Compartment()
 const wrap = new Compartment()
 const appearance = new Compartment()
+const vimSupport = new Compartment()
+let vimModeChangeHandler: ((event: { mode: string; subMode?: string }) => void) | null = null
+let mappedInsertExitKey = ''
 type ExpressionToken = { type: 'number'; value: number } | { type: 'operator'; value: string } | { type: 'paren'; value: '(' | ')' }
 
 const extensions = [
+  vimSupport.of(props.vimMode ? vim() : []),
   history(),
   drawSelection(),
   dropCursor(),
@@ -66,7 +77,7 @@ function baseEditorTheme() {
       minHeight: '100%',
     },
     '.cm-line': {
-      color: '#111111',
+      color: 'var(--np-text)',
       textDecoration: 'none',
       fontWeight: '400',
     },
@@ -80,6 +91,15 @@ function baseEditorTheme() {
     },
     '.cm-focused': {
       outline: '0',
+    },
+    '.cm-fat-cursor': {
+      backgroundColor: 'var(--np-vim-cursor) !important',
+      color: 'var(--np-vim-cursor-text) !important',
+    },
+    '&:not(.cm-focused) .cm-fat-cursor': {
+      backgroundColor: 'transparent !important',
+      color: 'transparent !important',
+      outline: '1px solid var(--np-vim-cursor)',
     },
   })
 }
@@ -100,6 +120,7 @@ onMounted(() => {
     return
   }
 
+  updateInsertExitMapping(props.vimInsertExitKey)
   editorView = new EditorView({
     state: EditorState.create({
       doc: model.value,
@@ -107,12 +128,62 @@ onMounted(() => {
     }),
     parent: editorRoot.value,
   })
+  connectVimModeListener()
 })
 
 onBeforeUnmount(() => {
+  disconnectVimModeListener()
+  updateInsertExitMapping('')
   editorView?.destroy()
   editorView = null
 })
+
+watch(
+  () => props.vimMode,
+  (enabled) => {
+    if (!editorView) return
+    disconnectVimModeListener()
+    editorView.dispatch({ effects: vimSupport.reconfigure(enabled ? vim() : []) })
+    connectVimModeListener()
+  },
+)
+
+watch(
+  () => props.vimInsertExitKey,
+  (key) => updateInsertExitMapping(key),
+)
+
+function updateInsertExitMapping(key: string) {
+  if (mappedInsertExitKey) {
+    Vim.unmap(mappedInsertExitKey, 'insert')
+  }
+  mappedInsertExitKey = key
+  if (mappedInsertExitKey) {
+    Vim.map(mappedInsertExitKey, '<Esc>', 'insert')
+  }
+}
+
+function connectVimModeListener() {
+  if (!editorView || !props.vimMode) {
+    emit('vimModeChange', '')
+    return
+  }
+
+  const cm = getCM(editorView)
+  if (!cm) return
+  vimModeChangeHandler = (event) => {
+    emit('vimModeChange', event.subMode ? `${event.mode}-${event.subMode}` : event.mode)
+  }
+  cm.on('vim-mode-change', vimModeChangeHandler)
+  emit('vimModeChange', cm.state.vim?.mode ?? 'normal')
+}
+
+function disconnectVimModeListener() {
+  if (editorView && vimModeChangeHandler) {
+    getCM(editorView)?.off('vim-mode-change', vimModeChangeHandler)
+  }
+  vimModeChangeHandler = null
+}
 
 watch(model, (nextValue) => {
   if (!editorView) {
@@ -162,6 +233,10 @@ function runEditorCommand(command: (view: EditorView) => boolean) {
 
 function focusEditor() {
   editorView?.focus()
+}
+
+function isEditorFocused() {
+  return editorView?.hasFocus ?? false
 }
 
 function undoEdit() {
@@ -463,6 +538,7 @@ function formatCalculationResult(result: number) {
 
 defineExpose({
   focusEditor,
+  isEditorFocused,
   undoEdit,
   redoEdit,
   cutSelection,

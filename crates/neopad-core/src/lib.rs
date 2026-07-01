@@ -11,7 +11,8 @@ pub use config::{load_config, save_config, AppConfig, McpConfig, PreviewMode, Th
 pub use lock::{lock_workspace_for_write, WorkspaceWriteLock};
 pub use note::{
     append_to_clipboard_note, append_to_note, create_note, delete_note_to_trash, list_notes,
-    read_note, rename_note, write_note_atomic, write_note_atomic_checked, NoteContent,
+    read_note, rename_note, set_note_color, write_note_atomic, write_note_atomic_checked,
+    NoteContent,
 };
 pub use search::{search_notes, SearchResult};
 pub use tab::{NoteTab, TabsState};

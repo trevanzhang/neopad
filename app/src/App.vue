@@ -23,6 +23,7 @@ import {
   saveClipboard,
   saveUiConfig,
   searchNotes,
+  setNoteColor,
   setAutostart,
   setCloseToMinimize,
   setSnapToEdges,
@@ -31,9 +32,11 @@ import {
   updateToggleShortcut,
   writeNote,
 } from './lib/invoke'
+import type { AppTheme } from './lib/invoke'
 import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
 import { AutosaveCoordinator } from './lib/autosave'
+import { editorBackgroundForTheme } from './lib/theme'
 import type { NoteTab, SearchResult } from './types/note'
 import { isEditorMode, nextEditorMode, type EditorMode, type EditorModeShortcut } from './types/editor'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
@@ -82,8 +85,11 @@ const searchQuery = ref('')
 const searchResults = ref<SearchResult[]>([])
 const searching = ref(false)
 const alwaysOnTop = ref(false)
-const theme = ref<'system' | 'light' | 'dark'>('system')
+const theme = ref<AppTheme>(initialTheme())
 const language = ref<AppLanguage>(initialLanguage())
+const vimMode = ref(initialBooleanSetting('neopad.vimMode', false))
+const vimInsertExitKey = ref(initialStringSetting('neopad.vimInsertExitKey', 'jj'))
+const activeVimMode = ref('')
 const tabBarOrientation = ref<TabBarOrientation>(initialTabBarOrientation())
 const wordWrap = ref(initialBooleanSetting('neopad.wordWrap', true))
 const editorFontFamily = ref(initialStringSetting('neopad.editorFontFamily', '"Segoe UI", Arial, sans-serif'))
@@ -98,7 +104,9 @@ const shortcutBaseKey = ref(initialStringSetting('neopad.shortcutBaseKey', 'Z'))
 const shortcutModifiers = ref<string[]>(initialJsonSetting('neopad.shortcutModifiers', ['Alt']))
 const insertSeparatorTemplate = ref(initialStringSetting('neopad.insertSeparatorTemplate', "crlf() + chars('-', 80) + crlf()"))
 const insertDateTimeTemplate = ref(initialStringSetting('neopad.insertDateTimeTemplate', "date() + ' ' + time()"))
-const insertDateTimeSeparatorTemplate = ref(initialStringSetting('neopad.insertDateTimeSeparatorTemplate', "crlf() + chars('-', 29) + ' ' + date() + ' ' + time()"))
+const legacyDateTimeSeparatorTemplate = "crlf() + chars('-', 29) + ' ' + date() + ' ' + time()"
+const defaultDateTimeSeparatorTemplate = "crlf() + chars('-', 29) + ' ' + date() + ' ' + time() + ' ' + chars('-', 29) + crlf()"
+const insertDateTimeSeparatorTemplate = ref(initialDateTimeSeparatorTemplate())
 const customInsertTexts = ref<string[]>(initialJsonSetting('neopad.customInsertTexts', []))
 const fileInput = ref<HTMLInputElement | null>(null)
 const backgroundColorInput = ref<HTMLInputElement | null>(null)
@@ -131,6 +139,8 @@ const editorModeLabel = computed(() => {
   if (previewMode.value === 'split') return t.value.status.hybridMode
   return t.value.status.editMode
 })
+const effectiveEditorBackground = computed(() => editorBackgroundForTheme(theme.value, editorBackgroundColor.value))
+const themeToggleLabel = computed(() => theme.value === 'dark' ? t.value.status.switchToLight : t.value.status.switchToDark)
 let searchTimer: number | null = null
 let uiConfigTimer: number | null = null
 let nativeSettingsTimer: number | null = null
@@ -270,6 +280,10 @@ watch(editorBackgroundColor, () => {
   window.localStorage.setItem('neopad.editorBackgroundColor', editorBackgroundColor.value)
 })
 
+watch(theme, () => {
+  window.localStorage.setItem('neopad.theme', theme.value)
+})
+
 watch(windowOpacity, () => {
   window.localStorage.setItem('neopad.windowOpacity', String(windowOpacity.value))
 })
@@ -327,13 +341,24 @@ watch(editorModeShortcut, () => {
   window.localStorage.setItem('neopad.editorModeShortcut', editorModeShortcut.value)
 })
 
+watch(vimMode, () => {
+  window.localStorage.setItem('neopad.vimMode', String(vimMode.value))
+})
+
+watch(vimInsertExitKey, () => {
+  window.localStorage.setItem('neopad.vimInsertExitKey', vimInsertExitKey.value)
+})
+
 watch(
   [
     language,
+    vimMode,
+    vimInsertExitKey,
     tabBarOrientation,
     wordWrap,
     editorFontFamily,
     editorBackgroundColor,
+    theme,
     windowOpacity,
     runAtStartup,
     closeToMinimize,
@@ -363,6 +388,13 @@ function initialLanguage(): AppLanguage {
   }
 
   return window.localStorage.getItem('neopad.language') === 'zh' ? 'zh' : 'en'
+}
+
+function initialTheme(): AppTheme {
+  if (typeof window === 'undefined') return 'light'
+  const stored = window.localStorage.getItem('neopad.theme')
+  if (stored === 'light' || stored === 'dark') return stored
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
 function initialTabBarOrientation(): TabBarOrientation {
@@ -413,6 +445,11 @@ function initialEditorModeShortcut(): EditorModeShortcut {
   return value === 'Ctrl+Shift+M' || value === 'disabled' ? value : 'F7'
 }
 
+function initialDateTimeSeparatorTemplate() {
+  const value = initialStringSetting('neopad.insertDateTimeSeparatorTemplate', defaultDateTimeSeparatorTemplate)
+  return value === legacyDateTimeSeparatorTemplate ? defaultDateTimeSeparatorTemplate : value
+}
+
 async function selectTab(tabId: string) {
   if (tabId === activeTabId.value) {
     return
@@ -449,6 +486,32 @@ async function renameActivePage() {
 
 async function deleteActivePage() {
   if (activeTab.value) await deleteTab(activeTab.value)
+}
+
+async function renamePageById(tabId: string) {
+  const tab = tabs.value.find((item) => item.id === tabId)
+  if (tab) await renameTab(tab)
+}
+
+async function deletePageById(tabId: string) {
+  const tab = tabs.value.find((item) => item.id === tabId)
+  if (tab) await deleteTab(tab)
+}
+
+async function updateTabColor(tabId: string, color: string | null) {
+  const tab = tabs.value.find((item) => item.id === tabId)
+  if (!tab) return
+  if (isTauriRuntime()) {
+    try {
+      const updated = await setNoteColor(tabId, color)
+      tab.color = updated.color
+      tab.updatedAt = updated.updatedAt
+    } catch {
+      saveState.value = 'Failed'
+    }
+  } else {
+    tab.color = color ?? undefined
+  }
 }
 
 async function renameTab(tab: NoteTab) {
@@ -714,6 +777,10 @@ function toggleWordWrap() {
   statusMessage.value = wordWrap.value ? t.value.status.wordWrapOn : t.value.status.wordWrapOff
 }
 
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+}
+
 function insertSeparator() {
   insertEditorText(renderInsertTemplate(insertSeparatorTemplate.value))
 }
@@ -967,10 +1034,17 @@ async function loadNativeUiConfig() {
       return
     }
     const ui = stored.ui
+    theme.value = stored.theme === 'dark'
+      ? 'dark'
+      : stored.theme === 'light'
+        ? 'light'
+        : window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     const storedMode = isEditorMode(stored.previewMode) ? stored.previewMode : 'edit'
     previewMode.value = storedMode
     defaultEditorMode.value = storedMode
     language.value = ui.language === 'zh' ? 'zh' : 'en'
+    vimMode.value = ui.vimMode
+    vimInsertExitKey.value = ui.vimInsertExitKey
     tabBarOrientation.value = ui.tabBarOrientation === 'vertical' ? 'vertical' : 'horizontal'
     wordWrap.value = ui.wordWrap
     editorFontFamily.value = ui.editorFontFamily
@@ -988,7 +1062,9 @@ async function loadNativeUiConfig() {
     shortcutModifiers.value = ui.shortcutModifiers
     insertSeparatorTemplate.value = ui.insertSeparatorTemplate
     insertDateTimeTemplate.value = ui.insertDateTimeTemplate
-    insertDateTimeSeparatorTemplate.value = ui.insertDateTimeSeparatorTemplate
+    insertDateTimeSeparatorTemplate.value = ui.insertDateTimeSeparatorTemplate === legacyDateTimeSeparatorTemplate
+      ? defaultDateTimeSeparatorTemplate
+      : ui.insertDateTimeSeparatorTemplate
     customInsertTexts.value = ui.customInsertTexts
     editorModeShortcut.value = ui.editorModeShortcut === 'Ctrl+Shift+M' || ui.editorModeShortcut === 'disabled'
       ? ui.editorModeShortcut
@@ -1008,6 +1084,8 @@ function persistUiConfig() {
     try {
       await saveUiConfig({
         language: language.value,
+        vimMode: vimMode.value,
+        vimInsertExitKey: vimInsertExitKey.value,
         tabBarOrientation: tabBarOrientation.value,
         wordWrap: wordWrap.value,
         editorFontFamily: editorFontFamily.value,
@@ -1025,7 +1103,7 @@ function persistUiConfig() {
         insertDateTimeSeparatorTemplate: insertDateTimeSeparatorTemplate.value,
         customInsertTexts: customInsertTexts.value,
         editorModeShortcut: editorModeShortcut.value,
-      }, defaultEditorMode.value)
+      }, defaultEditorMode.value, theme.value)
     } catch {
       saveState.value = 'Failed'
     }
@@ -1182,6 +1260,14 @@ function handleKeydown(event: KeyboardEvent) {
     return
   }
 
+  if (vimMode.value && editorPane.value?.isEditorFocused()) {
+    const isApplicationFunctionKey = event.key === 'F6' || event.key === 'F8' || event.key === 'F10'
+    const shouldHideFromNormalMode = event.key === 'Escape' && activeVimMode.value === 'normal'
+    if (!isApplicationFunctionKey && !shouldHideFromNormalMode) {
+      return
+    }
+  }
+
   if (event.key === 'Enter' && event.ctrlKey) {
     event.preventDefault()
     event.stopPropagation()
@@ -1214,10 +1300,10 @@ function handleKeydown(event: KeyboardEvent) {
     toggleWordWrap()
   }
 
-  if (event.key === '-' && event.ctrlKey && event.shiftKey) {
+  if (event.code === 'Minus' && event.ctrlKey && event.shiftKey) {
     event.preventDefault()
     insertDateTimeSeparator()
-  } else if (event.key === '-' && event.ctrlKey) {
+  } else if (event.code === 'Minus' && event.ctrlKey) {
     event.preventDefault()
     insertSeparator()
   }
@@ -1236,6 +1322,13 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
     void saveCurrentClipboard()
   }
+}
+
+function setVimInsertExitKey(key: string) {
+  vimInsertExitKey.value = Array.from(key)
+    .filter((character) => character.length === 1 && !/\s/.test(character))
+    .slice(0, 8)
+    .join('')
 }
 
 function scheduleSearch() {
@@ -1696,6 +1789,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
     :tab-orientation="tabBarOrientation"
     :window-opacity="transparencyEnabled ? windowOpacity : 1"
     :data-ready="appReady ? 'true' : 'false'"
+    :theme="theme"
   >
     <template #title>
       <MenuBar
@@ -1731,6 +1825,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         @format-font="promptEditorFont"
         @format-background="openBackgroundColorPicker"
         @toggle-word-wrap="toggleWordWrap"
+        @toggle-theme="toggleTheme"
         @insert-separator="insertSeparator"
         @insert-date-time="insertDateTime"
         @insert-date-time-separator="insertDateTimeSeparator"
@@ -1748,8 +1843,12 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       <TabBar
         :tabs="displayTabs"
         :active-tab-id="activeTabId"
+        :messages="t.tabs"
         @select-tab="selectTab"
         @title-double-click="handleTabTitleDoubleClick"
+        @rename-tab="renamePageById"
+        @delete-tab="deletePageById"
+        @update-tab-color="updateTabColor"
         @new-tab="createLocalTab"
         @toggle-orientation="toggleTabBarOrientation"
       />
@@ -1777,7 +1876,10 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         :title="activeTab?.title ?? 'Untitled'"
         :word-wrap="wordWrap"
         :font-family="editorFontFamily"
-        :background-color="editorBackgroundColor"
+        :background-color="effectiveEditorBackground"
+        :vim-mode="vimMode"
+        :vim-insert-exit-key="vimInsertExitKey"
+        @vim-mode-change="activeVimMode = $event"
       />
       <PreviewPane v-if="previewMode !== 'edit'" :content="content" />
     </div>
@@ -1795,7 +1897,8 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
     <SettingsPanel
       v-if="settingsOpen"
       :always-on-top="alwaysOnTop"
-      :theme="theme"
+      :vim-mode="vimMode"
+      :vim-insert-exit-key="vimInsertExitKey"
       :preview-mode="defaultEditorMode"
       :editor-mode-shortcut="editorModeShortcut"
       :language="language"
@@ -1816,7 +1919,8 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       :menu-messages="t.menu"
       @close="closeSettings"
       @toggle-always-on-top="togglePin"
-      @update:theme="theme = $event"
+      @update:vim-mode="vimMode = $event"
+      @update:vim-insert-exit-key="setVimInsertExitKey"
       @update:preview-mode="setDefaultEditorMode"
       @update:editor-mode-shortcut="editorModeShortcut = $event"
       @update:language="language = $event"
@@ -1852,7 +1956,11 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         :mode="statusMessage"
         :editor-mode="editorModeLabel"
         :chars-label="t.status.chars"
+        :dark-theme="theme === 'dark'"
+        :theme-label="themeToggleLabel"
+        :vim-mode="activeVimMode ? activeVimMode.toUpperCase() : ''"
         @cycle-editor-mode="cycleEditorMode"
+        @toggle-theme="toggleTheme"
       />
     </template>
   </AppShell>

@@ -1,7 +1,7 @@
 use neopad_core::{
     append_to_clipboard_note, create_note, delete_note_to_trash, list_notes, load_config,
     lock_workspace_for_write, read_note, rename_note, save_config, search_notes, write_note_atomic,
-    NoteContent, NoteTab, PreviewMode, SearchResult, UiConfig, Workspace,
+    NoteContent, NoteTab, PreviewMode, SearchResult, Theme, UiConfig, Workspace,
 };
 use serde::Serialize;
 use std::process::Command;
@@ -42,6 +42,7 @@ pub struct UiConfigInfo {
     pub initialized: bool,
     pub ui: UiConfig,
     pub preview_mode: PreviewMode,
+    pub theme: Theme,
 }
 
 #[tauri::command]
@@ -61,6 +62,7 @@ pub fn get_ui_config_command(state: State<'_, AppState>) -> Result<UiConfigInfo,
             initialized: config.version >= 2,
             ui: config.ui,
             preview_mode: config.preview_mode,
+            theme: config.theme,
         })
         .map_err(display_error)
 }
@@ -70,12 +72,14 @@ pub fn save_ui_config_command(
     state: State<'_, AppState>,
     ui: UiConfig,
     preview_mode: PreviewMode,
+    theme: Theme,
 ) -> Result<(), String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     let mut config = load_config(&state.workspace).map_err(display_error)?;
     config.version = 2;
     config.start_at_login = ui.run_at_startup;
     config.preview_mode = preview_mode;
+    config.theme = theme;
     config.ui = ui;
     save_config(&state.workspace, &config).map_err(display_error)
 }
@@ -126,6 +130,16 @@ pub fn rename_note_command(
 pub fn delete_note_command(state: State<'_, AppState>, note_id: String) -> Result<NoteTab, String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     delete_note_to_trash(&state.workspace, &note_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn set_note_color_command(
+    state: State<'_, AppState>,
+    note_id: String,
+    color: Option<String>,
+) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::set_note_color(&state.workspace, &note_id, color).map_err(display_error)
 }
 
 #[tauri::command]

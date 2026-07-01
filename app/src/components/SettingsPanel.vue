@@ -3,12 +3,13 @@ import { ref } from 'vue'
 import type { AppLanguage, AppMessages } from '../lib/i18n'
 import type { EditorMode, EditorModeShortcut } from '../types/editor'
 
-type SettingsTab = 'general' | 'shortcuts' | 'insertText'
+type SettingsTab = 'general' | 'shortcuts' | 'insertText' | 'advanced'
 type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
 
 defineProps<{
   alwaysOnTop: boolean
-  theme: 'system' | 'light' | 'dark'
+  vimMode: boolean
+  vimInsertExitKey: string
   previewMode: EditorMode
   editorModeShortcut: EditorModeShortcut
   language: AppLanguage
@@ -32,7 +33,8 @@ defineProps<{
 const emit = defineEmits<{
   close: []
   toggleAlwaysOnTop: []
-  'update:theme': [theme: 'system' | 'light' | 'dark']
+  'update:vimMode': [enabled: boolean]
+  'update:vimInsertExitKey': [key: string]
   'update:previewMode': [mode: EditorMode]
   'update:editorModeShortcut': [shortcut: EditorModeShortcut]
   'update:language': [language: AppLanguage]
@@ -108,6 +110,9 @@ function deleteCustomText(current: string[]) {
       </button>
       <button type="button" :class="{ active: activeTab === 'insertText' }" @click="activeTab = 'insertText'">
         {{ messages.insertTextTab }}
+      </button>
+      <button type="button" :class="{ active: activeTab === 'advanced' }" @click="activeTab = 'advanced'">
+        {{ messages.advancedTab }}
       </button>
     </div>
 
@@ -259,7 +264,7 @@ function deleteCustomText(current: string[]) {
         </fieldset>
       </template>
 
-      <template v-else>
+      <template v-else-if="activeTab === 'insertText'">
         <label class="settings-template-row">
           <span>{{ messages.separatorText }}:</span>
           <input
@@ -301,6 +306,31 @@ function deleteCustomText(current: string[]) {
             <button type="button" @click="editCustomText(customInsertTexts)">{{ messages.edit }}</button>
             <button type="button" @click="deleteCustomText(customInsertTexts)">{{ messages.delete }}</button>
           </div>
+        </fieldset>
+      </template>
+
+      <template v-else>
+        <fieldset class="settings-fieldset">
+          <legend>{{ messages.vimSettings }}</legend>
+          <label class="settings-check-row">
+            <input
+              :checked="vimMode"
+              type="checkbox"
+              @change="$emit('update:vimMode', ($event.target as HTMLInputElement).checked)"
+            />
+            <span>{{ messages.vimMode }}</span>
+          </label>
+          <label class="settings-form-row">
+            <span>{{ messages.vimInsertExitKey }}:</span>
+            <input
+              type="text"
+              maxlength="8"
+              :disabled="!vimMode"
+              :value="vimInsertExitKey"
+              @input="$emit('update:vimInsertExitKey', ($event.target as HTMLInputElement).value)"
+            />
+          </label>
+          <small class="settings-hint">{{ messages.vimModeHint }}</small>
         </fieldset>
       </template>
     </div>

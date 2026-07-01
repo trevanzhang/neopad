@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { AppMessages } from '../lib/i18n'
 import type { EditorMode } from '../types/editor'
 
@@ -38,6 +39,7 @@ defineEmits<{
   formatFont: []
   formatBackground: []
   toggleWordWrap: []
+  toggleTheme: []
   insertSeparator: []
   insertDateTime: []
   insertDateTimeSeparator: []
@@ -56,7 +58,7 @@ function handleMenuClick(event: MouseEvent) {
     return
   }
 
-  button.blur()
+  closeAllMenus()
 }
 
 function closeMenu(event: KeyboardEvent) {
@@ -64,10 +66,128 @@ function closeMenu(event: KeyboardEvent) {
   event.stopPropagation()
   ;(document.activeElement as HTMLElement | null)?.blur()
 }
+
+const menuBar = ref<HTMLElement | null>(null)
+let focusBeforeMenu: HTMLElement | null = null
+const mnemonicRoots: Record<string, number> = { f: 0, e: 1, v: 2, p: 3, o: 4, i: 5, t: 6, h: 7 }
+
+onMounted(() => window.addEventListener('keydown', handleMenuKeydown, { capture: true }))
+onBeforeUnmount(() => window.removeEventListener('keydown', handleMenuKeydown, { capture: true }))
+
+function rootTitles() {
+  return Array.from(menuBar.value?.querySelectorAll<HTMLButtonElement>(':scope > .menu-root > .menu-title') ?? [])
+}
+
+function openRoot(index: number) {
+  const titles = rootTitles()
+  if (!titles.length) return
+  if (!menuBar.value?.contains(document.activeElement)) {
+    focusBeforeMenu = document.activeElement as HTMLElement | null
+  }
+  titles[(index + titles.length) % titles.length]?.focus()
+}
+
+function directMenuButtons(popover: Element) {
+  return Array.from(popover.children).flatMap((child) => {
+    if (child instanceof HTMLButtonElement) return [child]
+    if (child.classList.contains('menu-subroot')) {
+      const button = child.querySelector<HTMLButtonElement>(':scope > button')
+      return button ? [button] : []
+    }
+    return []
+  }).filter((button) => !button.disabled)
+}
+
+function focusPopoverEdge(title: HTMLButtonElement, last = false) {
+  const popover = title.parentElement?.querySelector(':scope > .menu-popover')
+  if (!popover) return
+  const buttons = directMenuButtons(popover)
+  ;(last ? buttons.at(-1) : buttons[0])?.focus()
+}
+
+function closeAllMenus() {
+  const active = document.activeElement as HTMLElement | null
+  active?.blur()
+  focusBeforeMenu?.focus()
+  focusBeforeMenu = null
+}
+
+function handleMenuKeydown(event: KeyboardEvent) {
+  const mnemonic = event.altKey && !event.ctrlKey && !event.metaKey ? mnemonicRoots[event.key.toLowerCase()] : undefined
+  if (mnemonic !== undefined) {
+    event.preventDefault()
+    event.stopPropagation()
+    openRoot(mnemonic)
+    return
+  }
+
+  const active = document.activeElement as HTMLButtonElement | null
+  if (!active || !menuBar.value?.contains(active)) return
+  const titles = rootTitles()
+  const currentRoot = active.closest('.menu-root')
+  const rootIndex = titles.findIndex((title) => title.parentElement === currentRoot)
+  const subpopover = active.closest('.menu-subpopover')
+  const parentPopover = active.closest('.menu-popover')
+  const subroot = active.parentElement?.classList.contains('menu-subroot') ? active.parentElement : null
+
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    if (subpopover) {
+      subpopover.parentElement?.querySelector<HTMLButtonElement>(':scope > button')?.focus()
+    } else {
+      closeAllMenus()
+    }
+    return
+  }
+
+  if (event.key === 'ArrowRight') {
+    event.preventDefault()
+    if (subroot) {
+      const submenu = subroot.querySelector(':scope > .menu-subpopover')
+      const first = submenu ? directMenuButtons(submenu)[0] : null
+      first?.focus()
+    } else if (!subpopover) {
+      openRoot(rootIndex + 1)
+    }
+    return
+  }
+
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+    if (subpopover) {
+      subpopover.parentElement?.querySelector<HTMLButtonElement>(':scope > button')?.focus()
+    } else {
+      openRoot(rootIndex - 1)
+    }
+    return
+  }
+
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault()
+    if (active.classList.contains('menu-title')) {
+      focusPopoverEdge(active, event.key === 'ArrowUp')
+      return
+    }
+    if (!parentPopover) return
+    const buttons = directMenuButtons(parentPopover)
+    const current = buttons.indexOf(active)
+    const direction = event.key === 'ArrowDown' ? 1 : -1
+    buttons[(current + direction + buttons.length) % buttons.length]?.focus()
+    return
+  }
+
+  if ((event.key === 'Enter' || event.key === ' ') && subroot) {
+    event.preventDefault()
+    const submenu = subroot.querySelector(':scope > .menu-subpopover')
+    const first = submenu ? directMenuButtons(submenu)[0] : null
+    first?.focus()
+  }
+}
 </script>
 
 <template>
-  <nav class="menu-bar" aria-label="Application menu" @click="handleMenuClick" @keydown.esc="closeMenu">
+  <nav ref="menuBar" class="menu-bar" aria-label="Application menu" @click="handleMenuClick" @keydown.esc="closeMenu">
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.file }}</button>
       <div class="menu-popover">
@@ -133,13 +253,13 @@ function closeMenu(event: KeyboardEvent) {
 
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.view }}</button>
-      <div class="menu-popover">
+      <div class="menu-popover menu-view-popover">
         <div class="menu-subroot">
           <button type="button" class="menu-command">
             <span>{{ messages.editorMode }}</span>
             <span class="menu-arrow">&rsaquo;</span>
           </button>
-          <div class="menu-popover menu-subpopover">
+          <div class="menu-popover menu-subpopover menu-view-subpopover">
             <button type="button" :class="{ checked: previewMode === 'edit' }" @click="$emit('updatePreviewMode', 'edit')">
               {{ messages.editMode }}
             </button>
@@ -157,7 +277,7 @@ function closeMenu(event: KeyboardEvent) {
             <span>{{ messages.tabBarDisplay }}</span>
             <span class="menu-arrow">&rsaquo;</span>
           </button>
-          <div class="menu-popover menu-subpopover">
+          <div class="menu-popover menu-subpopover menu-view-subpopover">
             <button
               type="button"
               :class="{ checked: tabBarOrientation === 'horizontal' }"
@@ -191,6 +311,7 @@ function closeMenu(event: KeyboardEvent) {
       <div class="menu-popover">
         <button type="button" @click="$emit('formatFont')">{{ messages.font }}</button>
         <button type="button" @click="$emit('formatBackground')">{{ messages.backgroundColor }}</button>
+        <button type="button" @click="$emit('toggleTheme')">{{ messages.toggleTheme }}</button>
         <div class="menu-separator" role="separator" />
         <button type="button" class="menu-command" :class="{ checked: wordWrap }" @click="$emit('toggleWordWrap')">
           <span>{{ messages.wordWrap }}</span>
@@ -214,6 +335,7 @@ function closeMenu(event: KeyboardEvent) {
           <span>{{ messages.dateTimeSeparator }}</span>
           <span class="menu-shortcut">{{ messages.ctrlShiftDash }}</span>
         </button>
+        <div class="menu-separator" role="separator" />
         <button type="button" class="menu-command" @click="$emit('insertReminder')">
           <span>{{ messages.reminder }}</span>
           <span class="menu-shortcut">{{ messages.ctrlE }}</span>

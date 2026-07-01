@@ -12,6 +12,8 @@ pub struct NoteTab {
     pub deleted: bool,
     #[serde(default)]
     pub system_title: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -37,6 +39,7 @@ impl TabsState {
                     pinned: true,
                     deleted: false,
                     system_title: false,
+                    color: None,
                 },
                 NoteTab {
                     id: "clipboard".to_owned(),
@@ -47,6 +50,7 @@ impl TabsState {
                     pinned: true,
                     deleted: false,
                     system_title: false,
+                    color: None,
                 },
             ],
         }

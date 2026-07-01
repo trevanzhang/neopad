@@ -53,11 +53,12 @@ The default workspace is `~/.neopad/`.
 
 The app presents notes as tabs. The durable source of note content is always a
 Markdown file in `notes/`. `tabs.json` stores tab metadata such as title, file
-name, timestamps, pinned state, and active tab.
+name, timestamps, pinned state, active tab, and optional tab color.
 
-Desktop preferences are persisted in `config.json`. Browser `localStorage` is
-kept only as a compatibility cache for installations created before config
-version 2; the native config is authoritative once migrated.
+Desktop preferences are persisted in `config.json`. Browser `localStorage`
+supports frontend startup, while native `config.json` is authoritative in the
+desktop runtime. The experimental project does not maintain migrations for old
+configuration shapes.
 
 ## Core Responsibilities
 
@@ -80,14 +81,20 @@ the configured workspace.
 
 - Tauri command bindings to core operations.
 - Vue app shell and note editing workflow.
-- CodeMirror markdown editor.
+- CodeMirror markdown editor with optional Vim key bindings, configurable
+  Insert-mode exit sequence, and visible mode status.
 - Markdown preview and split mode.
+- Persistent light and dark themes.
+- Tab context actions for rename, trash, and persistent color selection.
+- Compact settings dialog with independently scrollable content and a dedicated
+  Advanced tab for optional editor features.
 - Autosave and status reporting.
 - Tray menu: show, hide, new note, save clipboard, settings, quit.
 - Global shortcuts:
   - `Alt+Z`: toggle window.
   - `Ctrl+Shift+V`: append current text clipboard to `clipboard.md`.
-  - `Escape`: hide window when focused.
+  - `Escape`: leave Vim Insert or Visual mode first; hide the window from Vim
+    Normal mode or the regular editor.
 - Close-to-hide behavior.
 - Windows runtime icon and release GUI subsystem.
 

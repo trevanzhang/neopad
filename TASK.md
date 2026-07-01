@@ -24,12 +24,18 @@ Implemented MVP capabilities:
 - Tauri 2 desktop app.
 - Vue 3 + TypeScript frontend.
 - CodeMirror 6 Markdown editor.
+- Optional Vim key bindings with an explicit mode indicator. Vim support stays
+  an editor input mode rather than a plugin or Vim runtime system; its small
+  set of options lives under Advanced settings.
 - Plain Markdown persistence under `~/.neopad/notes/*.md`.
 - Multiple tabs backed by local metadata.
 - Autosave.
 - Edit, hybrid, and preview editor modes with a persisted default and shortcut.
 - Page creation, rename, and trash actions with protected default pages.
+- Persistent optional tab colors managed from the tab context menu.
 - English and Chinese display names for system-managed page titles.
+- Persistent day and night themes across the complete desktop interface.
+- Compact settings that remain usable at the minimum supported window size.
 - Full-text search.
 - Manual clipboard capture into `clipboard.md`.
 - Tray menu.

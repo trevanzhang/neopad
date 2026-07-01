@@ -18,8 +18,14 @@ The repository currently contains a working Windows-focused MVP:
   trash moves, search, config, tabs, and path safety.
 - System tray menu, close-to-hide behavior, global shortcuts, and clipboard
   append.
-- Edit, split, and preview editor modes selectable from the View menu, status
+- Edit, hybrid, and preview editor modes selectable from the View menu, status
   bar, configurable shortcut, and persisted default setting.
+- Optional Vim key bindings for the CodeMirror editor, with persisted settings
+  in the Advanced tab, configurable Insert exit sequence, and a visible Normal,
+  Insert, or Visual mode indicator.
+- Persistent light and dark themes available from the Format menu and status
+  bar.
+- Tab context menu with rename, trash, and persistent color choices.
 - Standalone `neopad-mcp` stdio server with read-only tools by default and
   opt-in write tools via `--allow-write`.
 - Windows MSI packaging with app icon, branded WiX installer images, and desktop

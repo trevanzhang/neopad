@@ -5,6 +5,10 @@ export type AppMessages = {
     inbox: string
     clipboard: string
     untitled: string
+    rename: string
+    delete: string
+    color: string
+    defaultColor: string
   }
   menu: {
     file: string
@@ -48,6 +52,7 @@ export type AppMessages = {
     vertical: string
     font: string
     backgroundColor: string
+    toggleTheme: string
     wordWrap: string
     ctrlW: string
     editorMode: string
@@ -112,7 +117,12 @@ export type AppMessages = {
     general: string
     shortcutsTab: string
     insertTextTab: string
+    advancedTab: string
     generalOptions: string
+    vimMode: string
+    vimSettings: string
+    vimInsertExitKey: string
+    vimModeHint: string
     runAtStartup: string
     closeToMinimize: string
     snapToEdges: string
@@ -195,6 +205,8 @@ export type AppMessages = {
     mcpReadOnlyCopied: string
     mcpWriteCopied: string
     chars: string
+    switchToLight: string
+    switchToDark: string
   }
 }
 
@@ -204,6 +216,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       inbox: 'Inbox',
       clipboard: 'Clipboard',
       untitled: 'Untitled',
+      rename: 'Rename',
+      delete: 'Delete',
+      color: 'Tab color',
+      defaultColor: 'Default',
     },
     menu: {
       file: 'File(F)',
@@ -242,14 +258,15 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
-      tabBarDisplay: 'Tab Bar Position(T)',
+      tabBarDisplay: 'Tab Bar Position(F10)',
       horizontal: 'Top(H)',
       vertical: 'Left(V)',
       font: 'Font(F)...',
       backgroundColor: 'Background Color(B)...',
+      toggleTheme: 'Toggle Theme(T)',
       wordWrap: 'Word Wrap(W)',
       ctrlW: 'Ctrl+W',
-      editorMode: 'Editor Mode(M)',
+      editorMode: 'Editor Mode(F7)',
       cycleEditorMode: 'Cycle Editor Mode(C)',
       editMode: 'Edit',
       splitMode: 'Hybrid',
@@ -311,7 +328,12 @@ export const messages: Record<AppLanguage, AppMessages> = {
       general: 'General',
       shortcutsTab: 'Shortcuts',
       insertTextTab: 'Insert Text',
+      advancedTab: 'Advanced',
       generalOptions: 'General Options',
+      vimMode: 'Enable Vim key bindings',
+      vimSettings: 'Vim editing',
+      vimInsertExitKey: 'Additional Insert exit sequence',
+      vimModeHint: 'The custom sequence exits Insert mode without replacing Esc. Leave it empty to disable the extra mapping.',
       runAtStartup: 'Run automatically at system startup',
       closeToMinimize: 'Minimize when clicking the main window close button',
       snapToEdges: 'Snap main window to screen edges',
@@ -394,6 +416,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       mcpReadOnlyCopied: 'MCP read-only config copied',
       mcpWriteCopied: 'MCP write config copied',
       chars: 'chars',
+      switchToLight: 'Switch to light theme',
+      switchToDark: 'Switch to dark theme',
     },
   },
   zh: {
@@ -401,6 +425,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       inbox: '\u9ed8\u8ba4',
       clipboard: '\u526a\u5207\u677f',
       untitled: '\u672a\u547d\u540d',
+      rename: '\u91cd\u547d\u540d',
+      delete: '\u5220\u9664',
+      color: '\u4fee\u6539\u6807\u7b7e\u9875\u989c\u8272',
+      defaultColor: '\u9ed8\u8ba4\u989c\u8272',
     },
     menu: {
       file: '\u6587\u4ef6(F)',
@@ -439,14 +467,15 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
-      tabBarDisplay: '\u6807\u7b7e\u680f\u4f4d\u7f6e(T)',
+      tabBarDisplay: '\u6807\u7b7e\u680f\u4f4d\u7f6e(F10)',
       horizontal: '\u9876\u90e8(H)',
       vertical: '\u5de6\u4fa7(V)',
       font: '\u5b57\u4f53(F)...',
       backgroundColor: '\u80cc\u666f\u8272(B)...',
+      toggleTheme: '\u5207\u6362\u4e3b\u9898(T)',
       wordWrap: '\u81ea\u52a8\u6362\u884c(W)',
       ctrlW: 'Ctrl+W',
-      editorMode: '\u7f16\u8f91\u5668\u6a21\u5f0f(M)',
+      editorMode: '\u7f16\u8f91\u5668\u6a21\u5f0f(F7)',
       cycleEditorMode: '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f(C)',
       editMode: '\u7f16\u8f91',
       splitMode: '\u6df7\u5408',
@@ -508,7 +537,12 @@ export const messages: Record<AppLanguage, AppMessages> = {
       general: '\u5e38\u89c4',
       shortcutsTab: '\u5feb\u6377\u952e',
       insertTextTab: '\u63d2\u5165\u6587\u672c',
+      advancedTab: '\u9ad8\u7ea7',
       generalOptions: '\u5e38\u89c4\u9009\u9879',
+      vimMode: '\u542f\u7528 Vim \u952e\u4f4d',
+      vimSettings: 'Vim \u7f16\u8f91',
+      vimInsertExitKey: '\u989d\u5916\u7684 Insert \u9000\u51fa\u5e8f\u5217',
+      vimModeHint: '\u81ea\u5b9a\u4e49\u5e8f\u5217\u53ea\u4f5c\u4e3a\u9000\u51fa Insert \u6a21\u5f0f\u7684\u9644\u52a0\u6620\u5c04\uff0c\u4e0d\u4f1a\u66ff\u6362 Esc\uff1b\u7559\u7a7a\u53ef\u5173\u95ed\u3002',
       runAtStartup: '\u7cfb\u7edf\u542f\u52a8\u65f6\u81ea\u52a8\u8fd0\u884c',
       closeToMinimize: '\u70b9\u51fb\u4e3b\u7a97\u53e3\u7684\u5173\u95ed\u6309\u94ae\u65f6\u6700\u5c0f\u5316',
       snapToEdges: '\u4e3b\u7a97\u53e3\u5438\u9644\u5c4f\u5e55\u8fb9\u7f18',
@@ -591,6 +625,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       mcpReadOnlyCopied: '\u5df2\u590d\u5236 MCP \u53ea\u8bfb\u914d\u7f6e',
       mcpWriteCopied: '\u5df2\u590d\u5236 MCP \u5199\u5165\u914d\u7f6e',
       chars: '\u5b57\u7b26',
+      switchToLight: '\u5207\u6362\u81f3\u65e5\u95f4\u6a21\u5f0f',
+      switchToDark: '\u5207\u6362\u81f3\u591c\u95f4\u6a21\u5f0f',
     },
   },
 }

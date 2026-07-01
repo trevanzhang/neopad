@@ -7,4 +7,33 @@
   --np-accent: #2d6cdf;
   --np-accent-soft: #d9e8ff;
   --np-shadow: 0 18px 46px rgba(22, 34, 51, 0.18);
+  --np-window: #ffffff;
+  --np-chrome: #f5f7fa;
+  --np-control: #d6d6d4;
+  --np-control-active: #eeeeee;
+  --np-menu: #f8f8f8;
+  --np-editor: #ffffff;
+  --np-code: #edf1f5;
+  --np-vim-cursor: #2d6cdf;
+  --np-vim-cursor-text: #ffffff;
+}
+
+.theme-dark {
+  color-scheme: dark;
+  --np-bg: #171a1f;
+  --np-surface: #22262d;
+  --np-border: #4b525c;
+  --np-muted: #a8b0bb;
+  --np-text: #e7eaf0;
+  --np-accent: #5b8def;
+  --np-accent-soft: #293d66;
+  --np-window: #1b1e23;
+  --np-chrome: #20242a;
+  --np-control: #30353d;
+  --np-control-active: #3b424c;
+  --np-menu: #292e35;
+  --np-editor: #1e2228;
+  --np-code: #303640;
+  --np-vim-cursor: #ffd166;
+  --np-vim-cursor-text: #171a1f;
 }

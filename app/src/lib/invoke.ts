@@ -4,6 +4,8 @@ import type { EditorMode, EditorModeShortcut } from '../types/editor'
 
 export interface UiConfig {
   language: string
+  vimMode: boolean
+  vimInsertExitKey: string
   tabBarOrientation: string
   wordWrap: boolean
   editorFontFamily: string
@@ -23,6 +25,8 @@ export interface UiConfig {
   editorModeShortcut: EditorModeShortcut
 }
 
+export type AppTheme = 'light' | 'dark'
+
 export function getAppVersion(): Promise<string> {
   return invoke('app_version')
 }
@@ -31,12 +35,12 @@ export function getWorkspace(): Promise<WorkspaceInfo> {
   return invoke('get_workspace_command')
 }
 
-export function getUiConfig(): Promise<{ initialized: boolean; ui: UiConfig; previewMode: EditorMode }> {
+export function getUiConfig(): Promise<{ initialized: boolean; ui: UiConfig; previewMode: EditorMode; theme: 'system' | AppTheme }> {
   return invoke('get_ui_config_command')
 }
 
-export function saveUiConfig(ui: UiConfig, previewMode: EditorMode): Promise<void> {
-  return invoke('save_ui_config_command', { ui, previewMode })
+export function saveUiConfig(ui: UiConfig, previewMode: EditorMode, theme: AppTheme): Promise<void> {
+  return invoke('save_ui_config_command', { ui, previewMode, theme })
 }
 
 export function listNotes(): Promise<NoteTab[]> {
@@ -61,6 +65,10 @@ export function renameNote(noteId: string, title: string): Promise<NoteTab> {
 
 export function deleteNote(noteId: string): Promise<NoteTab> {
   return invoke('delete_note_command', { noteId })
+}
+
+export function setNoteColor(noteId: string, color: string | null): Promise<NoteTab> {
+  return invoke('set_note_color_command', { noteId, color })
 }
 
 export function searchNotes(query: string, limit = 100): Promise<SearchResult[]> {

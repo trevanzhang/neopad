@@ -7,6 +7,7 @@ export type NoteTab = {
   pinned: boolean
   deleted: boolean
   systemTitle: boolean
+  color?: string
 }
 
 export type NoteContent = {

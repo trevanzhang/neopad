@@ -58,6 +58,7 @@ pub fn create_note(workspace: &Workspace, title: Option<String>) -> Result<NoteC
         pinned: false,
         deleted: false,
         system_title,
+        color: None,
     });
     tabs.active_tab_id = id.clone();
     save_tabs(workspace, &tabs)?;
@@ -183,6 +184,34 @@ pub fn delete_note_to_trash(workspace: &Workspace, note_id: &str) -> Result<Note
     save_tabs(workspace, &tabs)?;
 
     Ok(deleted)
+}
+
+pub fn set_note_color(
+    workspace: &Workspace,
+    note_id: &str,
+    color: Option<String>,
+) -> Result<NoteTab> {
+    let color = color
+        .map(|value| value.trim().to_ascii_uppercase())
+        .filter(|value| !value.is_empty());
+    if let Some(value) = &color {
+        let valid = value.len() == 7
+            && value.starts_with('#')
+            && value[1..]
+                .chars()
+                .all(|character| character.is_ascii_hexdigit());
+        if !valid {
+            bail!("invalid tab color: {value}");
+        }
+    }
+
+    let mut tabs = load_tabs(workspace)?;
+    let tab = find_note_tab_mut(&mut tabs, note_id)?;
+    tab.color = color;
+    tab.updated_at = now_ms()?;
+    let updated = tab.clone();
+    save_tabs(workspace, &tabs)?;
+    Ok(updated)
 }
 
 fn load_tabs(workspace: &Workspace) -> Result<TabsState> {
@@ -330,6 +359,26 @@ mod tests {
 
         let renamed = rename_note(&workspace, &created.id, "Untitled".to_owned()).expect("rename");
         assert!(!renamed.system_title);
+    }
+
+    #[test]
+    fn tab_color_is_validated_and_persisted() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, None).expect("create note");
+
+        let colored =
+            set_note_color(&workspace, &created.id, Some("#a9dceb".to_owned())).expect("set color");
+        assert_eq!(colored.color.as_deref(), Some("#A9DCEB"));
+        assert_eq!(
+            list_notes(&workspace)
+                .expect("list")
+                .into_iter()
+                .find(|tab| tab.id == created.id)
+                .and_then(|tab| tab.color),
+            Some("#A9DCEB".to_owned())
+        );
+        assert!(set_note_color(&workspace, &created.id, Some("blue".to_owned())).is_err());
     }
 
     #[test]

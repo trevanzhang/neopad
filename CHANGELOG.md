@@ -4,6 +4,30 @@ NeoPad follows Semantic Versioning. While the project remains below `1.0.0`,
 minor versions may include user-visible behavior changes and new capabilities;
 patch versions are reserved for compatible fixes.
 
+## Unreleased
+
+### Added
+
+- Persistent light and dark themes switchable from the Format menu and status
+  bar.
+- Custom tab context menu with rename, trash, and persistent tab colors.
+- Optional Vim key bindings for the Markdown editor with persisted settings,
+  mode status, and Vim-first shortcut handling while the editor is focused.
+- Configurable Insert-mode exit sequence, defaulting to `jj`, while retaining
+  the standard `Esc` binding.
+- A dedicated Advanced settings tab for optional Vim editing controls.
+
+### Fixed
+
+- Vim block cursors remain clearly visible in both light and dark themes.
+- Settings remain fully accessible at the default window size by scrolling only
+  the settings content while keeping its header, tabs, and confirmation fixed.
+- The status-bar theme button now shows the destination action: moon to enter
+  dark mode and sun to enter light mode.
+- Date-time separators now include trailing dashes and respond to
+  `Ctrl+Shift+-`.
+- Application menus support Alt mnemonics and keyboard navigation.
+
 ## 0.2.0 - 2026-07-01
 
 ### Added

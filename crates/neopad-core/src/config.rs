@@ -30,6 +30,8 @@ pub struct AppConfig {
 #[serde(rename_all = "camelCase")]
 pub struct UiConfig {
     pub language: String,
+    pub vim_mode: bool,
+    pub vim_insert_exit_key: String,
     pub tab_bar_orientation: String,
     pub word_wrap: bool,
     pub editor_font_family: String,
@@ -58,6 +60,8 @@ impl Default for UiConfig {
     fn default() -> Self {
         Self {
             language: "en".to_owned(),
+            vim_mode: false,
+            vim_insert_exit_key: "jj".to_owned(),
             tab_bar_orientation: "horizontal".to_owned(),
             word_wrap: true,
             editor_font_family: r#""Segoe UI", Arial, sans-serif"#.to_owned(),
@@ -73,7 +77,7 @@ impl Default for UiConfig {
             insert_separator_template: "crlf() + chars('-', 80) + crlf()".to_owned(),
             insert_date_time_template: "date() + ' ' + time()".to_owned(),
             insert_date_time_separator_template:
-                "crlf() + chars('-', 29) + ' ' + date() + ' ' + time()".to_owned(),
+                "crlf() + chars('-', 29) + ' ' + date() + ' ' + time() + ' ' + chars('-', 29) + crlf()".to_owned(),
             custom_insert_texts: Vec::new(),
             editor_mode_shortcut: default_editor_mode_shortcut(),
         }
@@ -193,6 +197,17 @@ mod tests {
 
         let config: UiConfig = serde_json::from_value(value).expect("legacy UI config");
         assert_eq!(config.editor_mode_shortcut, "F7");
+    }
+
+    #[test]
+    fn vim_mode_is_required_in_ui_config() {
+        let mut value = serde_json::to_value(UiConfig::default()).expect("serialize UI config");
+        value
+            .as_object_mut()
+            .expect("UI config object")
+            .remove("vimMode");
+
+        assert!(serde_json::from_value::<UiConfig>(value).is_err());
     }
 
     #[test]

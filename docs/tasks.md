@@ -20,8 +20,13 @@ This file tracks the implemented MVP relative to the original task plan.
 - Edit, hybrid, and preview modes with a compact View menu, status indicator,
   configurable cycling shortcut, and persisted default.
 - Page rename and trash actions with UI and core protection for default pages.
+- Tab context menu with rename, trash, and persistent color selection.
 - Localized system page labels that preserve stable storage IDs and user titles.
 - CodeMirror 6 Markdown editor.
+- Optional persisted Vim key bindings with Normal, Insert, and Visual status,
+  plus a configurable Insert exit sequence in Advanced settings.
+- Persistent light and dark themes with a destination-state status-bar toggle.
+- Viewport-constrained settings dialog with fixed navigation and actions.
 - Autosave from the UI.
 - Serialized autosave and tray/global-command handling that preserves pending
   edits, with deterministic frontend tests.
