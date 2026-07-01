@@ -41,7 +41,8 @@ Implemented MVP capabilities:
 - Full-text search.
 - Native Save As for exporting the active note or a combined all-notes document
   to a user-selected Markdown file.
-- Manual clipboard capture into `clipboard.md`.
+- Manual clipboard capture into `clipboard.md` with readable local timestamp
+  separator lines.
 - Tray menu.
 - Single-instance startup and persistent main-window position, with a
   bottom-right default on first launch.

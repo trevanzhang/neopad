@@ -2232,6 +2232,7 @@ name = "neopad-core"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "dirs",
  "fs2",
  "serde",

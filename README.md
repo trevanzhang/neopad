@@ -22,6 +22,7 @@ The repository currently contains a working Windows-focused MVP:
   and restoration of the last window position on later launches.
 - Configurable global shortcuts for window visibility and clipboard capture,
   plus `Alt+Enter` maximize/restore.
+- Clipboard captures use readable local timestamps in compact separator lines.
 - Edit, hybrid, and preview editor modes selectable from the View menu, status
   bar, configurable shortcut, and persisted default setting.
 - Optional Vim key bindings for the CodeMirror editor, with persisted settings
