@@ -1,15 +1,15 @@
 <script setup lang="ts">
-export type PreviewMode = 'edit' | 'preview' | 'split'
+import type { EditorMode } from '../types/editor'
 
 defineProps<{
-  modelValue: PreviewMode
+  modelValue: EditorMode
 }>()
 
 defineEmits<{
-  'update:modelValue': [mode: PreviewMode]
+  'update:modelValue': [mode: EditorMode]
 }>()
 
-const modes: PreviewMode[] = ['edit', 'preview', 'split']
+const modes: EditorMode[] = ['edit', 'preview', 'split']
 </script>
 
 <template>

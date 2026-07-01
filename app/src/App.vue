@@ -1,9 +1,8 @@
 ﻿<script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppShell from './components/AppShell.vue'
 import EditorPane from './components/EditorPane.vue'
 import MenuBar from './components/MenuBar.vue'
-import type { PreviewMode } from './components/ModeSwitch.vue'
 import PreviewPane from './components/PreviewPane.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
@@ -36,6 +35,7 @@ import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
 import { AutosaveCoordinator } from './lib/autosave'
 import type { NoteTab, SearchResult } from './types/note'
+import { isEditorMode, nextEditorMode, type EditorMode, type EditorModeShortcut } from './types/editor'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 
@@ -53,6 +53,7 @@ const tabs = ref<NoteTab[]>([
     updatedAt: now,
     pinned: true,
     deleted: false,
+    systemTitle: false,
   },
   {
     id: 'clipboard',
@@ -62,6 +63,7 @@ const tabs = ref<NoteTab[]>([
     updatedAt: now,
     pinned: true,
     deleted: false,
+    systemTitle: false,
   },
 ])
 const activeTabId = ref('inbox')
@@ -70,7 +72,9 @@ const saveState = ref<'Saved' | 'Saving' | 'Failed'>('Saved')
 const appReady = ref(false)
 const isLoadingNote = ref(false)
 const statusMessage = ref('Markdown')
-const previewMode = ref<PreviewMode>('edit')
+const previewMode = ref<EditorMode>('edit')
+const defaultEditorMode = ref<EditorMode>('edit')
+const editorModeShortcut = ref<EditorModeShortcut>(initialEditorModeShortcut())
 const searchOpen = ref(false)
 const settingsOpen = ref(false)
 const helpTopic = ref<HelpTopic | null>(null)
@@ -102,6 +106,16 @@ const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
 const workspacePath = ref('~/.neopad')
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
 const t = computed(() => messages[language.value])
+const displayTabs = computed(() => tabs.value.map((tab) => ({
+  ...tab,
+  title: tab.id === 'inbox'
+      ? t.value.tabs.inbox
+    : tab.id === 'clipboard'
+      ? t.value.tabs.clipboard
+      : tab.systemTitle && tab.title === 'Untitled'
+        ? t.value.tabs.untitled
+      : tab.title,
+})))
 const localizedSaveState = computed(() => {
   if (saveState.value === 'Saving') {
     return t.value.status.saving
@@ -112,6 +126,11 @@ const localizedSaveState = computed(() => {
   return t.value.status.saved
 })
 const helpContent = computed(() => getHelpContent(helpTopic.value, language.value))
+const editorModeLabel = computed(() => {
+  if (previewMode.value === 'preview') return t.value.status.previewMode
+  if (previewMode.value === 'split') return t.value.status.hybridMode
+  return t.value.status.editMode
+})
 let searchTimer: number | null = null
 let uiConfigTimer: number | null = null
 let nativeSettingsTimer: number | null = null
@@ -304,6 +323,10 @@ watch(customInsertTexts, () => {
   window.localStorage.setItem('neopad.customInsertTexts', JSON.stringify(customInsertTexts.value))
 }, { deep: true })
 
+watch(editorModeShortcut, () => {
+  window.localStorage.setItem('neopad.editorModeShortcut', editorModeShortcut.value)
+})
+
 watch(
   [
     language,
@@ -323,6 +346,8 @@ watch(
     insertDateTimeTemplate,
     insertDateTimeSeparatorTemplate,
     customInsertTexts,
+    defaultEditorMode,
+    editorModeShortcut,
   ],
   () => {
     if (uiConfigLoaded && isTauriRuntime()) {
@@ -383,6 +408,11 @@ function initialTitleDoubleClickAction(): TitleDoubleClickAction {
   return value === 'none' || value === 'delete' || value === 'rename' ? value : 'rename'
 }
 
+function initialEditorModeShortcut(): EditorModeShortcut {
+  const value = initialStringSetting('neopad.editorModeShortcut', 'F7')
+  return value === 'Ctrl+Shift+M' || value === 'disabled' ? value : 'F7'
+}
+
 async function selectTab(tabId: string) {
   if (tabId === activeTabId.value) {
     return
@@ -404,43 +434,56 @@ async function handleTabTitleDoubleClick(tabId: string) {
   }
 
   if (titleDoubleClickAction.value === 'rename') {
-    const nextTitle = window.prompt(t.value.settings.renameTitle, tab.title)?.trim()
-    if (!nextTitle) {
-      return
-    }
-
-    if (isTauriRuntime()) {
-      try {
-        const renamed = await renameNote(tab.id, nextTitle)
-        tab.title = renamed.title
-        tab.updatedAt = renamed.updatedAt
-      } catch {
-        saveState.value = 'Failed'
-      }
-    } else {
-      tab.title = nextTitle
-      tab.updatedAt = Date.now()
-    }
+    await renameTab(tab)
     return
   }
 
   if (titleDoubleClickAction.value === 'delete') {
-    if (tab.pinned) {
+    await deleteTab(tab)
+  }
+}
+
+async function renameActivePage() {
+  if (activeTab.value) await renameTab(activeTab.value)
+}
+
+async function deleteActivePage() {
+  if (activeTab.value) await deleteTab(activeTab.value)
+}
+
+async function renameTab(tab: NoteTab) {
+  if (tab.id === 'inbox' || tab.id === 'clipboard') return
+  const nextTitle = window.prompt(t.value.settings.renameTitle, tab.title)?.trim()
+  if (!nextTitle) return
+
+  if (isTauriRuntime()) {
+    try {
+      const renamed = await renameNote(tab.id, nextTitle)
+      tab.title = renamed.title
+      tab.updatedAt = renamed.updatedAt
+    } catch {
+      saveState.value = 'Failed'
+    }
+  } else {
+    tab.title = nextTitle
+    tab.updatedAt = Date.now()
+  }
+}
+
+async function deleteTab(tab: NoteTab) {
+  if (tab.id === 'inbox' || tab.id === 'clipboard') return
+  if (isTauriRuntime()) {
+    try {
+      await deleteNote(tab.id)
+    } catch {
+      saveState.value = 'Failed'
       return
     }
-    if (isTauriRuntime()) {
-      try {
-        await deleteNote(tab.id)
-      } catch {
-        saveState.value = 'Failed'
-        return
-      }
-    }
-    tabs.value = tabs.value.filter((item) => item.id !== tab.id)
-    if (activeTabId.value === tab.id) {
-      activeTabId.value = tabs.value[0]?.id ?? 'inbox'
-      await loadActiveNote()
-    }
+  }
+  tabs.value = tabs.value.filter((item) => item.id !== tab.id)
+  if (activeTabId.value === tab.id) {
+    activeTabId.value = tabs.value[0]?.id ?? 'inbox'
+    await loadActiveNote()
   }
 }
 
@@ -457,6 +500,7 @@ async function createLocalTab() {
         updatedAt: note.updatedAt,
         pinned: false,
         deleted: false,
+        systemTitle: true,
       })
       activeTabId.value = note.id
       setContentFromLoad(note.content)
@@ -477,6 +521,7 @@ async function createLocalTab() {
     updatedAt: createdAt,
     pinned: false,
     deleted: false,
+    systemTitle: true,
   }
 
   tabs.value.push(tab)
@@ -501,6 +546,7 @@ async function saveCurrentClipboard() {
       updatedAt: note.updatedAt,
       pinned: true,
       deleted: false,
+      systemTitle: false,
     })
     activeTabId.value = note.id
     setContentFromLoad(note.content)
@@ -539,6 +585,7 @@ async function loadFileFromInput(event: Event) {
         updatedAt: saved.updatedAt,
         pinned: false,
         deleted: false,
+        systemTitle: false,
       })
       activeTabId.value = saved.id
       setContentFromLoad(saved.content)
@@ -920,6 +967,9 @@ async function loadNativeUiConfig() {
       return
     }
     const ui = stored.ui
+    const storedMode = isEditorMode(stored.previewMode) ? stored.previewMode : 'edit'
+    previewMode.value = storedMode
+    defaultEditorMode.value = storedMode
     language.value = ui.language === 'zh' ? 'zh' : 'en'
     tabBarOrientation.value = ui.tabBarOrientation === 'vertical' ? 'vertical' : 'horizontal'
     wordWrap.value = ui.wordWrap
@@ -940,6 +990,9 @@ async function loadNativeUiConfig() {
     insertDateTimeTemplate.value = ui.insertDateTimeTemplate
     insertDateTimeSeparatorTemplate.value = ui.insertDateTimeSeparatorTemplate
     customInsertTexts.value = ui.customInsertTexts
+    editorModeShortcut.value = ui.editorModeShortcut === 'Ctrl+Shift+M' || ui.editorModeShortcut === 'disabled'
+      ? ui.editorModeShortcut
+      : 'F7'
     uiConfigLoaded = true
   } catch {
     saveState.value = 'Failed'
@@ -971,7 +1024,8 @@ function persistUiConfig() {
         insertDateTimeTemplate: insertDateTimeTemplate.value,
         insertDateTimeSeparatorTemplate: insertDateTimeSeparatorTemplate.value,
         customInsertTexts: customInsertTexts.value,
-      })
+        editorModeShortcut: editorModeShortcut.value,
+      }, defaultEditorMode.value)
     } catch {
       saveState.value = 'Failed'
     }
@@ -1096,7 +1150,38 @@ function forceSaveOnHide() {
   }
 }
 
+function setEditorMode(mode: EditorMode) {
+  previewMode.value = mode
+  if (mode !== 'preview') {
+    void nextTick(() => editorPane.value?.focusEditor())
+  }
+}
+
+function setDefaultEditorMode(mode: EditorMode) {
+  defaultEditorMode.value = mode
+  setEditorMode(mode)
+}
+
+function cycleEditorMode() {
+  setEditorMode(nextEditorMode(previewMode.value))
+}
+
+function matchesEditorModeShortcut(event: KeyboardEvent) {
+  if (editorModeShortcut.value === 'disabled') return false
+  if (editorModeShortcut.value === 'F7') {
+    return event.key === 'F7' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
+  }
+  return event.key.toLowerCase() === 'm' && event.ctrlKey && event.shiftKey && !event.altKey && !event.metaKey
+}
+
 function handleKeydown(event: KeyboardEvent) {
+  if (matchesEditorModeShortcut(event)) {
+    event.preventDefault()
+    event.stopPropagation()
+    cycleEditorMode()
+    return
+  }
+
   if (event.key === 'Enter' && event.ctrlKey) {
     event.preventDefault()
     event.stopPropagation()
@@ -1205,6 +1290,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
     updatedAt: createdAt,
     pinned: false,
     deleted: false,
+    systemTitle: false,
   }
 
   tabs.value.push(tab)
@@ -1546,6 +1632,8 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         'Ctrl+E - ' + (zh ? '\u63d2\u5165\u63d0\u9192' : 'Insert reminder'),
         'Ctrl+W - ' + (zh ? '\u5207\u6362\u81ea\u52a8\u6362\u884c' : 'Toggle word wrap'),
         'F6 - ' + (zh ? '\u5207\u6362\u7a97\u53e3\u7f6e\u9876' : 'Toggle window on top'),
+        (editorModeShortcut.value === 'disabled' ? (zh ? '\u672a\u7ed1\u5b9a' : 'Unbound') : editorModeShortcut.value) +
+          ' - ' + (zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f' : 'Cycle editor mode'),
         'F8 - ' + (zh ? '\u6253\u5f00\u8bbe\u7f6e' : 'Open settings'),
         'F10 - ' + (zh ? '\u5207\u6362\u6807\u7b7e\u680f\u65b9\u5411' : 'Toggle tab bar orientation'),
         'Esc - ' + (zh ? '\u9690\u85cf\u7a97\u53e3' : 'Hide window'),
@@ -1615,8 +1703,11 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         :tab-bar-orientation="tabBarOrientation"
         :word-wrap="wordWrap"
         :always-on-top="alwaysOnTop"
+        :page-actions-enabled="Boolean(activeTab && activeTab.id !== 'inbox' && activeTab.id !== 'clipboard')"
         :messages="t.menu"
         @new-note="createLocalTab"
+        @rename-page="renameActivePage"
+        @delete-page="deleteActivePage"
         @save-clipboard="saveCurrentClipboard"
         @load-file="triggerLoadFile"
         @save-as-file="saveAsFile"
@@ -1636,7 +1727,6 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         @search="showSearchPlaceholder"
         @settings="showSettingsPlaceholder"
         @toggle-pin="togglePin"
-        @toggle-tab-bar-orientation="toggleTabBarOrientation"
         @update-tab-bar-orientation="tabBarOrientation = $event"
         @format-font="promptEditorFont"
         @format-background="openBackgroundColorPicker"
@@ -1650,13 +1740,13 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         @reminder-list="openReminderList"
         @process-text="processEditorText"
         @help-topic="openHelpTopic"
-        @update-preview-mode="previewMode = $event"
+        @update-preview-mode="setEditorMode"
       />
     </template>
 
     <template #tabs>
       <TabBar
-        :tabs="tabs"
+        :tabs="displayTabs"
         :active-tab-id="activeTabId"
         @select-tab="selectTab"
         @title-double-click="handleTabTitleDoubleClick"
@@ -1681,7 +1771,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         @input="updateEditorBackground"
       />
       <EditorPane
-        v-if="previewMode !== 'preview'"
+        v-show="previewMode !== 'preview'"
         ref="editorPane"
         v-model="content"
         :title="activeTab?.title ?? 'Untitled'"
@@ -1706,7 +1796,8 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       v-if="settingsOpen"
       :always-on-top="alwaysOnTop"
       :theme="theme"
-      :preview-mode="previewMode"
+      :preview-mode="defaultEditorMode"
+      :editor-mode-shortcut="editorModeShortcut"
       :language="language"
       :workspace-path="workspacePath"
       :run-at-startup="runAtStartup"
@@ -1726,7 +1817,8 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       @close="closeSettings"
       @toggle-always-on-top="togglePin"
       @update:theme="theme = $event"
-      @update:preview-mode="previewMode = $event"
+      @update:preview-mode="setDefaultEditorMode"
+      @update:editor-mode-shortcut="editorModeShortcut = $event"
       @update:language="language = $event"
       @update:run-at-startup="runAtStartup = $event"
       @update:close-to-minimize="closeToMinimize = $event"
@@ -1758,7 +1850,9 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         :state="localizedSaveState"
         :characters="content.length"
         :mode="statusMessage"
+        :editor-mode="editorModeLabel"
         :chars-label="t.status.chars"
+        @cycle-editor-mode="cycleEditorMode"
       />
     </template>
   </AppShell>

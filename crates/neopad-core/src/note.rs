@@ -41,6 +41,7 @@ pub fn create_note(workspace: &Workspace, title: Option<String>) -> Result<NoteC
     let mut tabs = load_tabs(workspace)?;
     let now = now_ms()?;
     let id = unique_note_id(&tabs, now);
+    let system_title = title.as_ref().is_none_or(|value| value.trim().is_empty());
     let title = normalized_title(title);
     let file_name = format!("{id}.md");
     let content = format!("# {title}\n\n");
@@ -56,6 +57,7 @@ pub fn create_note(workspace: &Workspace, title: Option<String>) -> Result<NoteC
         updated_at: now,
         pinned: false,
         deleted: false,
+        system_title,
     });
     tabs.active_tab_id = id.clone();
     save_tabs(workspace, &tabs)?;
@@ -139,11 +141,16 @@ pub fn append_to_clipboard_note(
 }
 
 pub fn rename_note(workspace: &Workspace, note_id: &str, title: String) -> Result<NoteTab> {
+    if matches!(note_id, "inbox" | "clipboard") {
+        bail!("{note_id} is pinned and cannot be renamed");
+    }
+
     let mut tabs = load_tabs(workspace)?;
     let tab = find_note_tab_mut(&mut tabs, note_id)?;
     let now = now_ms()?;
 
     tab.title = normalized_title(Some(title));
+    tab.system_title = false;
     tab.updated_at = now;
     let renamed = tab.clone();
     save_tabs(workspace, &tabs)?;
@@ -302,8 +309,27 @@ mod tests {
 
         assert!(delete_note_to_trash(&workspace, "inbox").is_err());
         assert!(delete_note_to_trash(&workspace, "clipboard").is_err());
+        assert!(rename_note(&workspace, "inbox", "Other".to_owned()).is_err());
+        assert!(rename_note(&workspace, "clipboard", "Other".to_owned()).is_err());
         assert!(workspace.inbox_path().is_file());
         assert!(workspace.clipboard_path().is_file());
+    }
+
+    #[test]
+    fn generated_untitled_marker_is_cleared_by_rename() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+
+        let created = create_note(&workspace, None).expect("create untitled note");
+        let created_tab = list_notes(&workspace)
+            .expect("list")
+            .into_iter()
+            .find(|tab| tab.id == created.id)
+            .expect("created tab");
+        assert!(created_tab.system_title);
+
+        let renamed = rename_note(&workspace, &created.id, "Untitled".to_owned()).expect("rename");
+        assert!(!renamed.system_title);
     }
 
     #[test]

@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import type { NoteContent, NoteTab, SearchResult, WorkspaceInfo } from '../types/note'
+import type { EditorMode, EditorModeShortcut } from '../types/editor'
 
 export interface UiConfig {
   language: string
@@ -19,6 +20,7 @@ export interface UiConfig {
   insertDateTimeTemplate: string
   insertDateTimeSeparatorTemplate: string
   customInsertTexts: string[]
+  editorModeShortcut: EditorModeShortcut
 }
 
 export function getAppVersion(): Promise<string> {
@@ -29,12 +31,12 @@ export function getWorkspace(): Promise<WorkspaceInfo> {
   return invoke('get_workspace_command')
 }
 
-export function getUiConfig(): Promise<{ initialized: boolean; ui: UiConfig }> {
+export function getUiConfig(): Promise<{ initialized: boolean; ui: UiConfig; previewMode: EditorMode }> {
   return invoke('get_ui_config_command')
 }
 
-export function saveUiConfig(ui: UiConfig): Promise<void> {
-  return invoke('save_ui_config_command', { ui })
+export function saveUiConfig(ui: UiConfig, previewMode: EditorMode): Promise<void> {
+  return invoke('save_ui_config_command', { ui, previewMode })
 }
 
 export function listNotes(): Promise<NoteTab[]> {

@@ -160,6 +160,10 @@ function runEditorCommand(command: (view: EditorView) => boolean) {
   return command(editorView)
 }
 
+function focusEditor() {
+  editorView?.focus()
+}
+
 function undoEdit() {
   return runEditorCommand(undo)
 }
@@ -458,6 +462,7 @@ function formatCalculationResult(result: number) {
 }
 
 defineExpose({
+  focusEditor,
   undoEdit,
   redoEdit,
   cutSelection,

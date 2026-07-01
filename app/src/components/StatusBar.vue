@@ -3,8 +3,11 @@ defineProps<{
   state: string
   characters: number
   mode: string
+  editorMode: string
   charsLabel: string
 }>()
+
+defineEmits<{ cycleEditorMode: [] }>()
 </script>
 
 <template>
@@ -13,5 +16,6 @@ defineProps<{
     <span>{{ characters }} {{ charsLabel }}</span>
     <span>{{ mode }}</span>
     <slot />
+    <button type="button" class="status-mode" @click="$emit('cycleEditorMode')">{{ editorMode }}</button>
   </footer>
 </template>

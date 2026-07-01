@@ -17,6 +17,10 @@ This file tracks the implemented MVP relative to the original task plan.
 - Cross-process write locking for desktop and write-enabled MCP operations.
 - Tauri command bridge.
 - Vue app shell with tabs, editor, preview, search, settings, and status bar.
+- Edit, hybrid, and preview modes with a compact View menu, status indicator,
+  configurable cycling shortcut, and persisted default.
+- Page rename and trash actions with UI and core protection for default pages.
+- Localized system page labels that preserve stable storage IDs and user titles.
 - CodeMirror 6 Markdown editor.
 - Autosave from the UI.
 - Serialized autosave and tray/global-command handling that preserves pending
@@ -30,6 +34,8 @@ This file tracks the implemented MVP relative to the original task plan.
 - Windows Tauri WebDriver smoke tests for the critical note workflow.
 - Windows icon, tray/taskbar icon, MSI branding, desktop shortcut icon, and
   hidden release console window.
+- Synchronized `0.2.0` application versions with a CI consistency check and
+  release changelog.
 
 ## Current Build Targets
 
@@ -46,7 +52,7 @@ This file tracks the implemented MVP relative to the original task plan.
    path or building on CI.
 4. Decide whether `neopad-mcp` should be bundled as a sidecar or distributed as
    a separate binary.
-5. Add release notes and versioning policy before publishing installers.
+5. Add a signed release workflow before publishing installers.
 
 ## Non-Goals for the MVP
 

@@ -328,6 +328,20 @@ body {
   white-space: nowrap;
 }
 
+.status-mode {
+  margin-left: auto;
+  padding: 2px 7px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.status-mode:hover,
+.status-mode:focus-visible {
+  background: #ffffff;
+  border-color: #a6a6a6;
+}
+
 .preview-pane {
   min-height: 0;
   overflow: auto;

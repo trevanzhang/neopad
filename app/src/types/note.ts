@@ -6,6 +6,7 @@ export type NoteTab = {
   updatedAt: number
   pinned: boolean
   deleted: boolean
+  systemTitle: boolean
 }
 
 export type NoteContent = {

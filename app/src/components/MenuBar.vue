@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import type { AppMessages } from '../lib/i18n'
-import type { PreviewMode } from './ModeSwitch.vue'
+import type { EditorMode } from '../types/editor'
 
 defineProps<{
-  previewMode: PreviewMode
+  previewMode: EditorMode
   tabBarOrientation: 'horizontal' | 'vertical'
   wordWrap: boolean
   alwaysOnTop: boolean
+  pageActionsEnabled: boolean
   messages: AppMessages['menu']
 }>()
 
 defineEmits<{
   newNote: []
+  renamePage: []
+  deletePage: []
   saveClipboard: []
   loadFile: []
   saveAsFile: []
@@ -31,7 +34,6 @@ defineEmits<{
   search: []
   settings: []
   togglePin: []
-  toggleTabBarOrientation: []
   updateTabBarOrientation: [orientation: 'horizontal' | 'vertical']
   formatFont: []
   formatBackground: []
@@ -45,7 +47,7 @@ defineEmits<{
   reminderList: []
   processText: [action: string]
   helpTopic: [topic: 'software' | 'shortcuts' | 'expression' | 'about']
-  updatePreviewMode: [mode: PreviewMode]
+  updatePreviewMode: [mode: EditorMode]
 }>()
 
 function handleMenuClick(event: MouseEvent) {
@@ -132,10 +134,23 @@ function closeMenu(event: KeyboardEvent) {
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.view }}</button>
       <div class="menu-popover">
-        <button type="button" class="menu-command" @click="$emit('toggleTabBarOrientation')">
-          <span>{{ messages.toggleTabBarDisplay }}</span>
-          <span class="menu-shortcut">{{ messages.f10 }}</span>
-        </button>
+        <div class="menu-subroot">
+          <button type="button" class="menu-command">
+            <span>{{ messages.editorMode }}</span>
+            <span class="menu-arrow">&rsaquo;</span>
+          </button>
+          <div class="menu-popover menu-subpopover">
+            <button type="button" :class="{ checked: previewMode === 'edit' }" @click="$emit('updatePreviewMode', 'edit')">
+              {{ messages.editMode }}
+            </button>
+            <button type="button" :class="{ checked: previewMode === 'split' }" @click="$emit('updatePreviewMode', 'split')">
+              {{ messages.splitMode }}
+            </button>
+            <button type="button" :class="{ checked: previewMode === 'preview' }" @click="$emit('updatePreviewMode', 'preview')">
+              {{ messages.previewMode }}
+            </button>
+          </div>
+        </div>
         <div class="menu-separator" role="separator" />
         <div class="menu-subroot">
           <button type="button" class="menu-command">
@@ -166,8 +181,8 @@ function closeMenu(event: KeyboardEvent) {
       <button type="button" class="menu-title">{{ messages.page }}</button>
       <div class="menu-popover">
         <button type="button" @click="$emit('newNote')">{{ messages.newPage }}</button>
-        <button type="button" disabled>{{ messages.renamePage }}</button>
-        <button type="button" disabled>{{ messages.deletePage }}</button>
+        <button type="button" :disabled="!pageActionsEnabled" @click="$emit('renamePage')">{{ messages.renamePage }}</button>
+        <button type="button" :disabled="!pageActionsEnabled" @click="$emit('deletePage')">{{ messages.deletePage }}</button>
       </div>
     </div>
 

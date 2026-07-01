@@ -18,6 +18,8 @@ The repository currently contains a working Windows-focused MVP:
   trash moves, search, config, tabs, and path safety.
 - System tray menu, close-to-hide behavior, global shortcuts, and clipboard
   append.
+- Edit, split, and preview editor modes selectable from the View menu, status
+  bar, configurable shortcut, and persisted default setting.
 - Standalone `neopad-mcp` stdio server with read-only tools by default and
   opt-in write tools via `--allow-write`.
 - Windows MSI packaging with app icon, branded WiX installer images, and desktop
@@ -109,7 +111,7 @@ pnpm tauri:build
 The MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.1.0_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.2.0_x64_en-US.msi
 ```
 
 ## MCP Server
@@ -154,4 +156,5 @@ Write tools are intentionally hidden unless `--allow-write` is provided.
 - [Development](docs/development.md)
 - [MCP](docs/mcp.md)
 - [Tasks](docs/tasks.md)
+- [Changelog](CHANGELOG.md)
 - [Agent guide](AGENTS.md)

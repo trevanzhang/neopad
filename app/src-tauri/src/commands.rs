@@ -1,7 +1,7 @@
 use neopad_core::{
     append_to_clipboard_note, create_note, delete_note_to_trash, list_notes, load_config,
     lock_workspace_for_write, read_note, rename_note, save_config, search_notes, write_note_atomic,
-    NoteContent, NoteTab, SearchResult, UiConfig, Workspace,
+    NoteContent, NoteTab, PreviewMode, SearchResult, UiConfig, Workspace,
 };
 use serde::Serialize;
 use std::process::Command;
@@ -41,6 +41,7 @@ pub struct WorkspaceInfo {
 pub struct UiConfigInfo {
     pub initialized: bool,
     pub ui: UiConfig,
+    pub preview_mode: PreviewMode,
 }
 
 #[tauri::command]
@@ -59,16 +60,22 @@ pub fn get_ui_config_command(state: State<'_, AppState>) -> Result<UiConfigInfo,
         .map(|config| UiConfigInfo {
             initialized: config.version >= 2,
             ui: config.ui,
+            preview_mode: config.preview_mode,
         })
         .map_err(display_error)
 }
 
 #[tauri::command]
-pub fn save_ui_config_command(state: State<'_, AppState>, ui: UiConfig) -> Result<(), String> {
+pub fn save_ui_config_command(
+    state: State<'_, AppState>,
+    ui: UiConfig,
+    preview_mode: PreviewMode,
+) -> Result<(), String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     let mut config = load_config(&state.workspace).map_err(display_error)?;
     config.version = 2;
     config.start_at_login = ui.run_at_startup;
+    config.preview_mode = preview_mode;
     config.ui = ui;
     save_config(&state.workspace, &config).map_err(display_error)
 }

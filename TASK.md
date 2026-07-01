@@ -27,7 +27,9 @@ Implemented MVP capabilities:
 - Plain Markdown persistence under `~/.neopad/notes/*.md`.
 - Multiple tabs backed by local metadata.
 - Autosave.
-- Markdown preview and split mode.
+- Edit, hybrid, and preview editor modes with a persisted default and shortcut.
+- Page creation, rename, and trash actions with protected default pages.
+- English and Chinese display names for system-managed page titles.
 - Full-text search.
 - Manual clipboard capture into `clipboard.md`.
 - Tray menu.
@@ -71,7 +73,9 @@ app/src-tauri/icons/wix-dialog.bmp
 ```
 
 The WiX dialog bitmap is used as a full background on welcome and finish pages.
-Keep the right side visually quiet so default WiX text remains readable.
+Keep the right side visually quiet so default WiX text remains readable. The
+WiX banner must remain free of branding and text because native installer copy
+is drawn over its left side.
 
 ## Verification
 

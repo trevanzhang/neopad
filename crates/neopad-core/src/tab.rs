@@ -10,6 +10,8 @@ pub struct NoteTab {
     pub updated_at: i64,
     pub pinned: bool,
     pub deleted: bool,
+    #[serde(default)]
+    pub system_title: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -34,6 +36,7 @@ impl TabsState {
                     updated_at: now_ms,
                     pinned: true,
                     deleted: false,
+                    system_title: false,
                 },
                 NoteTab {
                     id: "clipboard".to_owned(),
@@ -43,6 +46,7 @@ impl TabsState {
                     updated_at: now_ms,
                     pinned: true,
                     deleted: false,
+                    system_title: false,
                 },
             ],
         }

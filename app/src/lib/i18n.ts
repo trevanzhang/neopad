@@ -1,6 +1,11 @@
 export type AppLanguage = 'en' | 'zh'
 
 export type AppMessages = {
+  tabs: {
+    inbox: string
+    clipboard: string
+    untitled: string
+  }
   menu: {
     file: string
     edit: string
@@ -38,15 +43,15 @@ export type AppMessages = {
     ctrlR: string
     ctrlShiftF: string
     ctrlA: string
-    toggleTabBarDisplay: string
     tabBarDisplay: string
     horizontal: string
     vertical: string
-    f10: string
     font: string
     backgroundColor: string
     wordWrap: string
     ctrlW: string
+    editorMode: string
+    cycleEditorMode: string
     editMode: string
     splitMode: string
     previewMode: string
@@ -142,6 +147,9 @@ export type AppMessages = {
     hideWindow: string
     editor: string
     previewMode: string
+    cycleEditorMode: string
+    shortcut: string
+    disabled: string
     mcp: string
     workspace: string
     copyReadOnlyConfig: string
@@ -156,6 +164,9 @@ export type AppMessages = {
     line: string
   }
   status: {
+    editMode: string
+    hybridMode: string
+    previewMode: string
     saved: string
     saving: string
     failed: string
@@ -189,6 +200,11 @@ export type AppMessages = {
 
 export const messages: Record<AppLanguage, AppMessages> = {
   en: {
+    tabs: {
+      inbox: 'Inbox',
+      clipboard: 'Clipboard',
+      untitled: 'Untitled',
+    },
     menu: {
       file: 'File(F)',
       edit: 'Edit(E)',
@@ -226,17 +242,17 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
-      toggleTabBarDisplay: 'Toggle Tab Bar Display(S)',
-      tabBarDisplay: 'Tab Bar Display(T)',
-      horizontal: 'Horizontal(H)',
-      vertical: 'Vertical(V)',
-      f10: 'F10',
+      tabBarDisplay: 'Tab Bar Position(T)',
+      horizontal: 'Top(H)',
+      vertical: 'Left(V)',
       font: 'Font(F)...',
       backgroundColor: 'Background Color(B)...',
       wordWrap: 'Word Wrap(W)',
       ctrlW: 'Ctrl+W',
+      editorMode: 'Editor Mode(M)',
+      cycleEditorMode: 'Cycle Editor Mode(C)',
       editMode: 'Edit',
-      splitMode: 'Split',
+      splitMode: 'Hybrid',
       previewMode: 'Preview',
       alwaysOnTop: 'Always on Top',
       renamePage: 'Rename Page',
@@ -330,6 +346,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       hideWindow: 'Hide window',
       editor: 'Editor',
       previewMode: 'Preview mode',
+      cycleEditorMode: 'Cycle editor mode',
+      shortcut: 'Shortcut',
+      disabled: 'Disabled',
       mcp: 'MCP',
       workspace: 'Workspace',
       copyReadOnlyConfig: 'Copy read-only config',
@@ -344,6 +363,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       line: 'line',
     },
     status: {
+      editMode: 'Edit mode',
+      hybridMode: 'Hybrid mode',
+      previewMode: 'Preview mode',
       saved: 'Saved',
       saving: 'Saving',
       failed: 'Failed',
@@ -375,6 +397,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
     },
   },
   zh: {
+    tabs: {
+      inbox: '\u9ed8\u8ba4',
+      clipboard: '\u526a\u5207\u677f',
+      untitled: '\u672a\u547d\u540d',
+    },
     menu: {
       file: '\u6587\u4ef6(F)',
       edit: '\u7f16\u8f91(E)',
@@ -412,17 +439,17 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
-      toggleTabBarDisplay: '\u5207\u6362\u6807\u7b7e\u680f\u663e\u793a\u65b9\u5f0f(S)',
-      tabBarDisplay: '\u6807\u7b7e\u680f\u663e\u793a\u65b9\u5f0f(T)',
-      horizontal: '\u6a2a\u5411\u65b9\u5f0f(H)',
-      vertical: '\u7eb5\u5411\u65b9\u5f0f(V)',
-      f10: 'F10',
+      tabBarDisplay: '\u6807\u7b7e\u680f\u4f4d\u7f6e(T)',
+      horizontal: '\u9876\u90e8(H)',
+      vertical: '\u5de6\u4fa7(V)',
       font: '\u5b57\u4f53(F)...',
       backgroundColor: '\u80cc\u666f\u8272(B)...',
       wordWrap: '\u81ea\u52a8\u6362\u884c(W)',
       ctrlW: 'Ctrl+W',
+      editorMode: '\u7f16\u8f91\u5668\u6a21\u5f0f(M)',
+      cycleEditorMode: '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f(C)',
       editMode: '\u7f16\u8f91',
-      splitMode: '\u5206\u5c4f',
+      splitMode: '\u6df7\u5408',
       previewMode: '\u9884\u89c8',
       alwaysOnTop: '\u7a97\u53e3\u7f6e\u9876',
       renamePage: '\u91cd\u547d\u540d\u9875\u9762',
@@ -440,7 +467,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlD: 'Ctrl+D',
       ctrlShiftDash: 'Ctrl+Shift+-',
       ctrlE: 'Ctrl+E',
-      keepOnTop: '\u7a97\u53e3\u4fdd\u6301\u5728\u6700\u9876\u5c42(T)',
+      keepOnTop: '\u7a97\u53e3\u7f6e\u9876(T)',
       f6: 'F6',
       windowOpacity: '\u7a97\u53e3\u900f\u660e\u5ea6(W)...',
       textProcessing: '\u6587\u672c\u5904\u7406(P)',
@@ -516,6 +543,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       hideWindow: '\u9690\u85cf\u7a97\u53e3',
       editor: '\u7f16\u8f91\u5668',
       previewMode: '\u9884\u89c8\u6a21\u5f0f',
+      cycleEditorMode: '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f',
+      shortcut: '\u5feb\u6377\u952e',
+      disabled: '\u7981\u7528',
       mcp: 'MCP',
       workspace: '\u5de5\u4f5c\u533a',
       copyReadOnlyConfig: '\u590d\u5236\u53ea\u8bfb\u914d\u7f6e',
@@ -530,6 +560,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       line: '\u884c',
     },
     status: {
+      editMode: '\u7f16\u8f91\u6a21\u5f0f',
+      hybridMode: '\u6df7\u5408\u6a21\u5f0f',
+      previewMode: '\u9884\u89c8\u6a21\u5f0f',
       saved: '\u5df2\u4fdd\u5b58',
       saving: '\u4fdd\u5b58\u4e2d',
       failed: '\u5931\u8d25',

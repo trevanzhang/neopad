@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { AppLanguage, AppMessages } from '../lib/i18n'
-import type { PreviewMode } from './ModeSwitch.vue'
+import type { EditorMode, EditorModeShortcut } from '../types/editor'
 
 type SettingsTab = 'general' | 'shortcuts' | 'insertText'
 type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
@@ -9,7 +9,8 @@ type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
 defineProps<{
   alwaysOnTop: boolean
   theme: 'system' | 'light' | 'dark'
-  previewMode: PreviewMode
+  previewMode: EditorMode
+  editorModeShortcut: EditorModeShortcut
   language: AppLanguage
   workspacePath: string
   runAtStartup: boolean
@@ -32,7 +33,8 @@ const emit = defineEmits<{
   close: []
   toggleAlwaysOnTop: []
   'update:theme': [theme: 'system' | 'light' | 'dark']
-  'update:previewMode': [mode: PreviewMode]
+  'update:previewMode': [mode: EditorMode]
+  'update:editorModeShortcut': [shortcut: EditorModeShortcut]
   'update:language': [language: AppLanguage]
   'update:runAtStartup': [value: boolean]
   'update:closeToMinimize': [value: boolean]
@@ -199,6 +201,15 @@ function deleteCustomText(current: string[]) {
         </fieldset>
 
         <label class="settings-row">
+          <span>{{ messages.previewMode }}</span>
+          <select :value="previewMode" @change="$emit('update:previewMode', ($event.target as HTMLSelectElement).value as EditorMode)">
+            <option value="edit">{{ menuMessages.editMode }}</option>
+            <option value="split">{{ menuMessages.splitMode }}</option>
+            <option value="preview">{{ menuMessages.previewMode }}</option>
+          </select>
+        </label>
+
+        <label class="settings-row">
           <span>{{ messages.language }}</span>
           <select
             :value="language"
@@ -211,6 +222,17 @@ function deleteCustomText(current: string[]) {
       </template>
 
       <template v-else-if="activeTab === 'shortcuts'">
+        <fieldset class="settings-fieldset settings-shortcut-fieldset">
+          <legend>{{ messages.cycleEditorMode }}</legend>
+          <label class="settings-form-row">
+            <span>{{ messages.shortcut }}:</span>
+            <select :value="editorModeShortcut" @change="$emit('update:editorModeShortcut', ($event.target as HTMLSelectElement).value as EditorModeShortcut)">
+              <option value="F7">F7</option>
+              <option value="Ctrl+Shift+M">Ctrl+Shift+M</option>
+              <option value="disabled">{{ messages.disabled }}</option>
+            </select>
+          </label>
+        </fieldset>
         <fieldset class="settings-fieldset settings-shortcut-fieldset">
           <legend>{{ messages.toggleWindow }}</legend>
           <label class="settings-form-row">

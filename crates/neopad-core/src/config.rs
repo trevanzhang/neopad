@@ -46,6 +46,12 @@ pub struct UiConfig {
     pub insert_date_time_template: String,
     pub insert_date_time_separator_template: String,
     pub custom_insert_texts: Vec<String>,
+    #[serde(default = "default_editor_mode_shortcut")]
+    pub editor_mode_shortcut: String,
+}
+
+fn default_editor_mode_shortcut() -> String {
+    "F7".to_owned()
 }
 
 impl Default for UiConfig {
@@ -69,6 +75,7 @@ impl Default for UiConfig {
             insert_date_time_separator_template:
                 "crlf() + chars('-', 29) + ' ' + date() + ' ' + time()".to_owned(),
             custom_insert_texts: Vec::new(),
+            editor_mode_shortcut: default_editor_mode_shortcut(),
         }
     }
 }
@@ -174,6 +181,18 @@ mod tests {
         assert_eq!(config.version, 1);
         assert!(!config.ui.run_at_startup);
         assert_eq!(config.ui.shortcut_base_key, "Z");
+    }
+
+    #[test]
+    fn old_ui_config_without_editor_mode_shortcut_uses_f7() {
+        let mut value = serde_json::to_value(UiConfig::default()).expect("serialize UI config");
+        value
+            .as_object_mut()
+            .expect("UI config object")
+            .remove("editorModeShortcut");
+
+        let config: UiConfig = serde_json::from_value(value).expect("legacy UI config");
+        assert_eq!(config.editor_mode_shortcut, "F7");
     }
 
     #[test]
