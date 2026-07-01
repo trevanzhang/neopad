@@ -31,6 +31,7 @@ The repository currently contains a working Windows-focused MVP:
 - Persistent light and dark themes available from the Format menu and status
   bar.
 - Tab context menu with rename, trash, and persistent color choices.
+- Native Save As dialogs for exporting the active note or all notes as Markdown.
 - Standalone `neopad-mcp` stdio server with read-only tools by default and
   opt-in write tools via `--allow-write`.
 - Windows MSI packaging with app icon, branded WiX installer images, and desktop

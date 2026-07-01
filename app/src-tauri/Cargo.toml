@@ -16,6 +16,7 @@ tauri-plugin-clipboard-manager = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-window-state = "2"
+rfd = "0.15"
 anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
