@@ -39,7 +39,8 @@ Implemented MVP capabilities:
 - Native whole-window opacity controlled from an in-app slider.
 - Compact settings that remain usable at the minimum supported window size.
 - Full-text search.
-- Manual clipboard capture into `clipboard.md`.
+- Manual clipboard capture into `clipboard.md` with readable local timestamp
+  separator lines.
 - Tray menu.
 - Single-instance startup and persistent main-window position, with a
   bottom-right default on first launch.

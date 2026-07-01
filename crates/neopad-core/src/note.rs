@@ -2,6 +2,7 @@ use crate::atomic_write::write_atomic;
 use crate::path::{note_file_path, trash_file_path};
 use crate::{ensure_workspace_layout, NoteTab, TabsState, Workspace};
 use anyhow::{bail, Context, Result};
+use chrono::Local;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -137,7 +138,7 @@ pub fn append_to_clipboard_note(
         return read_note(workspace, "clipboard");
     }
 
-    let entry = format!("\n---\n\n{}\n\n{}\n", timestamp_heading()?, clipboard_text);
+    let entry = format!("\n{}\n\n{}\n", timestamp_separator(), clipboard_text);
     append_to_note(workspace, "clipboard", &entry)
 }
 
@@ -280,8 +281,13 @@ fn now_ms() -> Result<i64> {
     Ok(duration.as_millis() as i64)
 }
 
-fn timestamp_heading() -> Result<String> {
-    Ok(format!("Saved at {}", now_ms()?))
+fn timestamp_separator() -> String {
+    format_timestamp_separator(&Local::now().format("%Y-%m-%d %H:%M").to_string())
+}
+
+fn format_timestamp_separator(timestamp: &str) -> String {
+    let rule = "-".repeat(29);
+    format!("{rule} {timestamp} {rule}")
 }
 
 #[cfg(test)]
@@ -391,9 +397,17 @@ mod tests {
 
         let updated = append_to_clipboard_note(&workspace, "copied text").expect("append");
 
-        assert!(updated.content.contains("---"));
-        assert!(updated.content.contains("Saved at "));
+        assert!(!updated.content.contains("\n---\n"));
+        assert!(updated.content.contains("----------------------------- 20"));
         assert!(updated.content.contains("copied text"));
+    }
+
+    #[test]
+    fn clipboard_timestamp_separator_is_fixed_width_and_readable() {
+        assert_eq!(
+            format_timestamp_separator("2026-07-02 05:47"),
+            "----------------------------- 2026-07-02 05:47 -----------------------------"
+        );
     }
 
     #[test]
