@@ -18,6 +18,8 @@ The repository currently contains a working Windows-focused MVP:
   trash moves, search, config, tabs, and path safety.
 - System tray menu, close-to-hide behavior, global shortcuts, and clipboard
   append.
+- Configurable global shortcuts for window visibility and clipboard capture,
+  plus `Alt+Enter` maximize/restore.
 - Edit, hybrid, and preview editor modes selectable from the View menu, status
   bar, configurable shortcut, and persisted default setting.
 - Optional Vim key bindings for the CodeMirror editor, with persisted settings

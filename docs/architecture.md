@@ -85,6 +85,8 @@ the configured workspace.
   Insert-mode exit sequence, and visible mode status.
 - Markdown preview and split mode.
 - Persistent light and dark themes.
+- Native Windows whole-window opacity controlled through a Tauri command and
+  `SetLayeredWindowAttributes`; CSS opacity is not used for the app shell.
 - Tab context actions for rename, trash, and persistent color selection.
 - Compact settings dialog with independently scrollable content and a dedicated
   Advanced tab for optional editor features.
@@ -93,8 +95,12 @@ the configured workspace.
 - Global shortcuts:
   - `Alt+Z`: toggle window.
   - `Ctrl+Shift+V`: append current text clipboard to `clipboard.md`.
+  - `Alt+Enter`: maximize or restore the focused main window.
   - `Escape`: leave Vim Insert or Visual mode first; hide the window from Vim
     Normal mode or the regular editor.
+
+The two global shortcuts are configurable and re-registered at runtime. NeoPad
+rejects duplicate window and clipboard shortcut combinations.
 - Close-to-hide behavior.
 - Windows runtime icon and release GUI subsystem.
 

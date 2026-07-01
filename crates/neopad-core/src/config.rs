@@ -44,6 +44,8 @@ pub struct UiConfig {
     pub title_double_click_action: String,
     pub shortcut_base_key: String,
     pub shortcut_modifiers: Vec<String>,
+    pub clipboard_shortcut_base_key: String,
+    pub clipboard_shortcut_modifiers: Vec<String>,
     pub insert_separator_template: String,
     pub insert_date_time_template: String,
     pub insert_date_time_separator_template: String,
@@ -74,6 +76,8 @@ impl Default for UiConfig {
             title_double_click_action: "rename".to_owned(),
             shortcut_base_key: "Z".to_owned(),
             shortcut_modifiers: vec!["Alt".to_owned()],
+            clipboard_shortcut_base_key: "V".to_owned(),
+            clipboard_shortcut_modifiers: vec!["Ctrl".to_owned(), "Shift".to_owned()],
             insert_separator_template: "crlf() + chars('-', 80) + crlf()".to_owned(),
             insert_date_time_template: "date() + ' ' + time()".to_owned(),
             insert_date_time_separator_template:

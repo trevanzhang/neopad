@@ -22,6 +22,7 @@ pub struct AppState {
     pub close_to_minimize: AtomicBool,
     pub snap_to_edges: AtomicBool,
     pub toggle_shortcut: Mutex<Shortcut>,
+    pub clipboard_shortcut: Mutex<Shortcut>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -80,8 +81,22 @@ pub fn save_ui_config_command(
     config.start_at_login = ui.run_at_startup;
     config.preview_mode = preview_mode;
     config.theme = theme;
+    config.default_hotkey = shortcut_label(&ui.shortcut_base_key, &ui.shortcut_modifiers);
+    config.clipboard_hotkey = shortcut_label(
+        &ui.clipboard_shortcut_base_key,
+        &ui.clipboard_shortcut_modifiers,
+    );
     config.ui = ui;
     save_config(&state.workspace, &config).map_err(display_error)
+}
+
+fn shortcut_label(base_key: &str, modifiers: &[String]) -> String {
+    modifiers
+        .iter()
+        .map(String::as_str)
+        .chain(std::iter::once(base_key.trim()))
+        .collect::<Vec<_>>()
+        .join("+")
 }
 
 #[tauri::command]
@@ -182,6 +197,11 @@ pub fn set_snap_to_edges_command(state: State<'_, AppState>, enabled: bool) -> R
 }
 
 #[tauri::command]
+pub fn set_window_opacity_command(app: AppHandle, opacity: f64) -> Result<(), String> {
+    crate::window::set_main_window_opacity(&app, opacity)
+}
+
+#[tauri::command]
 pub fn update_toggle_shortcut_command(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -190,6 +210,22 @@ pub fn update_toggle_shortcut_command(
 ) -> Result<(), String> {
     crate::hotkey::update_toggle_window_shortcut(&app, &state, &base_key, &modifiers)
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn update_clipboard_shortcut_command(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    base_key: String,
+    modifiers: Vec<String>,
+) -> Result<(), String> {
+    crate::hotkey::update_clipboard_shortcut(&app, &state, &base_key, &modifiers)
+        .map_err(display_error)
+}
+
+#[tauri::command]
+pub fn toggle_main_window_maximize_command(app: AppHandle) -> Result<(), String> {
+    crate::window::toggle_main_window_maximize(&app).map_err(|error| error.to_string())
 }
 
 #[tauri::command]

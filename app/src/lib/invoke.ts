@@ -18,6 +18,8 @@ export interface UiConfig {
   titleDoubleClickAction: string
   shortcutBaseKey: string
   shortcutModifiers: string[]
+  clipboardShortcutBaseKey: string
+  clipboardShortcutModifiers: string[]
   insertSeparatorTemplate: string
   insertDateTimeTemplate: string
   insertDateTimeSeparatorTemplate: string
@@ -95,8 +97,20 @@ export function setSnapToEdges(enabled: boolean): Promise<void> {
   return invoke('set_snap_to_edges_command', { enabled })
 }
 
+export function setWindowOpacity(opacity: number): Promise<void> {
+  return invoke('set_window_opacity_command', { opacity })
+}
+
 export function updateToggleShortcut(baseKey: string, modifiers: string[]): Promise<void> {
   return invoke('update_toggle_shortcut_command', { baseKey, modifiers })
+}
+
+export function updateClipboardShortcut(baseKey: string, modifiers: string[]): Promise<void> {
+  return invoke('update_clipboard_shortcut_command', { baseKey, modifiers })
+}
+
+export function toggleMainWindowMaximize(): Promise<void> {
+  return invoke('toggle_main_window_maximize_command')
 }
 
 export function openTrash(): Promise<void> {

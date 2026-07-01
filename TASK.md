@@ -35,11 +35,14 @@ Implemented MVP capabilities:
 - Persistent optional tab colors managed from the tab context menu.
 - English and Chinese display names for system-managed page titles.
 - Persistent day and night themes across the complete desktop interface.
+- Native whole-window opacity controlled from an in-app slider.
 - Compact settings that remain usable at the minimum supported window size.
 - Full-text search.
 - Manual clipboard capture into `clipboard.md`.
 - Tray menu.
 - Global shortcuts.
+- Configurable global window and clipboard shortcuts, plus local `Alt+Enter`
+  maximize/restore.
 - Close-to-hide behavior.
 - Standalone MCP server.
 - Windows MSI packaging with branded installer assets.

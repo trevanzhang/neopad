@@ -27,9 +27,12 @@ import {
   setAutostart,
   setCloseToMinimize,
   setSnapToEdges,
+  setWindowOpacity,
+  toggleMainWindowMaximize,
   setTrayLanguage,
   toggleAlwaysOnTop,
   updateToggleShortcut,
+  updateClipboardShortcut,
   writeNote,
 } from './lib/invoke'
 import type { AppTheme } from './lib/invoke'
@@ -102,6 +105,8 @@ const transparencyEnabled = ref(initialBooleanSetting('neopad.transparencyEnable
 const titleDoubleClickAction = ref<TitleDoubleClickAction>(initialTitleDoubleClickAction())
 const shortcutBaseKey = ref(initialStringSetting('neopad.shortcutBaseKey', 'Z'))
 const shortcutModifiers = ref<string[]>(initialJsonSetting('neopad.shortcutModifiers', ['Alt']))
+const clipboardShortcutBaseKey = ref(initialStringSetting('neopad.clipboardShortcutBaseKey', 'V'))
+const clipboardShortcutModifiers = ref<string[]>(initialJsonSetting('neopad.clipboardShortcutModifiers', ['Ctrl', 'Shift']))
 const insertSeparatorTemplate = ref(initialStringSetting('neopad.insertSeparatorTemplate', "crlf() + chars('-', 80) + crlf()"))
 const insertDateTimeTemplate = ref(initialStringSetting('neopad.insertDateTimeTemplate', "date() + ' ' + time()"))
 const legacyDateTimeSeparatorTemplate = "crlf() + chars('-', 29) + ' ' + date() + ' ' + time()"
@@ -173,6 +178,7 @@ onMounted(async () => {
   await loadWorkspacePath()
   await loadShortcutWarnings()
   await loadNativeUiConfig()
+  await Promise.allSettled([syncWindowOpacity(), syncToggleShortcut(), syncClipboardShortcut()])
   window.addEventListener('keydown', handleKeydown, { capture: true })
   window.addEventListener('beforeunload', forceSaveOnExit)
   document.addEventListener('visibilitychange', forceSaveOnHide)
@@ -286,6 +292,7 @@ watch(theme, () => {
 
 watch(windowOpacity, () => {
   window.localStorage.setItem('neopad.windowOpacity', String(windowOpacity.value))
+  void syncWindowOpacity()
 })
 
 watch(runAtStartup, () => {
@@ -305,6 +312,7 @@ watch(snapToEdges, () => {
 
 watch(transparencyEnabled, () => {
   window.localStorage.setItem('neopad.transparencyEnabled', String(transparencyEnabled.value))
+  void syncWindowOpacity()
 })
 
 watch(titleDoubleClickAction, () => {
@@ -319,6 +327,16 @@ watch(shortcutBaseKey, () => {
 watch(shortcutModifiers, () => {
   window.localStorage.setItem('neopad.shortcutModifiers', JSON.stringify(shortcutModifiers.value))
   void syncToggleShortcut()
+}, { deep: true })
+
+watch(clipboardShortcutBaseKey, () => {
+  window.localStorage.setItem('neopad.clipboardShortcutBaseKey', clipboardShortcutBaseKey.value)
+  void syncClipboardShortcut()
+})
+
+watch(clipboardShortcutModifiers, () => {
+  window.localStorage.setItem('neopad.clipboardShortcutModifiers', JSON.stringify(clipboardShortcutModifiers.value))
+  void syncClipboardShortcut()
 }, { deep: true })
 
 watch(insertSeparatorTemplate, () => {
@@ -367,6 +385,8 @@ watch(
     titleDoubleClickAction,
     shortcutBaseKey,
     shortcutModifiers,
+    clipboardShortcutBaseKey,
+    clipboardShortcutModifiers,
     insertSeparatorTemplate,
     insertDateTimeTemplate,
     insertDateTimeSeparatorTemplate,
@@ -871,22 +891,6 @@ async function togglePin() {
   }
 }
 
-function promptWindowOpacity() {
-  const current = Math.round(windowOpacity.value * 100)
-  const input = window.prompt(t.value.menu.windowOpacity, String(current))
-  if (!input) {
-    return
-  }
-
-  const nextOpacity = Number(input)
-  if (!Number.isFinite(nextOpacity)) {
-    return
-  }
-
-  windowOpacity.value = Math.min(1, Math.max(0.2, nextOpacity / 100))
-  statusMessage.value = t.value.status.opacityUpdated
-}
-
 function openReminderList() {
   searchQuery.value = '- [ ]'
   showSearchPlaceholder()
@@ -1060,6 +1064,8 @@ async function loadNativeUiConfig() {
         : 'rename'
     shortcutBaseKey.value = ui.shortcutBaseKey
     shortcutModifiers.value = ui.shortcutModifiers
+    clipboardShortcutBaseKey.value = ui.clipboardShortcutBaseKey
+    clipboardShortcutModifiers.value = ui.clipboardShortcutModifiers
     insertSeparatorTemplate.value = ui.insertSeparatorTemplate
     insertDateTimeTemplate.value = ui.insertDateTimeTemplate
     insertDateTimeSeparatorTemplate.value = ui.insertDateTimeSeparatorTemplate === legacyDateTimeSeparatorTemplate
@@ -1098,6 +1104,8 @@ function persistUiConfig() {
         titleDoubleClickAction: titleDoubleClickAction.value,
         shortcutBaseKey: shortcutBaseKey.value,
         shortcutModifiers: shortcutModifiers.value,
+        clipboardShortcutBaseKey: clipboardShortcutBaseKey.value,
+        clipboardShortcutModifiers: clipboardShortcutModifiers.value,
         insertSeparatorTemplate: insertSeparatorTemplate.value,
         insertDateTimeTemplate: insertDateTimeTemplate.value,
         insertDateTimeSeparatorTemplate: insertDateTimeSeparatorTemplate.value,
@@ -1119,8 +1127,10 @@ async function syncNativeSettings() {
     syncAutostart(),
     syncCloseToMinimize(),
     syncSnapToEdges(),
+    syncWindowOpacity(),
     syncTrayLanguage(),
     syncToggleShortcut(),
+    syncClipboardShortcut(),
   ])
 }
 
@@ -1172,6 +1182,19 @@ async function syncSnapToEdges() {
   }
 }
 
+async function syncWindowOpacity() {
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  try {
+    await setWindowOpacity(transparencyEnabled.value ? windowOpacity.value : 1)
+    statusMessage.value = t.value.status.opacityUpdated
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
 async function syncToggleShortcut() {
   if (!isTauriRuntime()) {
     return
@@ -1179,6 +1202,18 @@ async function syncToggleShortcut() {
 
   try {
     await updateToggleShortcut(shortcutBaseKey.value, shortcutModifiers.value)
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function syncClipboardShortcut() {
+  if (!isTauriRuntime()) {
+    return
+  }
+
+  try {
+    await updateClipboardShortcut(clipboardShortcutBaseKey.value, clipboardShortcutModifiers.value)
   } catch {
     saveState.value = 'Failed'
   }
@@ -1257,6 +1292,15 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
     event.stopPropagation()
     cycleEditorMode()
+    return
+  }
+
+  if (event.key === 'Enter' && event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (isTauriRuntime()) {
+      void toggleMainWindowMaximize()
+    }
     return
   }
 
@@ -1717,6 +1761,9 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
     return {
       title: zh ? '\u5feb\u6377\u952e\u5217\u8868' : 'Shortcut List',
       lines: [
+        `${formatShortcutLabel(shortcutBaseKey.value, shortcutModifiers.value)} - ` + (zh ? '\u663e\u793a/\u9690\u85cf\u7a97\u53e3' : 'Show/hide window'),
+        `${formatShortcutLabel(clipboardShortcutBaseKey.value, clipboardShortcutModifiers.value)} - ` + (zh ? '\u4fdd\u5b58\u526a\u8d34\u677f' : 'Save clipboard'),
+        'Alt+Enter - ' + (zh ? '\u6700\u5927\u5316/\u8fd8\u539f\u7a97\u53e3' : 'Maximize/restore window'),
         'Ctrl+F - ' + (zh ? '\u67e5\u627e' : 'Find'),
         'Ctrl+Shift+F - ' + (zh ? '\u5168\u5c40\u641c\u7d22' : 'Global search'),
         'Ctrl+D - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4' : 'Insert date time'),
@@ -1782,12 +1829,15 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         ],
   }
 }
+
+function formatShortcutLabel(baseKey: string, modifiers: string[]) {
+  return [...modifiers, baseKey].filter(Boolean).join('+')
+}
 </script>
 
 <template>
   <AppShell
     :tab-orientation="tabBarOrientation"
-    :window-opacity="transparencyEnabled ? windowOpacity : 1"
     :data-ready="appReady ? 'true' : 'false'"
     :theme="theme"
   >
@@ -1831,7 +1881,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         @insert-date-time-separator="insertDateTimeSeparator"
         @insert-reminder="insertReminder"
         @insert-text-settings="openInsertTextSettings"
-        @window-opacity="promptWindowOpacity"
+        @window-opacity="openSettings"
         @reminder-list="openReminderList"
         @process-text="processEditorText"
         @help-topic="openHelpTopic"
@@ -1911,6 +1961,8 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       :title-double-click-action="titleDoubleClickAction"
       :shortcut-base-key="shortcutBaseKey"
       :shortcut-modifiers="shortcutModifiers"
+      :clipboard-shortcut-base-key="clipboardShortcutBaseKey"
+      :clipboard-shortcut-modifiers="clipboardShortcutModifiers"
       :insert-separator-template="insertSeparatorTemplate"
       :insert-date-time-template="insertDateTimeTemplate"
       :insert-date-time-separator-template="insertDateTimeSeparatorTemplate"
@@ -1932,6 +1984,8 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       @update:title-double-click-action="titleDoubleClickAction = $event"
       @update:shortcut-base-key="shortcutBaseKey = $event"
       @update:shortcut-modifiers="shortcutModifiers = $event"
+      @update:clipboard-shortcut-base-key="clipboardShortcutBaseKey = $event"
+      @update:clipboard-shortcut-modifiers="clipboardShortcutModifiers = $event"
       @update:insert-separator-template="insertSeparatorTemplate = $event"
       @update:insert-date-time-template="insertDateTimeTemplate = $event"
       @update:insert-date-time-separator-template="insertDateTimeSeparatorTemplate = $event"

@@ -27,7 +27,12 @@ pub fn handle_global_shortcut(
 
     if shortcut == &toggle_shortcut {
         let _ = toggle_main_window(app);
-    } else if shortcut == &save_clipboard_shortcut() {
+    } else if state
+        .clipboard_shortcut
+        .lock()
+        .map(|current| shortcut == &*current)
+        .unwrap_or_else(|_| shortcut == &save_clipboard_shortcut())
+    {
         let _ = app.emit("neopad://save-clipboard-requested", ());
     }
 }
@@ -50,6 +55,13 @@ pub fn update_toggle_window_shortcut(
     modifiers: &[String],
 ) -> Result<()> {
     let shortcut = shortcut_from_parts(base_key, modifiers)?;
+    let clipboard_shortcut = *state
+        .clipboard_shortcut
+        .lock()
+        .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+    if shortcut == clipboard_shortcut {
+        bail!("window and clipboard shortcuts must be different");
+    }
     let previous = *state
         .toggle_shortcut
         .lock()
@@ -59,15 +71,60 @@ pub fn update_toggle_window_shortcut(
         return Ok(());
     }
 
-    let shortcuts = app.global_shortcut();
-    let _ = shortcuts.unregister(previous);
-    shortcuts.register(shortcut)?;
+    replace_registered_shortcut(app, previous, shortcut)?;
 
     let mut current = state
         .toggle_shortcut
         .lock()
         .map_err(|error| anyhow::anyhow!(error.to_string()))?;
     *current = shortcut;
+    Ok(())
+}
+
+pub fn update_clipboard_shortcut(
+    app: &tauri::AppHandle,
+    state: &AppState,
+    base_key: &str,
+    modifiers: &[String],
+) -> Result<()> {
+    let shortcut = shortcut_from_parts(base_key, modifiers)?;
+    let toggle_shortcut = *state
+        .toggle_shortcut
+        .lock()
+        .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+    if shortcut == toggle_shortcut {
+        bail!("window and clipboard shortcuts must be different");
+    }
+    let previous = *state
+        .clipboard_shortcut
+        .lock()
+        .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+
+    if previous == shortcut {
+        return Ok(());
+    }
+
+    replace_registered_shortcut(app, previous, shortcut)?;
+
+    let mut current = state
+        .clipboard_shortcut
+        .lock()
+        .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+    *current = shortcut;
+    Ok(())
+}
+
+fn replace_registered_shortcut(
+    app: &tauri::AppHandle,
+    previous: Shortcut,
+    next: Shortcut,
+) -> Result<()> {
+    let shortcuts = app.global_shortcut();
+    shortcuts.unregister(previous)?;
+    if let Err(error) = shortcuts.register(next) {
+        let _ = shortcuts.register(previous);
+        return Err(error.into());
+    }
     Ok(())
 }
 

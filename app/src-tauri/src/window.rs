@@ -75,6 +75,54 @@ pub fn set_main_window_always_on_top(app: &AppHandle, enabled: bool) -> tauri::R
     Ok(())
 }
 
+pub fn toggle_main_window_maximize(app: &AppHandle) -> tauri::Result<()> {
+    if let Some(window) = main_window(app) {
+        if window.is_maximized()? {
+            window.unmaximize()?;
+        } else {
+            window.maximize()?;
+        }
+    }
+    Ok(())
+}
+
+pub fn set_main_window_opacity(app: &AppHandle, opacity: f64) -> Result<(), String> {
+    let window = main_window(app).ok_or_else(|| "main window is unavailable".to_owned())?;
+    set_window_opacity(&window, opacity)
+}
+
+#[cfg(windows)]
+fn set_window_opacity(window: &WebviewWindow, opacity: f64) -> Result<(), String> {
+    use windows::Win32::Foundation::COLORREF;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetWindowLongPtrW, SetLayeredWindowAttributes, SetWindowLongPtrW, GWL_EXSTYLE, LWA_ALPHA,
+        WS_EX_LAYERED,
+    };
+
+    let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+    let alpha = opacity_alpha(opacity);
+
+    unsafe {
+        let extended_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+        if extended_style & WS_EX_LAYERED.0 as isize == 0 {
+            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, extended_style | WS_EX_LAYERED.0 as isize);
+        }
+        SetLayeredWindowAttributes(hwnd, COLORREF(0), alpha, LWA_ALPHA)
+            .map_err(|error| error.to_string())?;
+    }
+
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn set_window_opacity(_window: &WebviewWindow, _opacity: f64) -> Result<(), String> {
+    Ok(())
+}
+
+fn opacity_alpha(opacity: f64) -> u8 {
+    (opacity.clamp(0.2, 1.0) * 255.0).round() as u8
+}
+
 fn main_window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window("main")
 }
@@ -115,4 +163,18 @@ fn snap_window_to_edges(window: &WebviewWindow) -> tauri::Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::opacity_alpha;
+
+    #[test]
+    fn opacity_is_clamped_and_converted_to_alpha() {
+        assert_eq!(opacity_alpha(1.0), 255);
+        assert_eq!(opacity_alpha(0.5), 128);
+        assert_eq!(opacity_alpha(0.2), 51);
+        assert_eq!(opacity_alpha(0.0), 51);
+        assert_eq!(opacity_alpha(2.0), 255);
+    }
 }

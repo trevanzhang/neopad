@@ -9,7 +9,8 @@ use commands::{
     open_trash_command, quit_app_command, read_note_command, rename_note_command,
     save_clipboard_command, save_ui_config_command, search_notes_command, set_autostart_command,
     set_close_to_minimize_command, set_note_color_command, set_snap_to_edges_command,
-    show_window_command, toggle_always_on_top_command, toggle_window_command,
+    set_window_opacity_command, show_window_command, toggle_always_on_top_command,
+    toggle_main_window_maximize_command, toggle_window_command, update_clipboard_shortcut_command,
     update_toggle_shortcut_command, write_note_command, AppState,
 };
 use neopad_core::init_workspace;
@@ -27,6 +28,10 @@ fn build_state() -> AppState {
         close_to_minimize: AtomicBool::new(true),
         snap_to_edges: AtomicBool::new(false),
         toggle_shortcut: Mutex::new(Shortcut::new(Some(Modifiers::ALT), Code::KeyZ)),
+        clipboard_shortcut: Mutex::new(Shortcut::new(
+            Some(Modifiers::CONTROL | Modifiers::SHIFT),
+            Code::KeyV,
+        )),
     }
 }
 
@@ -65,7 +70,10 @@ pub fn run() {
             set_autostart_command,
             set_close_to_minimize_command,
             set_snap_to_edges_command,
+            set_window_opacity_command,
             update_toggle_shortcut_command,
+            update_clipboard_shortcut_command,
+            toggle_main_window_maximize_command,
             open_trash_command,
             quit_app_command,
             toggle_window_command,

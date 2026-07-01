@@ -8,6 +8,9 @@ patch versions are reserved for compatible fixes.
 
 ### Added
 
+- `Alt+Enter` toggles the main window between maximized and restored states.
+- The global clipboard capture shortcut is now configurable in Settings,
+  defaulting to `Ctrl+Shift+V`.
 - Persistent light and dark themes switchable from the Format menu and status
   bar.
 - Custom tab context menu with rename, trash, and persistent tab colors.
@@ -19,6 +22,8 @@ patch versions are reserved for compatible fixes.
 
 ### Fixed
 
+- Window opacity now controls the native Windows window through Tauri instead
+  of fading only the web content; the Format menu opens the existing slider.
 - Vim block cursors remain clearly visible in both light and dark themes.
 - Settings remain fully accessible at the default window size by scrolling only
   the settings content while keeping its header, tabs, and confirmation fixed.

@@ -922,6 +922,17 @@ body {
   margin-top: 8px;
 }
 
+.settings-slider-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--np-accent);
+  cursor: pointer;
+}
+
+.settings-slider-row input[type="range"]:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
 .settings-radio-row {
   display: flex;
   flex-wrap: wrap;

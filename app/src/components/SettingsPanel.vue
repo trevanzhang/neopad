@@ -22,6 +22,8 @@ defineProps<{
   titleDoubleClickAction: TitleDoubleClickAction
   shortcutBaseKey: string
   shortcutModifiers: string[]
+  clipboardShortcutBaseKey: string
+  clipboardShortcutModifiers: string[]
   insertSeparatorTemplate: string
   insertDateTimeTemplate: string
   insertDateTimeSeparatorTemplate: string
@@ -46,6 +48,8 @@ const emit = defineEmits<{
   'update:titleDoubleClickAction': [value: TitleDoubleClickAction]
   'update:shortcutBaseKey': [value: string]
   'update:shortcutModifiers': [value: string[]]
+  'update:clipboardShortcutBaseKey': [value: string]
+  'update:clipboardShortcutModifiers': [value: string[]]
   'update:insertSeparatorTemplate': [value: string]
   'update:insertDateTimeTemplate': [value: string]
   'update:insertDateTimeSeparatorTemplate': [value: string]
@@ -59,6 +63,11 @@ const selectedCustomIndex = ref<number | null>(null)
 function updateModifier(modifier: string, checked: boolean, current: string[]) {
   const next = checked ? Array.from(new Set([...current, modifier])) : current.filter((item) => item !== modifier)
   emit('update:shortcutModifiers', next)
+}
+
+function updateClipboardModifier(modifier: string, checked: boolean, current: string[]) {
+  const next = checked ? Array.from(new Set([...current, modifier])) : current.filter((item) => item !== modifier)
+  emit('update:clipboardShortcutModifiers', next)
 }
 
 function addCustomText(current: string[]) {
@@ -161,6 +170,7 @@ function deleteCustomText(current: string[]) {
               type="range"
               min="20"
               max="100"
+              :aria-label="messages.windowOpacity"
               :disabled="!transparencyEnabled"
               :value="windowOpacityPercent"
               @input="$emit('update:windowOpacityPercent', Number(($event.target as HTMLInputElement).value))"
@@ -256,6 +266,30 @@ function deleteCustomText(current: string[]) {
                   type="checkbox"
                   :checked="shortcutModifiers.includes(modifier)"
                   @change="updateModifier(modifier, ($event.target as HTMLInputElement).checked, shortcutModifiers)"
+                />
+                {{ modifier }}
+              </label>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset class="settings-fieldset settings-shortcut-fieldset">
+          <legend>{{ messages.saveClipboard }}</legend>
+          <label class="settings-form-row">
+            <span>{{ messages.baseKey }}:</span>
+            <input
+              type="text"
+              :value="clipboardShortcutBaseKey"
+              @input="$emit('update:clipboardShortcutBaseKey', ($event.target as HTMLInputElement).value)"
+            />
+          </label>
+          <div class="settings-form-row">
+            <span>{{ messages.modifiers }}:</span>
+            <div class="settings-modifier-list">
+              <label v-for="modifier in ['Ctrl', 'Alt', 'Shift', 'Win']" :key="modifier">
+                <input
+                  type="checkbox"
+                  :checked="clipboardShortcutModifiers.includes(modifier)"
+                  @change="updateClipboardModifier(modifier, ($event.target as HTMLInputElement).checked, clipboardShortcutModifiers)"
                 />
                 {{ modifier }}
               </label>
