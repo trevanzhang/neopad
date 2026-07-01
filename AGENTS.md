@@ -21,44 +21,6 @@ mcp-server/           Standalone MCP stdio server
 docs/                 Human-facing project docs
 ```
 
-## Multi-Agent Development
-
-- Use `develop` as the integration branch. Do not commit task work directly to
-  `main` or `develop`.
-- Each task must use a unique `codex/<task-name>` branch created from the latest
-  `origin/develop`.
-- Each agent must work in a dedicated Git worktree. Never switch branches in
-  another agent's worktree or in the primary repository while it is being used
-  for integration.
-- Before editing, run `git status -sb` and inspect existing changes. Uncommitted
-  changes belong to the current worktree owner; never reset, discard, or
-  overwrite them.
-- Keep task scope explicit. Do not modify files outside the assigned scope
-  unless the additional change is required and reported in the handoff.
-- Avoid assigning multiple active tasks to the same high-contention files such
-  as `app/src/App.vue`, `Cargo.lock`, or `pnpm-lock.yaml`.
-- Keep commits focused. Push the task branch and open a pull request against
-  `develop`; do not merge it unless explicitly authorized.
-- Before opening a pull request, fetch `origin`, synchronize with the latest
-  `origin/develop`, resolve conflicts inside the task worktree, and rerun the
-  relevant checks.
-- Do not reuse development-server ports or run multiple interactive Tauri app
-  instances concurrently unless each task has isolated its runtime resources.
-- Do not commit generated output from `target/`, `app/dist/`, or installer
-  bundle directories.
-
-Create a task worktree from the primary repository with:
-
-```powershell
-git fetch origin
-git worktree add `
-  D:\TrevanCode\neopad-worktrees\<task-name> `
-  -b codex/<task-name> origin/develop
-```
-
-At handoff, report the worktree path, branch, commit, changed files, tests run,
-pull request, remaining risks, and any dependency or migration changes.
-
 ## Important Rules
 
 - Use `neopad-core` for all note, workspace, path, search, and write behavior.
