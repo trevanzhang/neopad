@@ -22,6 +22,14 @@ patch versions are reserved for compatible fixes.
 
 ### Fixed
 
+- Escape now closes settings, menus, search, help, and tab context menus before
+  falling back to hiding the main window.
+- Menu popovers now size to their command labels and shortcut columns so long
+  localized labels cannot overlap shortcut text.
+- Edge snapping no longer interrupts `Alt+Enter` while Windows is maximizing
+  the main window.
+- Vim Insert-mode carets now use the theme-aware cursor color instead of the
+  CodeMirror default black caret on dark backgrounds.
 - Window opacity now controls the native Windows window through Tauri instead
   of fading only the web content; the Format menu opens the existing slider.
 - Vim block cursors remain clearly visible in both light and dark themes.

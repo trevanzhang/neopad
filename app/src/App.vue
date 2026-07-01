@@ -1288,6 +1288,33 @@ function matchesEditorModeShortcut(event: KeyboardEvent) {
 }
 
 function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    if (settingsOpen.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeSettings()
+      return
+    }
+
+    if (helpTopic.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeHelp()
+      return
+    }
+
+    if (searchOpen.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeSearch()
+      return
+    }
+
+    // Menus and tab context menus own Escape while they are open. Their
+    // component listeners close the surface later in the same event dispatch.
+    if (document.querySelector('.menu-root:focus-within, .tab-context-menu')) return
+  }
+
   if (matchesEditorModeShortcut(event)) {
     event.preventDefault()
     event.stopPropagation()

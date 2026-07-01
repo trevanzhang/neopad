@@ -43,4 +43,44 @@ describe('NeoPad desktop note workflow', () => {
     await browser.execute((element) => (element as HTMLElement).click(), closeButton)
     expect(await $('.cm-content').getText()).toContain('E2E autosave content')
   })
+
+  it('uses Escape to close settings and menus before hiding the window', async () => {
+    await browser.keys('F8')
+    await expect($('.settings-panel')).toBeDisplayed()
+    await browser.keys('Escape')
+    await expect($('.settings-panel')).not.toBeDisplayed()
+    await expect($('.app-shell')).toBeDisplayed()
+
+    const menuTitle = await $('.menu-title')
+    await menuTitle.click()
+    await expect($('.menu-root:focus-within .menu-popover')).toBeDisplayed()
+    await browser.keys('Escape')
+    await browser.waitUntil(async () => !(await $('.menu-root:focus-within').isExisting()), {
+      timeoutMsg: 'Escape did not close the open menu',
+    })
+    await expect($('.app-shell')).toBeDisplayed()
+  })
+
+  it('maximizes and restores with Alt+Enter while edge snapping is enabled', async () => {
+    await browser.setWindowSize(720, 520)
+    await browser.keys('F8')
+    const snapRow = await $('.settings-check-row*=Snap main window to screen edges')
+    const snapCheckbox = await snapRow.$('input')
+    await snapCheckbox.waitForExist()
+    await browser.execute((element) => (element as HTMLInputElement).click(), snapCheckbox)
+    await click('.settings-footer button')
+
+    const restored = await browser.getWindowSize()
+    await browser.keys(['Alt', 'Enter'])
+    await browser.waitUntil(async () => {
+      const maximized = await browser.getWindowSize()
+      return maximized.width > restored.width && maximized.height > restored.height
+    }, { timeoutMsg: 'Alt+Enter did not maximize the window' })
+
+    await browser.keys(['Alt', 'Enter'])
+    await browser.waitUntil(async () => {
+      const current = await browser.getWindowSize()
+      return current.width === restored.width && current.height === restored.height
+    }, { timeoutMsg: 'Alt+Enter did not restore the original window size' })
+  })
 })

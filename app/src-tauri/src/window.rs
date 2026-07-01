@@ -130,6 +130,12 @@ fn main_window(app: &AppHandle) -> Option<WebviewWindow> {
 fn snap_window_to_edges(window: &WebviewWindow) -> tauri::Result<()> {
     const SNAP_DISTANCE: i32 = 16;
 
+    // Windows emits a move event while entering the maximized state. Moving the
+    // window again from that callback interrupts the native maximize sequence.
+    if window.is_maximized()? {
+        return Ok(());
+    }
+
     let Some(monitor) = window.current_monitor()? else {
         return Ok(());
     };

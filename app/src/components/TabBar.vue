@@ -49,7 +49,10 @@ function closeContextMenu(event?: Event) {
 }
 
 function closeContextMenuOnEscape(event: KeyboardEvent) {
-  if (event.key === 'Escape') contextMenu.value = null
+  if (event.key !== 'Escape' || !contextMenu.value) return
+  event.preventDefault()
+  event.stopImmediatePropagation()
+  contextMenu.value = null
 }
 
 function runContextAction(action: 'rename' | 'delete') {

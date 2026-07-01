@@ -96,6 +96,9 @@ function baseEditorTheme() {
       backgroundColor: 'var(--np-vim-cursor) !important',
       color: 'var(--np-vim-cursor-text) !important',
     },
+    '.cm-cursor, .cm-dropCursor': {
+      borderLeftColor: 'var(--np-vim-cursor) !important',
+    },
     '&:not(.cm-focused) .cm-fat-cursor': {
       backgroundColor: 'transparent !important',
       color: 'transparent !important',

@@ -133,6 +133,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     event.preventDefault()
     event.stopPropagation()
+    event.stopImmediatePropagation()
     if (subpopover) {
       subpopover.parentElement?.querySelector<HTMLButtonElement>(':scope > button')?.focus()
     } else {
