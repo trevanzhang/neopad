@@ -1051,6 +1051,23 @@ body {
   border-color: var(--np-border);
 }
 
+.theme-dark .help-header {
+  color: var(--np-text);
+  background: var(--np-chrome);
+  border-color: var(--np-border);
+}
+
+.theme-dark .help-header button {
+  color: var(--np-text);
+  background: var(--np-control);
+  border-color: var(--np-border);
+}
+
+.theme-dark .help-body {
+  color: var(--np-text);
+  background: var(--np-surface);
+}
+
 .theme-dark .settings-tabs button {
   color: var(--np-text);
   background: var(--np-control);
