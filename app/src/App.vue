@@ -1451,6 +1451,28 @@ function handleKeydown(event: KeyboardEvent) {
     return
   }
 
+  if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+    const key = event.key.toLowerCase()
+    if (key === 'n') {
+      event.preventDefault()
+      event.stopPropagation()
+      void createLocalTab()
+      return
+    }
+    if (key === 'w') {
+      event.preventDefault()
+      event.stopPropagation()
+      void deleteActivePage()
+      return
+    }
+    if (key === 'o') {
+      event.preventDefault()
+      event.stopPropagation()
+      triggerLoadFile()
+      return
+    }
+  }
+
   if (vimMode.value && editorPane.value?.isEditorFocused()) {
     const isApplicationFunctionKey = event.key === 'F3' || event.key === 'F6' || event.key === 'F8' || event.key === 'F10'
     const shouldHideFromNormalMode = event.key === 'Escape' && activeVimMode.value === 'normal'
@@ -1528,11 +1550,6 @@ function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'F8') {
     event.preventDefault()
     openSettings()
-  }
-
-  if (event.key.toLowerCase() === 'w' && event.ctrlKey) {
-    event.preventDefault()
-    toggleWordWrap()
   }
 
   if (event.code === 'Minus' && event.ctrlKey && event.shiftKey) {
@@ -1963,6 +1980,9 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         `${formatShortcutLabel(shortcutBaseKey.value, shortcutModifiers.value)} - ` + (zh ? '\u663e\u793a/\u9690\u85cf\u7a97\u53e3' : 'Show/hide window'),
         `${formatShortcutLabel(clipboardShortcutBaseKey.value, clipboardShortcutModifiers.value)} - ` + (zh ? '\u4fdd\u5b58\u526a\u8d34\u677f' : 'Save clipboard'),
         'Alt+Enter - ' + (zh ? '\u6700\u5927\u5316/\u8fd8\u539f\u7a97\u53e3' : 'Maximize/restore window'),
+        'Ctrl+N - ' + (zh ? '\u65b0\u5efa\u6807\u7b7e\u9875' : 'New tab'),
+        'Ctrl+W - ' + (zh ? '\u5173\u95ed\u6807\u7b7e\u9875' : 'Close tab'),
+        'Ctrl+O - ' + (zh ? '\u4ece\u6587\u4ef6\u8f7d\u5165' : 'Load from file'),
         'Ctrl+Tab / Ctrl+Shift+Tab - ' + (zh ? '\u5207\u6362\u4e0b\u4e00\u4e2a/\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875' : 'Switch next/previous tab'),
         'Ctrl+F - ' + (zh ? '\u67e5\u627e' : 'Find'),
         'Ctrl+Shift+F - ' + (zh ? '\u5168\u5c40\u641c\u7d22' : 'Global search'),
@@ -1970,7 +1990,6 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         'Ctrl+- - ' + (zh ? '\u63d2\u5165\u5206\u9694\u884c' : 'Insert separator'),
         'Ctrl+Shift+- - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4\u5206\u9694\u884c' : 'Insert date time separator'),
         'Ctrl+E - ' + (zh ? '\u63d2\u5165\u63d0\u9192' : 'Insert reminder'),
-        'Ctrl+W - ' + (zh ? '\u5207\u6362\u81ea\u52a8\u6362\u884c' : 'Toggle word wrap'),
         'F6 - ' + (zh ? '\u5207\u6362\u7a97\u53e3\u7f6e\u9876' : 'Toggle window on top'),
         (editorModeShortcut.value === 'disabled' ? (zh ? '\u672a\u7ed1\u5b9a' : 'Unbound') : editorModeShortcut.value) +
           ' - ' + (zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f' : 'Cycle editor mode'),

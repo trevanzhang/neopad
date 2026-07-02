@@ -49,6 +49,8 @@ export type AppMessages = {
     ctrlR: string
     ctrlShiftF: string
     ctrlA: string
+    ctrlN: string
+    ctrlO: string
     tabBarDisplay: string
     horizontal: string
     vertical: string
@@ -267,6 +269,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
+      ctrlN: 'Ctrl+N',
+      ctrlO: 'Ctrl+O',
       tabBarDisplay: 'Tab Bar Position(F10)',
       horizontal: 'Top(H)',
       vertical: 'Left(V)',
@@ -483,6 +487,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
+      ctrlN: 'Ctrl+N',
+      ctrlO: 'Ctrl+O',
       tabBarDisplay: '\u6807\u7b7e\u680f\u4f4d\u7f6e(F10)',
       horizontal: '\u9876\u90e8(H)',
       vertical: '\u5de6\u4fa7(V)',
