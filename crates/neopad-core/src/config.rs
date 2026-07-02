@@ -132,7 +132,7 @@ impl AppConfig {
             show_in_taskbar: false,
             auto_save_debounce_ms: 500,
             default_open_mode: "edit".to_owned(),
-            preview_mode: PreviewMode::Split,
+            preview_mode: PreviewMode::Edit,
             clipboard_target: "clipboard".to_owned(),
             max_search_results: 100,
             mcp: McpConfig {
