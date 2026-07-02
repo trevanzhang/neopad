@@ -192,7 +192,10 @@ function handleMenuKeydown(event: KeyboardEvent) {
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.file }}</button>
       <div class="menu-popover">
-        <button type="button" @click="$emit('loadFile')">{{ messages.loadFromFile }}</button>
+        <button type="button" class="menu-command" @click="$emit('loadFile')">
+          <span>{{ messages.loadFromFile }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlO }}</span>
+        </button>
         <button type="button" @click="$emit('saveAsFile')">{{ messages.saveAsFile }}</button>
         <div class="menu-separator" role="separator" />
         <button type="button" @click="$emit('exportAll')">{{ messages.exportAll }}</button>
@@ -301,9 +304,15 @@ function handleMenuKeydown(event: KeyboardEvent) {
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.page }}</button>
       <div class="menu-popover">
-        <button type="button" @click="$emit('newNote')">{{ messages.newPage }}</button>
+        <button type="button" class="menu-command" @click="$emit('newNote')">
+          <span>{{ messages.newPage }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlN }}</span>
+        </button>
         <button type="button" :disabled="!pageActionsEnabled" @click="$emit('renamePage')">{{ messages.renamePage }}</button>
-        <button type="button" :disabled="!pageActionsEnabled" @click="$emit('deletePage')">{{ messages.deletePage }}</button>
+        <button type="button" class="menu-command" :disabled="!pageActionsEnabled" @click="$emit('deletePage')">
+          <span>{{ messages.deletePage }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlW }}</span>
+        </button>
       </div>
     </div>
 
@@ -314,10 +323,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
         <button type="button" @click="$emit('formatBackground')">{{ messages.backgroundColor }}</button>
         <button type="button" @click="$emit('toggleTheme')">{{ messages.toggleTheme }}</button>
         <div class="menu-separator" role="separator" />
-        <button type="button" class="menu-command" :class="{ checked: wordWrap }" @click="$emit('toggleWordWrap')">
-          <span>{{ messages.wordWrap }}</span>
-          <span class="menu-shortcut">{{ messages.ctrlW }}</span>
-        </button>
+        <button type="button" :class="{ checked: wordWrap }" @click="$emit('toggleWordWrap')">{{ messages.wordWrap }}</button>
       </div>
     </div>
 

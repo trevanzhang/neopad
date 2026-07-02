@@ -2,6 +2,7 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { bracketMatching } from '@codemirror/language'
+import { findNext, openSearchPanel } from '@codemirror/search'
 import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
 import { getCM, Vim, vim } from '@replit/codemirror-vim'
 import {
@@ -67,7 +68,7 @@ function baseEditorTheme() {
     '&': {
       height: '100%',
       color: 'var(--np-text)',
-      fontSize: '15px',
+      fontSize: '14px',
     },
     '.cm-scroller': {
       lineHeight: '1.45',
@@ -103,6 +104,57 @@ function baseEditorTheme() {
       backgroundColor: 'transparent !important',
       color: 'transparent !important',
       outline: '1px solid var(--np-vim-cursor)',
+    },
+    '.cm-panels': {
+      color: 'var(--np-text)',
+      backgroundColor: 'var(--np-chrome)',
+      borderTop: '1px solid var(--np-border)',
+    },
+    '.cm-panel.cm-search': {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '5px',
+      alignItems: 'center',
+      padding: '6px 8px',
+    },
+    '.cm-panel.cm-search br': {
+      display: 'none',
+    },
+    '.cm-panel.cm-search input': {
+      width: '140px',
+      height: '26px',
+      padding: '0 7px',
+      color: 'var(--np-text)',
+      backgroundColor: 'var(--np-surface)',
+      border: '1px solid var(--np-border)',
+      borderRadius: '2px',
+      fontSize: '13px',
+    },
+    '.cm-panel.cm-search button': {
+      height: '26px',
+      padding: '0 8px',
+      color: 'var(--np-text)',
+      backgroundColor: 'var(--np-control)',
+      backgroundImage: 'none',
+      border: '1px solid var(--np-border)',
+      borderRadius: '2px',
+      fontSize: '12px',
+      cursor: 'pointer',
+    },
+    '.cm-panel.cm-search label': {
+      display: 'inline-flex',
+      gap: '3px',
+      alignItems: 'center',
+      fontSize: '12px',
+    },
+    '.cm-panel.cm-search input[type="checkbox"]': {
+      width: '14px',
+      height: '14px',
+      padding: '0',
+    },
+    '.cm-panel.cm-search button[name="close"]': {
+      position: 'static',
+      marginLeft: 'auto',
     },
   })
 }
@@ -304,6 +356,24 @@ function selectAllText() {
   })
   editorView.focus()
   return true
+}
+
+function openEditorFind() {
+  if (!editorView) return false
+  const opened = runEditorCommand(openSearchPanel)
+  requestAnimationFrame(() => editorRoot.value?.querySelector<HTMLInputElement>('.cm-search input[name="search"]')?.focus())
+  return opened
+}
+
+function openEditorReplace() {
+  if (!editorView) return false
+  const opened = runEditorCommand(openSearchPanel)
+  requestAnimationFrame(() => editorRoot.value?.querySelector<HTMLInputElement>('.cm-search input[name="replace"]')?.focus())
+  return opened
+}
+
+function findNextMatch() {
+  return runEditorCommand(findNext)
 }
 
 function insertText(text: string) {
@@ -548,6 +618,9 @@ defineExpose({
   copySelection,
   pasteClipboard,
   selectAllText,
+  openEditorFind,
+  openEditorReplace,
+  findNextMatch,
   insertText,
   transformText,
   appendCurrentLineCalculation,

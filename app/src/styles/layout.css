@@ -73,7 +73,7 @@ body {
   padding: 0 10px;
   background: #ffffff;
   border-bottom: 1px solid #b9b9b9;
-  font-size: 18px;
+  font-size: 15px;
   -webkit-user-select: none;
   user-select: none;
 }
@@ -233,7 +233,7 @@ body {
   border-left-color: #eeeeee;
   border-radius: 0;
   box-shadow: inset 1px 1px #ffffff;
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
 }
 
@@ -1024,6 +1024,19 @@ body {
   line-height: 1.4;
 }
 
+.vim-exit-row {
+  margin-top: 8px;
+}
+
+.vim-exit-row > span {
+  color: var(--np-text);
+  font-size: 13px;
+}
+
+.vim-exit-hint {
+  margin-left: 0;
+}
+
 .settings-description {
   margin: 0 0 8px;
   color: var(--np-muted);
@@ -1036,6 +1049,23 @@ body {
   color: var(--np-text);
   background: var(--np-chrome);
   border-color: var(--np-border);
+}
+
+.theme-dark .help-header {
+  color: var(--np-text);
+  background: var(--np-chrome);
+  border-color: var(--np-border);
+}
+
+.theme-dark .help-header button {
+  color: var(--np-text);
+  background: var(--np-control);
+  border-color: var(--np-border);
+}
+
+.theme-dark .help-body {
+  color: var(--np-text);
+  background: var(--np-surface);
 }
 
 .theme-dark .settings-tabs button {

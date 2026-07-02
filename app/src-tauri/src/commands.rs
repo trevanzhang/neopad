@@ -1,7 +1,7 @@
 use neopad_core::{
-    append_to_clipboard_note, create_note, delete_note_to_trash, list_notes, load_config,
-    lock_workspace_for_write, read_note, rename_note, save_config, search_notes, write_note_atomic,
-    NoteContent, NoteTab, PreviewMode, SearchResult, Theme, UiConfig, Workspace,
+    append_to_clipboard_note, create_note, delete_note_to_trash, export_note_file, list_notes,
+    load_config, lock_workspace_for_write, read_note, rename_note, save_config, search_notes,
+    write_note_atomic, NoteContent, NoteTab, PreviewMode, SearchResult, Theme, UiConfig, Workspace,
 };
 use serde::Serialize;
 use std::process::Command;
@@ -164,6 +164,31 @@ pub fn search_notes_command(
     limit: Option<usize>,
 ) -> Result<Vec<SearchResult>, String> {
     search_notes(&state.workspace, &query, limit.unwrap_or(100)).map_err(display_error)
+}
+
+#[tauri::command]
+pub async fn save_markdown_file_command(
+    window: tauri::WebviewWindow,
+    suggested_file_name: String,
+    content: String,
+) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = rfd::FileDialog::new()
+            .set_parent(&window)
+            .set_title("Save Markdown file")
+            .set_file_name(&suggested_file_name)
+            .add_filter("Markdown", &["md", "markdown"])
+            .save_file();
+
+        let Some(path) = path else {
+            return Ok(false);
+        };
+
+        export_note_file(&path, &content).map_err(display_error)?;
+        Ok(true)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]

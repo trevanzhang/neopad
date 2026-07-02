@@ -78,6 +78,10 @@ export function searchNotes(query: string, limit = 100): Promise<SearchResult[]>
   return invoke('search_notes_command', { query, limit })
 }
 
+export function saveMarkdownFile(suggestedFileName: string, content: string): Promise<boolean> {
+  return invoke('save_markdown_file_command', { suggestedFileName, content })
+}
+
 export function showWindow(): Promise<void> {
   return invoke('show_window_command')
 }

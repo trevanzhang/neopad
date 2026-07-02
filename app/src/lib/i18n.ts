@@ -49,6 +49,8 @@ export type AppMessages = {
     ctrlR: string
     ctrlShiftF: string
     ctrlA: string
+    ctrlN: string
+    ctrlO: string
     tabBarDisplay: string
     horizontal: string
     vertical: string
@@ -267,6 +269,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
+      ctrlN: 'Ctrl+N',
+      ctrlO: 'Ctrl+O',
       tabBarDisplay: 'Tab Bar Position(F10)',
       horizontal: 'Top(H)',
       vertical: 'Left(V)',
@@ -343,7 +347,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       vimUseCtrlShortcuts: 'Keep NeoPad Ctrl shortcuts enabled',
       vimModeDescription: 'Vim mode adds Normal, Insert, and Visual editing. NeoPad shortcuts can take priority over conflicting Vim Ctrl mappings.',
       vimSettings: 'Vim editing',
-      vimInsertExitKey: 'Additional Insert exit sequence',
+      vimInsertExitKey: 'Insert mode exit sequence',
       vimModeHint: 'The custom sequence exits Insert mode without replacing Esc. Leave it empty to disable the extra mapping.',
       runAtStartup: 'Run automatically at system startup',
       closeToMinimize: 'Minimize when clicking the main window close button',
@@ -483,6 +487,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
+      ctrlN: 'Ctrl+N',
+      ctrlO: 'Ctrl+O',
       tabBarDisplay: '\u6807\u7b7e\u680f\u4f4d\u7f6e(F10)',
       horizontal: '\u9876\u90e8(H)',
       vertical: '\u5de6\u4fa7(V)',
@@ -559,7 +565,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       vimUseCtrlShortcuts: '\u4fdd\u7559 NeoPad \u7684 Ctrl \u5feb\u6377\u952e',
       vimModeDescription: 'Vim \u6a21\u5f0f\u63d0\u4f9b Normal\u3001Insert \u548c Visual \u7f16\u8f91\u3002\u5f00\u542f\u4e0b\u65b9\u9009\u9879\u540e\uff0cNeoPad \u5feb\u6377\u952e\u4f18\u5148\u4e8e\u51b2\u7a81\u7684 Vim Ctrl \u6620\u5c04\u3002',
       vimSettings: 'Vim \u7f16\u8f91',
-      vimInsertExitKey: '\u989d\u5916\u7684 Insert \u9000\u51fa\u5e8f\u5217',
+      vimInsertExitKey: 'Insert \u6a21\u5f0f\u9000\u51fa\u5e8f\u5217',
       vimModeHint: '\u81ea\u5b9a\u4e49\u5e8f\u5217\u53ea\u4f5c\u4e3a\u9000\u51fa Insert \u6a21\u5f0f\u7684\u9644\u52a0\u6620\u5c04\uff0c\u4e0d\u4f1a\u66ff\u6362 Esc\uff1b\u7559\u7a7a\u53ef\u5173\u95ed\u3002',
       runAtStartup: '\u7cfb\u7edf\u542f\u52a8\u65f6\u81ea\u52a8\u8fd0\u884c',
       closeToMinimize: '\u70b9\u51fb\u4e3b\u7a97\u53e3\u7684\u5173\u95ed\u6309\u94ae\u65f6\u6700\u5c0f\u5316',

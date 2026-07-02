@@ -22,6 +22,7 @@ import {
   readNote,
   renameNote,
   saveClipboard,
+  saveMarkdownFile,
   saveUiConfig,
   searchNotes,
   setNoteColor,
@@ -41,6 +42,7 @@ import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
 import { AutosaveCoordinator } from './lib/autosave'
 import { editorBackgroundForTheme } from './lib/theme'
+import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
 import type { NoteTab, SearchResult } from './types/note'
 import { isEditorMode, nextEditorMode, type EditorMode, type EditorModeShortcut } from './types/editor'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
@@ -110,9 +112,9 @@ const closeToMinimize = ref(initialBooleanSetting('neopad.closeToMinimize', true
 const snapToEdges = ref(initialBooleanSetting('neopad.snapToEdges', false))
 const transparencyEnabled = ref(initialBooleanSetting('neopad.transparencyEnabled', true))
 const titleDoubleClickAction = ref<TitleDoubleClickAction>(initialTitleDoubleClickAction())
-const shortcutBaseKey = ref(initialStringSetting('neopad.shortcutBaseKey', 'Z'))
+const shortcutBaseKey = ref(normalizeStoredShortcutKey(initialStringSetting('neopad.shortcutBaseKey', 'Z'), 'Z'))
 const shortcutModifiers = ref<string[]>(initialJsonSetting('neopad.shortcutModifiers', ['Alt']))
-const clipboardShortcutBaseKey = ref(initialStringSetting('neopad.clipboardShortcutBaseKey', 'V'))
+const clipboardShortcutBaseKey = ref(normalizeStoredShortcutKey(initialStringSetting('neopad.clipboardShortcutBaseKey', 'V'), 'V'))
 const clipboardShortcutModifiers = ref<string[]>(initialJsonSetting('neopad.clipboardShortcutModifiers', ['Ctrl', 'Shift']))
 const insertSeparatorTemplate = ref(initialStringSetting('neopad.insertSeparatorTemplate', "crlf() + chars('-', 80) + crlf()"))
 const insertDateTimeTemplate = ref(initialStringSetting('neopad.insertDateTimeTemplate', "date() + ' ' + time()"))
@@ -706,8 +708,19 @@ async function loadFileFromInput(event: Event) {
 async function saveAsFile() {
   await forceSave()
   const title = activeTab.value?.title || 'Untitled'
-  downloadText(`${safeFileName(title)}.md`, content.value)
-  statusMessage.value = t.value.status.savedAsFile
+  const fileName = `${safeFileName(title)}.md`
+
+  try {
+    if (isTauriRuntime()) {
+      const saved = await saveMarkdownFile(fileName, content.value)
+      if (!saved) return
+    } else {
+      downloadText(fileName, content.value)
+    }
+    statusMessage.value = t.value.status.savedAsFile
+  } catch {
+    saveState.value = 'Failed'
+  }
 }
 
 async function exportAllNotes() {
@@ -720,7 +733,13 @@ async function exportAllNotes() {
       sections.push(`## ${tab.title}\n\n<!-- file: ${tab.fileName} -->\n\n${noteContent.trimEnd()}\n`)
     }
 
-    downloadText('neopad-export.md', `# Exported from NeoPad\n\n${sections.join('\n---\n\n')}`)
+    const exportContent = `# Exported from NeoPad\n\n${sections.join('\n---\n\n')}`
+    if (isTauriRuntime()) {
+      const saved = await saveMarkdownFile('neopad-export.md', exportContent)
+      if (!saved) return
+    } else {
+      downloadText('neopad-export.md', exportContent)
+    }
     statusMessage.value = t.value.status.exported
   } catch {
     saveState.value = 'Failed'
@@ -777,15 +796,15 @@ function selectAllEditorText() {
 }
 
 function openFindPanel() {
-  showSearchPlaceholder()
+  editorPane.value?.openEditorFind()
 }
 
 function findNextMatch() {
-  showSearchPlaceholder()
+  editorPane.value?.findNextMatch()
 }
 
 function openReplacePanel() {
-  showSearchPlaceholder()
+  editorPane.value?.openEditorReplace()
 }
 
 function toggleTabBarOrientation() {
@@ -1127,9 +1146,9 @@ async function loadNativeUiConfig() {
       ui.titleDoubleClickAction === 'none' || ui.titleDoubleClickAction === 'delete'
         ? ui.titleDoubleClickAction
         : 'rename'
-    shortcutBaseKey.value = ui.shortcutBaseKey
+    shortcutBaseKey.value = normalizeStoredShortcutKey(ui.shortcutBaseKey, 'Z')
     shortcutModifiers.value = ui.shortcutModifiers
-    clipboardShortcutBaseKey.value = ui.clipboardShortcutBaseKey
+    clipboardShortcutBaseKey.value = normalizeStoredShortcutKey(ui.clipboardShortcutBaseKey, 'V')
     clipboardShortcutModifiers.value = ui.clipboardShortcutModifiers
     insertSeparatorTemplate.value = ui.insertSeparatorTemplate
     insertDateTimeTemplate.value = ui.insertDateTimeTemplate
@@ -1432,8 +1451,30 @@ function handleKeydown(event: KeyboardEvent) {
     return
   }
 
+  if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+    const key = event.key.toLowerCase()
+    if (key === 'n') {
+      event.preventDefault()
+      event.stopPropagation()
+      void createLocalTab()
+      return
+    }
+    if (key === 'w') {
+      event.preventDefault()
+      event.stopPropagation()
+      void deleteActivePage()
+      return
+    }
+    if (key === 'o') {
+      event.preventDefault()
+      event.stopPropagation()
+      triggerLoadFile()
+      return
+    }
+  }
+
   if (vimMode.value && editorPane.value?.isEditorFocused()) {
-    const isApplicationFunctionKey = event.key === 'F6' || event.key === 'F8' || event.key === 'F10'
+    const isApplicationFunctionKey = event.key === 'F3' || event.key === 'F6' || event.key === 'F8' || event.key === 'F10'
     const shouldHideFromNormalMode = event.key === 'Escape' && activeVimMode.value === 'normal'
     const isPreservedCtrlShortcut = vimUseCtrlShortcuts.value && (event.ctrlKey || event.metaKey)
     if (!isApplicationFunctionKey && !shouldHideFromNormalMode && !isPreservedCtrlShortcut) {
@@ -1450,6 +1491,12 @@ function handleKeydown(event: KeyboardEvent) {
       else openFindPanel()
       return
     }
+    if (key === 'r' && !event.shiftKey) {
+      event.preventDefault()
+      event.stopPropagation()
+      openReplacePanel()
+      return
+    }
     if (key === 'c') { event.preventDefault(); void copyEditorSelection(); return }
     if (key === 'x') { event.preventDefault(); void cutEditorSelection(); return }
     if (key === 'v' && !event.shiftKey) { event.preventDefault(); void pasteIntoEditor(); return }
@@ -1461,6 +1508,20 @@ function handleKeydown(event: KeyboardEvent) {
     event.stopPropagation()
     if (event.shiftKey) showSearchPlaceholder()
     else openFindPanel()
+    return
+  }
+
+  if (!vimMode.value && event.key.toLowerCase() === 'r' && event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    openReplacePanel()
+    return
+  }
+
+  if (event.key === 'F3' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    findNextMatch()
     return
   }
 
@@ -1489,11 +1550,6 @@ function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'F8') {
     event.preventDefault()
     openSettings()
-  }
-
-  if (event.key.toLowerCase() === 'w' && event.ctrlKey) {
-    event.preventDefault()
-    toggleWordWrap()
   }
 
   if (event.code === 'Minus' && event.ctrlKey && event.shiftKey) {
@@ -1525,6 +1581,14 @@ function setVimInsertExitKey(key: string) {
     .filter((character) => character.length === 1 && !/\s/.test(character))
     .slice(0, 8)
     .join('')
+}
+
+function setShortcutBaseKey(value: string) {
+  shortcutBaseKey.value = normalizeShortcutInput(value)
+}
+
+function setClipboardShortcutBaseKey(value: string) {
+  clipboardShortcutBaseKey.value = normalizeShortcutInput(value)
 }
 
 function scheduleSearch() {
@@ -1916,6 +1980,9 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         `${formatShortcutLabel(shortcutBaseKey.value, shortcutModifiers.value)} - ` + (zh ? '\u663e\u793a/\u9690\u85cf\u7a97\u53e3' : 'Show/hide window'),
         `${formatShortcutLabel(clipboardShortcutBaseKey.value, clipboardShortcutModifiers.value)} - ` + (zh ? '\u4fdd\u5b58\u526a\u8d34\u677f' : 'Save clipboard'),
         'Alt+Enter - ' + (zh ? '\u6700\u5927\u5316/\u8fd8\u539f\u7a97\u53e3' : 'Maximize/restore window'),
+        'Ctrl+N - ' + (zh ? '\u65b0\u5efa\u6807\u7b7e\u9875' : 'New tab'),
+        'Ctrl+W - ' + (zh ? '\u5173\u95ed\u6807\u7b7e\u9875' : 'Close tab'),
+        'Ctrl+O - ' + (zh ? '\u4ece\u6587\u4ef6\u8f7d\u5165' : 'Load from file'),
         'Ctrl+Tab / Ctrl+Shift+Tab - ' + (zh ? '\u5207\u6362\u4e0b\u4e00\u4e2a/\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875' : 'Switch next/previous tab'),
         'Ctrl+F - ' + (zh ? '\u67e5\u627e' : 'Find'),
         'Ctrl+Shift+F - ' + (zh ? '\u5168\u5c40\u641c\u7d22' : 'Global search'),
@@ -1923,7 +1990,6 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         'Ctrl+- - ' + (zh ? '\u63d2\u5165\u5206\u9694\u884c' : 'Insert separator'),
         'Ctrl+Shift+- - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4\u5206\u9694\u884c' : 'Insert date time separator'),
         'Ctrl+E - ' + (zh ? '\u63d2\u5165\u63d0\u9192' : 'Insert reminder'),
-        'Ctrl+W - ' + (zh ? '\u5207\u6362\u81ea\u52a8\u6362\u884c' : 'Toggle word wrap'),
         'F6 - ' + (zh ? '\u5207\u6362\u7a97\u53e3\u7f6e\u9876' : 'Toggle window on top'),
         (editorModeShortcut.value === 'disabled' ? (zh ? '\u672a\u7ed1\u5b9a' : 'Unbound') : editorModeShortcut.value) +
           ' - ' + (zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f' : 'Cycle editor mode'),
@@ -1958,12 +2024,21 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
   if (topic === 'about') {
     return {
       title: zh ? '\u5173\u4e8e NeoPad' : 'About NeoPad',
-      lines: [
-        'NeoPad',
-        zh ? '\u672c\u5730\u4f18\u5148\u7684 Markdown \u7b14\u8bb0\u5de5\u5177\u3002' : 'Local-first markdown notes.',
-        zh ? '\u9879\u76ee\u540d\u79f0\uff1aNeoPad / neopad' : 'Project name: NeoPad / neopad',
-        zh ? '\u6280\u672f\u6808\uff1aTauri 2, Vue 3, Rust' : 'Stack: Tauri 2, Vue 3, Rust',
-      ],
+      lines: zh
+        ? [
+            'NeoPad - \u8f7b\u91cf\u3001\u672c\u5730\u4f18\u5148\u7684 Markdown \u684c\u9762\u4fbf\u7b7e\u3002',
+            '\u4f5c\u8005\uff1aTrevanZhang',
+            '\u5f00\u6e90\u9879\u76ee\uff1ahttps://github.com/trevanzhang/neopad',
+            '\u5f00\u6e90\u534f\u8bae\uff1aMIT License',
+            '\u6280\u672f\u6808\uff1aTauri 2, Vue 3, TypeScript, Rust',
+          ]
+        : [
+            'NeoPad - a lightweight, local-first Markdown desktop note pad.',
+            'Author: TrevanZhang',
+            'Open source: https://github.com/trevanzhang/neopad',
+            'License: MIT License',
+            'Built with Tauri 2, Vue 3, TypeScript, and Rust.',
+          ],
     }
   }
 
@@ -1971,23 +2046,20 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
     title: zh ? '\u8f6f\u4ef6\u8bf4\u660e' : 'Software Help',
     lines: zh
       ? [
-          'NeoPad \u662f\u4e00\u4e2a\u672c\u5730\u4f18\u5148\u7684 Markdown \u7b14\u8bb0\u5de5\u5177\u3002',
-          '\u5de6\u4e0a\u65b9\u83dc\u5355\u63d0\u4f9b\u6587\u4ef6\u3001\u7f16\u8f91\u3001\u89c6\u56fe\u3001\u9875\u9762\u3001\u683c\u5f0f\u3001\u63d2\u5165\u3001\u5de5\u5177\u548c\u5e2e\u52a9\u529f\u80fd\u3002',
-          '\u7b14\u8bb0\u4fdd\u5b58\u5728\u672c\u5730\u5de5\u4f5c\u533a\uff0c\u53ef\u4ee5\u901a\u8fc7\u8bbe\u7f6e\u67e5\u770b\u5de5\u4f5c\u533a\u8def\u5f84\u3002',
-          '\u5e38\u7528\u64cd\u4f5c\u53ef\u4ee5\u901a\u8fc7\u83dc\u5355\u6216\u5feb\u6377\u952e\u5b8c\u6210\u3002',
+          'NeoPad \u662f\u4e00\u6b3e\u8f7b\u91cf\u7684\u672c\u5730\u4f18\u5148\u684c\u9762\u4fbf\u7b7e\uff0c\u4e13\u6ce8\u4e8e\u5feb\u901f\u8bb0\u5f55\u548c\u67e5\u627e\u3002',
+          '\u7b14\u8bb0\u4ee5 Markdown \u6587\u4ef6\u81ea\u52a8\u4fdd\u5b58\u5728\u672c\u5730\uff0c\u65e0\u9700\u8d26\u53f7\uff0c\u4e0d\u4f9d\u8d56\u4e91\u670d\u52a1\u3002',
+          '\u652f\u6301\u591a\u6807\u7b7e\u9875\u3001\u5168\u6587\u641c\u7d22\u3001\u526a\u8d34\u677f\u91c7\u96c6\u3001Markdown \u9884\u89c8\u3001Vim \u952e\u4f4d\u548c\u884c\u5185\u8ba1\u7b97\u3002',
+          '\u72ec\u7acb MCP \u670d\u52a1\u5668\u53ef\u4f9b\u672c\u5730 AI \u5de5\u5177\u8bbf\u95ee\u540c\u4e00\u7b14\u8bb0\u5de5\u4f5c\u533a\uff0c\u9ed8\u8ba4\u53ea\u8bfb\u3002',
         ]
       : [
-          'NeoPad is a local-first markdown note tool.',
-          'The menu bar provides file, edit, view, page, format, insert, tools, and help actions.',
-          'Notes are stored in the local workspace. Open Settings to inspect the workspace path.',
-          'Common actions are available through menus and keyboard shortcuts.',
+          'NeoPad is a lightweight, local-first desktop note pad focused on fast capture and retrieval.',
+          'Notes are autosaved locally as Markdown files. No account or cloud service is required.',
+          'It supports tabs, full-text search, clipboard capture, Markdown preview, Vim keys, and inline calculations.',
+          'A standalone, read-only-by-default MCP server lets local AI tools access the same note workspace.',
         ],
   }
 }
 
-function formatShortcutLabel(baseKey: string, modifiers: string[]) {
-  return [...modifiers, baseKey].filter(Boolean).join('+')
-}
 </script>
 
 <template>
@@ -2142,9 +2214,9 @@ function formatShortcutLabel(baseKey: string, modifiers: string[]) {
       @update:transparency-enabled="transparencyEnabled = $event"
       @update:window-opacity-percent="windowOpacity = $event / 100"
       @update:title-double-click-action="titleDoubleClickAction = $event"
-      @update:shortcut-base-key="shortcutBaseKey = $event"
+      @update:shortcut-base-key="setShortcutBaseKey"
       @update:shortcut-modifiers="shortcutModifiers = $event"
-      @update:clipboard-shortcut-base-key="clipboardShortcutBaseKey = $event"
+      @update:clipboard-shortcut-base-key="setClipboardShortcutBaseKey"
       @update:clipboard-shortcut-modifiers="clipboardShortcutModifiers = $event"
       @update:insert-separator-template="insertSeparatorTemplate = $event"
       @update:insert-date-time-template="insertDateTimeTemplate = $event"
