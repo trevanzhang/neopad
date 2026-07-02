@@ -270,6 +270,7 @@ function deleteCustomText(current: string[]) {
             <span>{{ messages.baseKey }}:</span>
             <input
               type="text"
+              maxlength="3"
               :value="shortcutBaseKey"
               @input="$emit('update:shortcutBaseKey', ($event.target as HTMLInputElement).value)"
             />
@@ -294,6 +295,7 @@ function deleteCustomText(current: string[]) {
             <span>{{ messages.baseKey }}:</span>
             <input
               type="text"
+              maxlength="3"
               :value="clipboardShortcutBaseKey"
               @input="$emit('update:clipboardShortcutBaseKey', ($event.target as HTMLInputElement).value)"
             />
@@ -380,7 +382,7 @@ function deleteCustomText(current: string[]) {
             />
             <span>{{ messages.vimUseCtrlShortcuts }}</span>
           </label>
-          <label class="settings-form-row">
+          <label class="settings-template-row vim-exit-row">
             <span>{{ messages.vimInsertExitKey }}:</span>
             <input
               type="text"
@@ -390,7 +392,7 @@ function deleteCustomText(current: string[]) {
               @input="$emit('update:vimInsertExitKey', ($event.target as HTMLInputElement).value)"
             />
           </label>
-          <small class="settings-hint">{{ messages.vimModeHint }}</small>
+          <small class="settings-hint vim-exit-hint">{{ messages.vimModeHint }}</small>
         </fieldset>
       </template>
     </div>

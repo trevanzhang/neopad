@@ -42,6 +42,7 @@ import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
 import { AutosaveCoordinator } from './lib/autosave'
 import { editorBackgroundForTheme } from './lib/theme'
+import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
 import type { NoteTab, SearchResult } from './types/note'
 import { isEditorMode, nextEditorMode, type EditorMode, type EditorModeShortcut } from './types/editor'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
@@ -111,9 +112,9 @@ const closeToMinimize = ref(initialBooleanSetting('neopad.closeToMinimize', true
 const snapToEdges = ref(initialBooleanSetting('neopad.snapToEdges', false))
 const transparencyEnabled = ref(initialBooleanSetting('neopad.transparencyEnabled', true))
 const titleDoubleClickAction = ref<TitleDoubleClickAction>(initialTitleDoubleClickAction())
-const shortcutBaseKey = ref(initialStringSetting('neopad.shortcutBaseKey', 'Z'))
+const shortcutBaseKey = ref(normalizeStoredShortcutKey(initialStringSetting('neopad.shortcutBaseKey', 'Z'), 'Z'))
 const shortcutModifiers = ref<string[]>(initialJsonSetting('neopad.shortcutModifiers', ['Alt']))
-const clipboardShortcutBaseKey = ref(initialStringSetting('neopad.clipboardShortcutBaseKey', 'V'))
+const clipboardShortcutBaseKey = ref(normalizeStoredShortcutKey(initialStringSetting('neopad.clipboardShortcutBaseKey', 'V'), 'V'))
 const clipboardShortcutModifiers = ref<string[]>(initialJsonSetting('neopad.clipboardShortcutModifiers', ['Ctrl', 'Shift']))
 const insertSeparatorTemplate = ref(initialStringSetting('neopad.insertSeparatorTemplate', "crlf() + chars('-', 80) + crlf()"))
 const insertDateTimeTemplate = ref(initialStringSetting('neopad.insertDateTimeTemplate', "date() + ' ' + time()"))
@@ -795,15 +796,15 @@ function selectAllEditorText() {
 }
 
 function openFindPanel() {
-  showSearchPlaceholder()
+  editorPane.value?.openEditorFind()
 }
 
 function findNextMatch() {
-  showSearchPlaceholder()
+  editorPane.value?.findNextMatch()
 }
 
 function openReplacePanel() {
-  showSearchPlaceholder()
+  editorPane.value?.openEditorReplace()
 }
 
 function toggleTabBarOrientation() {
@@ -1145,9 +1146,9 @@ async function loadNativeUiConfig() {
       ui.titleDoubleClickAction === 'none' || ui.titleDoubleClickAction === 'delete'
         ? ui.titleDoubleClickAction
         : 'rename'
-    shortcutBaseKey.value = ui.shortcutBaseKey
+    shortcutBaseKey.value = normalizeStoredShortcutKey(ui.shortcutBaseKey, 'Z')
     shortcutModifiers.value = ui.shortcutModifiers
-    clipboardShortcutBaseKey.value = ui.clipboardShortcutBaseKey
+    clipboardShortcutBaseKey.value = normalizeStoredShortcutKey(ui.clipboardShortcutBaseKey, 'V')
     clipboardShortcutModifiers.value = ui.clipboardShortcutModifiers
     insertSeparatorTemplate.value = ui.insertSeparatorTemplate
     insertDateTimeTemplate.value = ui.insertDateTimeTemplate
@@ -1451,7 +1452,7 @@ function handleKeydown(event: KeyboardEvent) {
   }
 
   if (vimMode.value && editorPane.value?.isEditorFocused()) {
-    const isApplicationFunctionKey = event.key === 'F6' || event.key === 'F8' || event.key === 'F10'
+    const isApplicationFunctionKey = event.key === 'F3' || event.key === 'F6' || event.key === 'F8' || event.key === 'F10'
     const shouldHideFromNormalMode = event.key === 'Escape' && activeVimMode.value === 'normal'
     const isPreservedCtrlShortcut = vimUseCtrlShortcuts.value && (event.ctrlKey || event.metaKey)
     if (!isApplicationFunctionKey && !shouldHideFromNormalMode && !isPreservedCtrlShortcut) {
@@ -1468,6 +1469,12 @@ function handleKeydown(event: KeyboardEvent) {
       else openFindPanel()
       return
     }
+    if (key === 'r' && !event.shiftKey) {
+      event.preventDefault()
+      event.stopPropagation()
+      openReplacePanel()
+      return
+    }
     if (key === 'c') { event.preventDefault(); void copyEditorSelection(); return }
     if (key === 'x') { event.preventDefault(); void cutEditorSelection(); return }
     if (key === 'v' && !event.shiftKey) { event.preventDefault(); void pasteIntoEditor(); return }
@@ -1479,6 +1486,20 @@ function handleKeydown(event: KeyboardEvent) {
     event.stopPropagation()
     if (event.shiftKey) showSearchPlaceholder()
     else openFindPanel()
+    return
+  }
+
+  if (!vimMode.value && event.key.toLowerCase() === 'r' && event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    openReplacePanel()
+    return
+  }
+
+  if (event.key === 'F3' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    findNextMatch()
     return
   }
 
@@ -1543,6 +1564,14 @@ function setVimInsertExitKey(key: string) {
     .filter((character) => character.length === 1 && !/\s/.test(character))
     .slice(0, 8)
     .join('')
+}
+
+function setShortcutBaseKey(value: string) {
+  shortcutBaseKey.value = normalizeShortcutInput(value)
+}
+
+function setClipboardShortcutBaseKey(value: string) {
+  clipboardShortcutBaseKey.value = normalizeShortcutInput(value)
 }
 
 function scheduleSearch() {
@@ -2003,9 +2032,6 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
   }
 }
 
-function formatShortcutLabel(baseKey: string, modifiers: string[]) {
-  return [...modifiers, baseKey].filter(Boolean).join('+')
-}
 </script>
 
 <template>
@@ -2160,9 +2186,9 @@ function formatShortcutLabel(baseKey: string, modifiers: string[]) {
       @update:transparency-enabled="transparencyEnabled = $event"
       @update:window-opacity-percent="windowOpacity = $event / 100"
       @update:title-double-click-action="titleDoubleClickAction = $event"
-      @update:shortcut-base-key="shortcutBaseKey = $event"
+      @update:shortcut-base-key="setShortcutBaseKey"
       @update:shortcut-modifiers="shortcutModifiers = $event"
-      @update:clipboard-shortcut-base-key="clipboardShortcutBaseKey = $event"
+      @update:clipboard-shortcut-base-key="setClipboardShortcutBaseKey"
       @update:clipboard-shortcut-modifiers="clipboardShortcutModifiers = $event"
       @update:insert-separator-template="insertSeparatorTemplate = $event"
       @update:insert-date-time-template="insertDateTimeTemplate = $event"

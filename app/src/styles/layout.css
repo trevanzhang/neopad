@@ -1024,6 +1024,19 @@ body {
   line-height: 1.4;
 }
 
+.vim-exit-row {
+  margin-top: 8px;
+}
+
+.vim-exit-row > span {
+  color: var(--np-text);
+  font-size: 13px;
+}
+
+.vim-exit-hint {
+  margin-left: 0;
+}
+
 .settings-description {
   margin: 0 0 8px;
   color: var(--np-muted);
