@@ -21,6 +21,7 @@ pub struct AppState {
     pub always_on_top: AtomicBool,
     pub close_to_minimize: AtomicBool,
     pub snap_to_edges: AtomicBool,
+    pub window_opacity: Mutex<f64>,
     pub toggle_shortcut: Mutex<Shortcut>,
     pub clipboard_shortcut: Mutex<Shortcut>,
 }

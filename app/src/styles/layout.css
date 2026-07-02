@@ -134,6 +134,12 @@ body {
   min-width: 230px;
 }
 
+.menu-tall-popover {
+  top: -42px;
+  max-height: calc(100vh - 70px);
+  overflow-y: auto;
+}
+
 .menu-view-popover {
   min-width: 210px;
 }

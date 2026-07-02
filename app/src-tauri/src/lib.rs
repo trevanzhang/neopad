@@ -29,6 +29,7 @@ fn build_state() -> AppState {
         always_on_top: AtomicBool::new(false),
         close_to_minimize: AtomicBool::new(true),
         snap_to_edges: AtomicBool::new(false),
+        window_opacity: Mutex::new(1.0),
         toggle_shortcut: Mutex::new(Shortcut::new(Some(Modifiers::ALT), Code::KeyZ)),
         clipboard_shortcut: Mutex::new(Shortcut::new(
             Some(Modifiers::CONTROL | Modifiers::SHIFT),
