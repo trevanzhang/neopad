@@ -1,6 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppShell from './components/AppShell.vue'
+import ConfirmationDialog from './components/ConfirmationDialog.vue'
 import EditorPane from './components/EditorPane.vue'
 import InputDialog from './components/InputDialog.vue'
 import MenuBar from './components/MenuBar.vue'
@@ -53,6 +54,7 @@ type TabBarOrientation = 'horizontal' | 'vertical'
 type HelpTopic = 'software' | 'shortcuts' | 'expression' | 'about'
 type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
 type InputDialogState = { title: string; initialValue: string }
+type ConfirmationDialogState = { title: string; message: string }
 
 const now = Date.now()
 const tabs = ref<NoteTab[]>([
@@ -91,6 +93,8 @@ const settingsOpen = ref(false)
 const helpTopic = ref<HelpTopic | null>(null)
 const inputDialog = ref<InputDialogState | null>(null)
 let resolveInputDialog: ((value: string | null) => void) | null = null
+const confirmationDialog = ref<ConfirmationDialogState | null>(null)
+let resolveConfirmationDialog: ((confirmed: boolean) => void) | null = null
 const immersiveMode = ref(false)
 const searchQuery = ref('')
 const searchResults = ref<SearchResult[]>([])
@@ -577,6 +581,12 @@ async function renameTab(tab: NoteTab) {
 
 async function deleteTab(tab: NoteTab) {
   if (tab.id === 'inbox' || tab.id === 'clipboard') return
+  const confirmed = await requestConfirmation(
+    t.value.tabs.confirmDeleteTitle,
+    t.value.tabs.confirmDeleteMessage.replace('{title}', tab.title),
+  )
+  if (!confirmed) return
+
   if (isTauriRuntime()) {
     try {
       await deleteNote(tab.id)
@@ -834,6 +844,21 @@ function finishInputDialog(value: string | null) {
   resolveInputDialog = null
   inputDialog.value = null
   resolve?.(value)
+}
+
+function requestConfirmation(title: string, message: string) {
+  resolveConfirmationDialog?.(false)
+  confirmationDialog.value = { title, message }
+  return new Promise<boolean>((resolve) => {
+    resolveConfirmationDialog = resolve
+  })
+}
+
+function finishConfirmationDialog(confirmed: boolean) {
+  const resolve = resolveConfirmationDialog
+  resolveConfirmationDialog = null
+  confirmationDialog.value = null
+  resolve?.(confirmed)
 }
 
 async function editCustomInsertText(index: number) {
@@ -1395,6 +1420,13 @@ function handleKeydown(event: KeyboardEvent) {
   }
 
   if (event.key === 'Escape') {
+    if (confirmationDialog.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      finishConfirmationDialog(false)
+      return
+    }
+
     if (inputDialog.value) {
       event.preventDefault()
       event.stopPropagation()
@@ -2234,6 +2266,16 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       :cancel-label="t.settings.cancel"
       @confirm="finishInputDialog"
       @cancel="finishInputDialog(null)"
+    />
+
+    <ConfirmationDialog
+      v-if="confirmationDialog"
+      :title="confirmationDialog.title"
+      :message="confirmationDialog.message"
+      :confirm-label="t.tabs.delete"
+      :cancel-label="t.settings.cancel"
+      @confirm="finishConfirmationDialog(true)"
+      @cancel="finishConfirmationDialog(false)"
     />
 
     <section v-if="helpTopic" class="help-panel" role="dialog" aria-modal="true" :aria-label="helpContent.title">

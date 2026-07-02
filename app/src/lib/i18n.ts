@@ -11,6 +11,8 @@ export type AppMessages = {
     defaultColor: string
     previous: string
     next: string
+    confirmDeleteTitle: string
+    confirmDeleteMessage: string
   }
   menu: {
     file: string
@@ -231,6 +233,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       defaultColor: 'Default',
       previous: 'Previous tab',
       next: 'Next tab',
+      confirmDeleteTitle: 'Delete tab?',
+      confirmDeleteMessage: 'Delete "{title}"? The note will be moved to Trash.',
     },
     menu: {
       file: 'File(F)',
@@ -449,6 +453,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       defaultColor: '\u9ed8\u8ba4\u989c\u8272',
       previous: '\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875',
       next: '\u4e0b\u4e00\u4e2a\u6807\u7b7e\u9875',
+      confirmDeleteTitle: '\u5220\u9664\u6807\u7b7e\u9875\uff1f',
+      confirmDeleteMessage: '\u786e\u5b9a\u5220\u9664\u201c{title}\u201d\u5417\uff1f\u7b14\u8bb0\u5c06\u79fb\u81f3\u56de\u6536\u7ad9\u3002',
     },
     menu: {
       file: '\u6587\u4ef6(F)',

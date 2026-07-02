@@ -787,7 +787,7 @@ body {
   overflow: auto;
   background: #ffffff;
   border: 1px solid #8f8f8f;
-  border-radius: 0;
+  border-radius: 8px;
   box-shadow: 3px 4px 12px rgba(0, 0, 0, 0.22);
 }
 
@@ -895,6 +895,17 @@ body {
   color: #ffffff;
   background: #2b65c8;
   border-color: #2b65c8;
+}
+
+.input-dialog button.danger {
+  color: #ffffff;
+  background: #b42318;
+  border-color: #b42318;
+}
+
+.confirmation-dialog-message {
+  margin: 0;
+  line-height: 1.5;
 }
 
 .settings-section h2 {
