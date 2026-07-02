@@ -57,6 +57,19 @@ For Rust formatting:
 cargo fmt
 ```
 
+## Versioning
+
+- Follow Semantic Versioning for distributable builds.
+- Keep the workspace version in `Cargo.toml`, the frontend version in
+  `app/package.json`, and the Tauri version in `app/src-tauri/tauri.conf.json`
+  synchronized. Update `Cargo.lock` when the workspace version changes.
+- Do not bump versions for routine development commits. Bump the version when
+  preparing a distinct distributable build or release.
+- Use a patch bump for compatible fixes, a minor bump for backward-compatible
+  features, and a major bump for incompatible changes.
+- Use prerelease labels such as `beta` only when the task explicitly establishes
+  a prerelease channel. Do not add them to ordinary development builds.
+
 ## Windows Packaging Notes
 
 The current bundle target is MSI only. Do not re-enable NSIS unless the task is
