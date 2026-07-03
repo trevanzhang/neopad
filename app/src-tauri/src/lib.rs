@@ -4,17 +4,18 @@ mod tray;
 mod window;
 
 use commands::{
-    app_version, create_note_command, delete_note_command, get_shortcut_warnings_command,
-    get_ui_config_command, get_workspace_command, hide_window_command, list_notes_command,
-    open_trash_command, quit_app_command, read_note_command, rename_note_command,
-    save_clipboard_command, save_markdown_file_command, save_ui_config_command,
-    search_notes_command, set_autostart_command, set_close_to_minimize_command,
-    set_note_color_command, set_snap_to_edges_command, set_window_opacity_command,
-    show_window_command, toggle_always_on_top_command, toggle_main_window_maximize_command,
-    toggle_window_command, update_clipboard_shortcut_command, update_toggle_shortcut_command,
-    write_note_command, AppState,
+    app_version, complete_startup_command, create_note_command, delete_note_command,
+    get_shortcut_warnings_command, get_ui_config_command, get_workspace_command,
+    hide_window_command, list_notes_command, open_trash_command, quit_app_command,
+    read_note_command, rename_note_command, save_clipboard_command, save_markdown_file_command,
+    save_ui_config_command, search_notes_command, set_autostart_command,
+    set_close_to_minimize_command, set_note_color_command, set_snap_to_edges_command,
+    set_start_hidden_command, set_window_opacity_command, show_window_command,
+    toggle_always_on_top_command, toggle_main_window_maximize_command, toggle_window_command,
+    update_clipboard_shortcut_command, update_toggle_shortcut_command, write_note_command,
+    AppState,
 };
-use neopad_core::init_workspace;
+use neopad_core::{init_workspace, load_config};
 use std::sync::{atomic::AtomicBool, Mutex};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 use tauri_plugin_window_state::StateFlags;
@@ -22,6 +23,10 @@ use tauri_plugin_window_state::StateFlags;
 fn build_state() -> AppState {
     let workspace_path = std::env::var_os("NEOPAD_WORKSPACE").map(std::path::PathBuf::from);
     let workspace = init_workspace(workspace_path).expect("failed to initialize NeoPad workspace");
+    let startup_hidden = std::env::args_os().any(|arg| arg == "--hidden")
+        || load_config(&workspace)
+            .map(|config| config.ui.start_hidden)
+            .unwrap_or(false);
     AppState {
         workspace,
         shortcut_warnings: Mutex::new(Vec::new()),
@@ -29,11 +34,13 @@ fn build_state() -> AppState {
         always_on_top: AtomicBool::new(false),
         close_to_minimize: AtomicBool::new(true),
         snap_to_edges: AtomicBool::new(false),
+        window_opacity: Mutex::new(1.0),
         toggle_shortcut: Mutex::new(Shortcut::new(Some(Modifiers::ALT), Code::KeyZ)),
         clipboard_shortcut: Mutex::new(Shortcut::new(
             Some(Modifiers::CONTROL | Modifiers::SHIFT),
             Code::KeyV,
         )),
+        startup_hidden,
     }
 }
 
@@ -65,6 +72,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             app_version,
+            complete_startup_command,
             get_workspace_command,
             get_ui_config_command,
             save_ui_config_command,
@@ -80,6 +88,7 @@ pub fn run() {
             show_window_command,
             hide_window_command,
             set_autostart_command,
+            set_start_hidden_command,
             set_close_to_minimize_command,
             set_snap_to_edges_command,
             set_window_opacity_command,

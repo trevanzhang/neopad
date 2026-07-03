@@ -40,6 +40,8 @@ pub struct UiConfig {
     pub editor_background_color: String,
     pub window_opacity: f64,
     pub run_at_startup: bool,
+    #[serde(default)]
+    pub start_hidden: bool,
     pub close_to_minimize: bool,
     pub snap_to_edges: bool,
     pub transparency_enabled: bool,
@@ -77,6 +79,7 @@ impl Default for UiConfig {
             editor_background_color: "#ffffff".to_owned(),
             window_opacity: 1.0,
             run_at_startup: false,
+            start_hidden: false,
             close_to_minimize: true,
             snap_to_edges: false,
             transparency_enabled: true,
@@ -195,6 +198,7 @@ mod tests {
         let config: AppConfig = serde_json::from_str(json).expect("legacy config");
         assert_eq!(config.version, 1);
         assert!(!config.ui.run_at_startup);
+        assert!(!config.ui.start_hidden);
         assert_eq!(config.ui.shortcut_base_key, "Z");
     }
 
@@ -208,6 +212,18 @@ mod tests {
 
         let config: UiConfig = serde_json::from_value(value).expect("legacy UI config");
         assert_eq!(config.editor_mode_shortcut, "F7");
+    }
+
+    #[test]
+    fn old_ui_config_without_start_hidden_stays_visible() {
+        let mut value = serde_json::to_value(UiConfig::default()).expect("serialize UI config");
+        value
+            .as_object_mut()
+            .expect("UI config object")
+            .remove("startHidden");
+
+        let config: UiConfig = serde_json::from_value(value).expect("legacy UI config");
+        assert!(!config.start_hidden);
     }
 
     #[test]

@@ -57,12 +57,20 @@ pub fn install_close_to_hide_handler(app: &App) {
                 let _ = snap_window_to_edges(&window_for_event);
             }
         }
+
+        if let WindowEvent::Focused(true) = event {
+            restore_main_window_opacity(&app_handle, &window_for_event);
+        }
     });
 }
 
 pub fn show_main_window(app: &AppHandle) -> tauri::Result<()> {
     if let Some(window) = main_window(app) {
+        if window.is_minimized()? {
+            window.unminimize()?;
+        }
         window.show()?;
+        restore_main_window_opacity(app, &window);
         window.set_focus()?;
     }
     Ok(())
@@ -77,10 +85,16 @@ pub fn hide_main_window(app: &AppHandle) -> tauri::Result<()> {
 
 pub fn toggle_main_window(app: &AppHandle) -> tauri::Result<()> {
     if let Some(window) = main_window(app) {
-        if window.is_visible()? {
+        if window.is_minimized()? {
+            window.unminimize()?;
+            window.show()?;
+            restore_main_window_opacity(app, &window);
+            window.set_focus()?;
+        } else if window.is_visible()? {
             window.hide()?;
         } else {
             window.show()?;
+            restore_main_window_opacity(app, &window);
             window.set_focus()?;
         }
     }
@@ -106,8 +120,27 @@ pub fn toggle_main_window_maximize(app: &AppHandle) -> tauri::Result<()> {
 }
 
 pub fn set_main_window_opacity(app: &AppHandle, opacity: f64) -> Result<(), String> {
+    let opacity = opacity.clamp(0.2, 1.0);
+    let state = app.state::<AppState>();
+    let mut stored_opacity = state
+        .window_opacity
+        .lock()
+        .map_err(|_| "window opacity state is unavailable".to_owned())?;
+    *stored_opacity = opacity;
+    drop(stored_opacity);
+
     let window = main_window(app).ok_or_else(|| "main window is unavailable".to_owned())?;
     set_window_opacity(&window, opacity)
+}
+
+fn restore_main_window_opacity(app: &AppHandle, window: &WebviewWindow) {
+    let state = app.state::<AppState>();
+    let opacity = state
+        .window_opacity
+        .lock()
+        .map(|opacity| *opacity)
+        .unwrap_or(1.0);
+    let _ = set_window_opacity(window, opacity);
 }
 
 #[cfg(windows)]

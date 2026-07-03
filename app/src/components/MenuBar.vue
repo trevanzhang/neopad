@@ -48,7 +48,7 @@ defineEmits<{
   windowOpacity: []
   reminderList: []
   processText: [action: string]
-  helpTopic: [topic: 'software' | 'shortcuts' | 'expression' | 'about']
+  helpTopic: [topic: 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about']
   updatePreviewMode: [mode: EditorMode]
 }>()
 
@@ -328,31 +328,6 @@ function handleMenuKeydown(event: KeyboardEvent) {
     </div>
 
     <div class="menu-root">
-      <button type="button" class="menu-title">{{ messages.insert }}</button>
-      <div class="menu-popover">
-        <button type="button" class="menu-command" @click="$emit('insertSeparator')">
-          <span>{{ messages.insertSeparator }}</span>
-          <span class="menu-shortcut">{{ messages.ctrlDash }}</span>
-        </button>
-        <button type="button" class="menu-command" @click="$emit('insertDateTime')">
-          <span>{{ messages.dateTime }}</span>
-          <span class="menu-shortcut">{{ messages.ctrlD }}</span>
-        </button>
-        <button type="button" class="menu-command" @click="$emit('insertDateTimeSeparator')">
-          <span>{{ messages.dateTimeSeparator }}</span>
-          <span class="menu-shortcut">{{ messages.ctrlShiftDash }}</span>
-        </button>
-        <div class="menu-separator" role="separator" />
-        <button type="button" class="menu-command" @click="$emit('insertReminder')">
-          <span>{{ messages.reminder }}</span>
-          <span class="menu-shortcut">{{ messages.ctrlE }}</span>
-        </button>
-        <div class="menu-separator" role="separator" />
-        <button type="button" @click="$emit('insertTextSettings')">{{ messages.insertTextSettings }}</button>
-      </div>
-    </div>
-
-    <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.tools }}</button>
       <div class="menu-popover">
         <button type="button" class="menu-command" :class="{ checked: alwaysOnTop }" @click="$emit('togglePin')">
@@ -406,9 +381,35 @@ function handleMenuKeydown(event: KeyboardEvent) {
     </div>
 
     <div class="menu-root">
+      <button type="button" class="menu-title">{{ messages.insert }}</button>
+      <div class="menu-popover">
+        <button type="button" class="menu-command" @click="$emit('insertSeparator')">
+          <span>{{ messages.insertSeparator }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlDash }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('insertDateTime')">
+          <span>{{ messages.dateTime }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlD }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('insertDateTimeSeparator')">
+          <span>{{ messages.dateTimeSeparator }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlShiftDash }}</span>
+        </button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" class="menu-command" @click="$emit('insertReminder')">
+          <span>{{ messages.reminder }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlE }}</span>
+        </button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" @click="$emit('insertTextSettings')">{{ messages.insertTextSettings }}</button>
+      </div>
+    </div>
+
+    <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.help }}</button>
       <div class="menu-popover">
         <button type="button" @click="$emit('helpTopic', 'software')">{{ messages.softwareHelp }}</button>
+        <button type="button" @click="$emit('helpTopic', 'markdown')">{{ messages.markdownGuide }}</button>
         <button type="button" @click="$emit('helpTopic', 'shortcuts')">{{ messages.shortcutList }}</button>
         <button type="button" @click="$emit('helpTopic', 'expression')">{{ messages.expressionGuide }}</button>
         <div class="menu-separator" role="separator" />
