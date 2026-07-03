@@ -26,7 +26,8 @@ The repository currently contains a working Windows-focused MVP:
   maximize/restore.
 - Clipboard captures use readable local timestamps in compact separator lines.
 - Edit, hybrid, and preview editor modes selectable from the View menu, status
-  bar, configurable shortcut, and persisted default setting.
+  bar, configurable shortcut, and persisted default setting, including while
+  using immersive fullscreen.
 - Optional Vim key bindings for the CodeMirror editor, with persisted settings
   in the Advanced tab, configurable Insert exit sequence, and a visible Normal,
   Insert, or Visual mode indicator. NeoPad Ctrl shortcuts can optionally take
