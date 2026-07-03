@@ -95,6 +95,10 @@ export function setAutostart(enabled: boolean, startHidden: boolean): Promise<vo
   return invoke('set_autostart_command', { enabled, startHidden })
 }
 
+export function setStartHidden(enabled: boolean): Promise<void> {
+  return invoke('set_start_hidden_command', { enabled })
+}
+
 export function completeStartup(): Promise<void> {
   return invoke('complete_startup_command')
 }

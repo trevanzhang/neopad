@@ -137,7 +137,6 @@ function deleteCustomText(current: string[]) {
           <label class="settings-check-row">
             <input
               :checked="startHidden"
-              :disabled="!runAtStartup"
               type="checkbox"
               @change="$emit('update:startHidden', ($event.target as HTMLInputElement).checked)"
             />

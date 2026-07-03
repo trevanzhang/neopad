@@ -45,7 +45,7 @@ Implemented MVP capabilities:
   separator lines.
 - Tray menu.
 - Flicker-free single-instance startup and persistent main-window position, with a
-  user-selectable hidden background launch at system startup and a
+  user-selectable hidden background launch mode and a
   bottom-right default on first launch.
 - Global shortcuts.
 - Configurable global window and clipboard shortcuts, plus local `Alt+Enter`

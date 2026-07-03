@@ -31,6 +31,7 @@ import {
   setAutostart,
   setCloseToMinimize,
   setSnapToEdges,
+  setStartHidden,
   setWindowOpacity,
   toggleMainWindowMaximize,
   setTrayLanguage,
@@ -322,6 +323,11 @@ watch(runAtStartup, () => {
 watch(startHidden, () => {
   window.localStorage.setItem('neopad.startHidden', String(startHidden.value))
   void syncAutostart()
+  if (uiConfigLoaded && isTauriRuntime()) {
+    void setStartHidden(startHidden.value).catch(() => {
+      saveState.value = 'Failed'
+    })
+  }
 })
 
 watch(closeToMinimize, () => {

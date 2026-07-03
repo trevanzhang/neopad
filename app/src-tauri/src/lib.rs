@@ -10,11 +10,12 @@ use commands::{
     read_note_command, rename_note_command, save_clipboard_command, save_markdown_file_command,
     save_ui_config_command, search_notes_command, set_autostart_command,
     set_close_to_minimize_command, set_note_color_command, set_snap_to_edges_command,
-    set_window_opacity_command, show_window_command, toggle_always_on_top_command,
-    toggle_main_window_maximize_command, toggle_window_command, update_clipboard_shortcut_command,
-    update_toggle_shortcut_command, write_note_command, AppState,
+    set_start_hidden_command, set_window_opacity_command, show_window_command,
+    toggle_always_on_top_command, toggle_main_window_maximize_command, toggle_window_command,
+    update_clipboard_shortcut_command, update_toggle_shortcut_command, write_note_command,
+    AppState,
 };
-use neopad_core::init_workspace;
+use neopad_core::{init_workspace, load_config};
 use std::sync::{atomic::AtomicBool, Mutex};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 use tauri_plugin_window_state::StateFlags;
@@ -22,6 +23,10 @@ use tauri_plugin_window_state::StateFlags;
 fn build_state() -> AppState {
     let workspace_path = std::env::var_os("NEOPAD_WORKSPACE").map(std::path::PathBuf::from);
     let workspace = init_workspace(workspace_path).expect("failed to initialize NeoPad workspace");
+    let startup_hidden = std::env::args_os().any(|arg| arg == "--hidden")
+        || load_config(&workspace)
+            .map(|config| config.ui.start_hidden)
+            .unwrap_or(false);
     AppState {
         workspace,
         shortcut_warnings: Mutex::new(Vec::new()),
@@ -35,7 +40,7 @@ fn build_state() -> AppState {
             Some(Modifiers::CONTROL | Modifiers::SHIFT),
             Code::KeyV,
         )),
-        startup_hidden: std::env::args_os().any(|arg| arg == "--hidden"),
+        startup_hidden,
     }
 }
 
@@ -83,6 +88,7 @@ pub fn run() {
             show_window_command,
             hide_window_command,
             set_autostart_command,
+            set_start_hidden_command,
             set_close_to_minimize_command,
             set_snap_to_edges_command,
             set_window_opacity_command,

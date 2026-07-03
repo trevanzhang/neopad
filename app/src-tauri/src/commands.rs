@@ -213,6 +213,14 @@ pub fn set_autostart_command(
 }
 
 #[tauri::command]
+pub fn set_start_hidden_command(state: State<'_, AppState>, enabled: bool) -> Result<(), String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    let mut config = load_config(&state.workspace).map_err(display_error)?;
+    config.ui.start_hidden = enabled;
+    save_config(&state.workspace, &config).map_err(display_error)
+}
+
+#[tauri::command]
 pub fn complete_startup_command(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     if !state.startup_hidden {
         crate::window::show_main_window(&app).map_err(|error| error.to_string())?;
