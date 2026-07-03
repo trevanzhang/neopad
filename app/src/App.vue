@@ -917,7 +917,7 @@ async function setImmersiveMode(enabled: boolean) {
     await getCurrentWindow().setFullscreen(enabled)
   }
   immersiveMode.value = enabled
-  if (enabled) {
+  if (enabled && previewMode.value !== 'preview') {
     await nextTick()
     editorPane.value?.focusEditor()
   }
@@ -2225,7 +2225,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         @input="updateEditorBackground"
       />
       <EditorPane
-        v-show="immersiveMode || previewMode !== 'preview'"
+        v-show="previewMode !== 'preview'"
         ref="editorPane"
         v-model="content"
         :title="activeTab?.title ?? 'Untitled'"
@@ -2236,7 +2236,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         :vim-insert-exit-key="vimInsertExitKey"
         @vim-mode-change="activeVimMode = $event"
       />
-      <PreviewPane v-if="!immersiveMode && previewMode !== 'edit'" :content="content" />
+      <PreviewPane v-if="previewMode !== 'edit'" :content="content" />
     </div>
 
     <SearchPanel

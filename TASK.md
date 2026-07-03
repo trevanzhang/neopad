@@ -31,7 +31,8 @@ Implemented MVP capabilities:
 - Plain Markdown persistence under `~/.neopad/notes/*.md`.
 - Multiple tabs backed by local metadata.
 - Autosave.
-- Edit, hybrid, and preview editor modes with a persisted default and shortcut.
+- Edit, hybrid, and preview editor modes with a persisted default and shortcut;
+  all three modes remain available in immersive fullscreen.
 - Page creation, rename, and trash actions with protected default pages.
 - Persistent optional tab colors managed from the tab context menu.
 - English and Chinese display names for system-managed page titles.

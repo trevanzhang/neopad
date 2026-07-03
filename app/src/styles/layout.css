@@ -30,7 +30,6 @@ body {
 .app-shell.immersive .workspace-pane {
   grid-column: 1;
   grid-row: 1;
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .app-shell.tab-vertical {
