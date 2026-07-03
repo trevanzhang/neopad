@@ -66,6 +66,9 @@ pub fn install_close_to_hide_handler(app: &App) {
 
 pub fn show_main_window(app: &AppHandle) -> tauri::Result<()> {
     if let Some(window) = main_window(app) {
+        if window.is_minimized()? {
+            window.unminimize()?;
+        }
         window.show()?;
         restore_main_window_opacity(app, &window);
         window.set_focus()?;
@@ -82,7 +85,12 @@ pub fn hide_main_window(app: &AppHandle) -> tauri::Result<()> {
 
 pub fn toggle_main_window(app: &AppHandle) -> tauri::Result<()> {
     if let Some(window) = main_window(app) {
-        if window.is_visible()? {
+        if window.is_minimized()? {
+            window.unminimize()?;
+            window.show()?;
+            restore_main_window_opacity(app, &window);
+            window.set_focus()?;
+        } else if window.is_visible()? {
             window.hide()?;
         } else {
             window.show()?;

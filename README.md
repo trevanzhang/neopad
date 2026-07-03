@@ -22,7 +22,8 @@ The repository currently contains a working Windows-focused MVP:
   restoration of the last window position on later launches, and an option to
   keep the window hidden after any launch.
 - Configurable global shortcuts for window visibility and clipboard capture,
-  plus `Alt+Enter` maximize/restore.
+  including reliable restore from the minimized state, plus `Alt+Enter`
+  maximize/restore.
 - Clipboard captures use readable local timestamps in compact separator lines.
 - Edit, hybrid, and preview editor modes selectable from the View menu, status
   bar, configurable shortcut, and persisted default setting.
