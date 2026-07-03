@@ -44,7 +44,8 @@ Implemented MVP capabilities:
 - Manual clipboard capture into `clipboard.md` with readable local timestamp
   separator lines.
 - Tray menu.
-- Single-instance startup and persistent main-window position, with a
+- Flicker-free single-instance startup and persistent main-window position, with a
+  user-selectable hidden background launch at system startup and a
   bottom-right default on first launch.
 - Global shortcuts.
 - Configurable global window and clipboard shortcuts, plus local `Alt+Enter`

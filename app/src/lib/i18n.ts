@@ -113,6 +113,7 @@ export type AppMessages = {
     search: string
     settings: string
     softwareHelp: string
+    markdownGuide: string
     shortcutList: string
     expressionGuide: string
     about: string
@@ -132,6 +133,7 @@ export type AppMessages = {
     vimInsertExitKey: string
     vimModeHint: string
     runAtStartup: string
+    startHidden: string
     closeToMinimize: string
     snapToEdges: string
     windowOpacity: string
@@ -335,6 +337,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       search: 'Search',
       settings: 'Settings',
       softwareHelp: 'Software Help(R)...',
+      markdownGuide: 'Markdown Quick Guide(M)...',
       shortcutList: 'Shortcut List(S)...',
       expressionGuide: 'Expression Guide(E)...',
       about: 'About NeoPad',
@@ -354,6 +357,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       vimInsertExitKey: 'Insert mode exit sequence',
       vimModeHint: 'The custom sequence exits Insert mode without replacing Esc. Leave it empty to disable the extra mapping.',
       runAtStartup: 'Run automatically at system startup',
+      startHidden: 'Keep hidden when started automatically',
       closeToMinimize: 'Minimize when clicking the main window close button',
       snapToEdges: 'Snap main window to screen edges',
       windowOpacity: 'Window Opacity',
@@ -555,6 +559,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       search: '\u641c\u7d22',
       settings: '\u8bbe\u7f6e',
       softwareHelp: '\u8f6f\u4ef6\u8bf4\u660e(R)...',
+      markdownGuide: 'Markdown \u7b80\u660e\u6307\u5357(M)...',
       shortcutList: '\u5feb\u6377\u952e\u5217\u8868(S)...',
       expressionGuide: '\u8868\u8fbe\u5f0f\u8ba1\u7b97\u6307\u5357(E)...',
       about: '\u5173\u4e8e NeoPad',
@@ -574,6 +579,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       vimInsertExitKey: 'Insert \u6a21\u5f0f\u9000\u51fa\u5e8f\u5217',
       vimModeHint: '\u81ea\u5b9a\u4e49\u5e8f\u5217\u53ea\u4f5c\u4e3a\u9000\u51fa Insert \u6a21\u5f0f\u7684\u9644\u52a0\u6620\u5c04\uff0c\u4e0d\u4f1a\u66ff\u6362 Esc\uff1b\u7559\u7a7a\u53ef\u5173\u95ed\u3002',
       runAtStartup: '\u7cfb\u7edf\u542f\u52a8\u65f6\u81ea\u52a8\u8fd0\u884c',
+      startHidden: '\u81ea\u52a8\u542f\u52a8\u540e\u4fdd\u6301\u9690\u85cf',
       closeToMinimize: '\u70b9\u51fb\u4e3b\u7a97\u53e3\u7684\u5173\u95ed\u6309\u94ae\u65f6\u6700\u5c0f\u5316',
       snapToEdges: '\u4e3b\u7a97\u53e3\u5438\u9644\u5c4f\u5e55\u8fb9\u7f18',
       windowOpacity: '\u7a97\u53e3\u900f\u660e\u5ea6',

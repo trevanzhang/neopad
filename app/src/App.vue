@@ -12,6 +12,7 @@ import StatusBar from './components/StatusBar.vue'
 import TabBar from './components/TabBar.vue'
 import {
   createNote,
+  completeStartup,
   deleteNote,
   getShortcutWarnings,
   getUiConfig,
@@ -51,7 +52,7 @@ import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
 type TabBarOrientation = 'horizontal' | 'vertical'
-type HelpTopic = 'software' | 'shortcuts' | 'expression' | 'about'
+type HelpTopic = 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about'
 type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
 type InputDialogState = { title: string; initialValue: string }
 type ConfirmationDialogState = { title: string; message: string }
@@ -112,6 +113,7 @@ const editorFontFamily = ref(initialStringSetting('neopad.editorFontFamily', '"S
 const editorBackgroundColor = ref(initialStringSetting('neopad.editorBackgroundColor', '#ffffff'))
 const windowOpacity = ref(Number(initialStringSetting('neopad.windowOpacity', '1')))
 const runAtStartup = ref(initialBooleanSetting('neopad.runAtStartup', false))
+const startHidden = ref(initialBooleanSetting('neopad.startHidden', false))
 const closeToMinimize = ref(initialBooleanSetting('neopad.closeToMinimize', true))
 const snapToEdges = ref(initialBooleanSetting('neopad.snapToEdges', false))
 const transparencyEnabled = ref(initialBooleanSetting('neopad.transparencyEnabled', true))
@@ -196,6 +198,10 @@ onMounted(async () => {
   window.addEventListener('beforeunload', forceSaveOnExit)
   document.addEventListener('visibilitychange', forceSaveOnHide)
   appReady.value = true
+  await nextTick()
+  await completeStartup().catch(() => {
+    saveState.value = 'Failed'
+  })
   nativeSettingsTimer = window.setTimeout(() => {
     nativeSettingsTimer = null
     void syncNativeSettings()
@@ -313,6 +319,11 @@ watch(runAtStartup, () => {
   void syncAutostart()
 })
 
+watch(startHidden, () => {
+  window.localStorage.setItem('neopad.startHidden', String(startHidden.value))
+  void syncAutostart()
+})
+
 watch(closeToMinimize, () => {
   window.localStorage.setItem('neopad.closeToMinimize', String(closeToMinimize.value))
   void syncCloseToMinimize()
@@ -397,6 +408,7 @@ watch(
     theme,
     windowOpacity,
     runAtStartup,
+    startHidden,
     closeToMinimize,
     snapToEdges,
     transparencyEnabled,
@@ -1164,6 +1176,7 @@ async function loadNativeUiConfig() {
     editorBackgroundColor.value = ui.editorBackgroundColor
     windowOpacity.value = Math.min(1, Math.max(0.2, ui.windowOpacity))
     runAtStartup.value = ui.runAtStartup
+    startHidden.value = ui.startHidden
     closeToMinimize.value = ui.closeToMinimize
     snapToEdges.value = ui.snapToEdges
     transparencyEnabled.value = ui.transparencyEnabled
@@ -1208,6 +1221,7 @@ function persistUiConfig() {
         editorBackgroundColor: editorBackgroundColor.value,
         windowOpacity: windowOpacity.value,
         runAtStartup: runAtStartup.value,
+        startHidden: startHidden.value,
         closeToMinimize: closeToMinimize.value,
         snapToEdges: snapToEdges.value,
         transparencyEnabled: transparencyEnabled.value,
@@ -1262,7 +1276,7 @@ async function syncAutostart() {
   }
 
   try {
-    await setAutostart(runAtStartup.value)
+    await setAutostart(runAtStartup.value, startHidden.value)
   } catch {
     saveState.value = 'Failed'
   }
@@ -2034,6 +2048,29 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
     }
   }
 
+  if (topic === 'markdown') {
+    return {
+      title: zh ? 'Markdown 简明指南' : 'Markdown Quick Guide',
+      lines: zh
+        ? [
+            '# 一级标题；## 二级标题；### 三级标题',
+            '**粗体**；*斜体*；~~删除线~~',
+            '- 无序列表；1. 有序列表；- [ ] 待办；- [x] 已完成',
+            '[链接文字](https://example.com)；![图片说明](图片地址)',
+            '> 引用文字；`行内代码`；三个反引号包裹代码块',
+            '--- 单独一行可插入分隔线。段落之间空一行。',
+          ]
+        : [
+            '# Heading 1; ## Heading 2; ### Heading 3',
+            '**bold**; *italic*; ~~strikethrough~~',
+            '- Bulleted list; 1. numbered list; - [ ] task; - [x] done',
+            '[link text](https://example.com); ![image description](image-url)',
+            '> Quote; `inline code`; wrap code blocks in three backticks',
+            'Use --- on its own line for a divider. Leave a blank line between paragraphs.',
+          ],
+    }
+  }
+
   if (topic === 'expression') {
     return {
       title: zh ? '\u8868\u8fbe\u5f0f\u8ba1\u7b97\u6307\u5357' : 'Expression Guide',
@@ -2217,6 +2254,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       :language="language"
       :workspace-path="workspacePath"
       :run-at-startup="runAtStartup"
+      :start-hidden="startHidden"
       :close-to-minimize="closeToMinimize"
       :snap-to-edges="snapToEdges"
       :transparency-enabled="transparencyEnabled"
@@ -2241,6 +2279,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       @update:editor-mode-shortcut="editorModeShortcut = $event"
       @update:language="language = $event"
       @update:run-at-startup="runAtStartup = $event"
+      @update:start-hidden="startHidden = $event"
       @update:close-to-minimize="closeToMinimize = $event"
       @update:snap-to-edges="snapToEdges = $event"
       @update:transparency-enabled="transparencyEnabled = $event"

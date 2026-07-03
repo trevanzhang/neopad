@@ -24,6 +24,7 @@ pub struct AppState {
     pub window_opacity: Mutex<f64>,
     pub toggle_shortcut: Mutex<Shortcut>,
     pub clipboard_shortcut: Mutex<Shortcut>,
+    pub startup_hidden: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -203,8 +204,20 @@ pub fn hide_window_command(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn set_autostart_command(app: AppHandle, enabled: bool) -> Result<(), String> {
-    set_autostart(&app, enabled).map_err(|error| error.to_string())
+pub fn set_autostart_command(
+    app: AppHandle,
+    enabled: bool,
+    start_hidden: bool,
+) -> Result<(), String> {
+    set_autostart(&app, enabled, start_hidden).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn complete_startup_command(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    if !state.startup_hidden {
+        crate::window::show_main_window(&app).map_err(|error| error.to_string())?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -358,15 +371,22 @@ fn open_path(path: &std::path::Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn set_autostart(_app: &AppHandle, enabled: bool) -> anyhow::Result<()> {
+fn set_autostart(_app: &AppHandle, enabled: bool, start_hidden: bool) -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]
     {
         let exe_path = std::env::current_exe()?;
-        let exe = exe_path.to_string_lossy().to_string();
+        let exe = exe_path.to_string_lossy();
+        let command = if start_hidden {
+            format!(r#"\"{}\" --hidden"#, exe)
+        } else {
+            format!(r#"\"{}\""#, exe)
+        };
         let key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
         let status = if enabled {
             Command::new("reg")
-                .args(["add", key, "/v", "NeoPad", "/t", "REG_SZ", "/d", &exe, "/f"])
+                .args([
+                    "add", key, "/v", "NeoPad", "/t", "REG_SZ", "/d", &command, "/f",
+                ])
                 .status()?
         } else {
             Command::new("reg")
@@ -380,7 +400,7 @@ fn set_autostart(_app: &AppHandle, enabled: bool) -> anyhow::Result<()> {
 
     #[cfg(not(target_os = "windows"))]
     {
-        let _ = (app, enabled);
+        let _ = (app, enabled, start_hidden);
     }
 
     Ok(())

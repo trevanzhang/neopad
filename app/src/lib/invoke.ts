@@ -13,6 +13,7 @@ export interface UiConfig {
   editorBackgroundColor: string
   windowOpacity: number
   runAtStartup: boolean
+  startHidden: boolean
   closeToMinimize: boolean
   snapToEdges: boolean
   transparencyEnabled: boolean
@@ -90,8 +91,12 @@ export function hideWindow(): Promise<void> {
   return invoke('hide_window_command')
 }
 
-export function setAutostart(enabled: boolean): Promise<void> {
-  return invoke('set_autostart_command', { enabled })
+export function setAutostart(enabled: boolean, startHidden: boolean): Promise<void> {
+  return invoke('set_autostart_command', { enabled, startHidden })
+}
+
+export function completeStartup(): Promise<void> {
+  return invoke('complete_startup_command')
 }
 
 export function setCloseToMinimize(enabled: boolean): Promise<void> {

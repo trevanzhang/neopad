@@ -18,8 +18,9 @@ The repository currently contains a working Windows-focused MVP:
   trash moves, search, config, tabs, and path safety.
 - System tray menu, close-to-hide behavior, global shortcuts, and clipboard
   append.
-- Single-instance startup, first-launch placement at the screen's bottom-right,
-  and restoration of the last window position on later launches.
+- Flicker-free single-instance startup, first-launch placement at the screen's bottom-right,
+  restoration of the last window position on later launches, and optional hidden
+  background launch at system startup.
 - Configurable global shortcuts for window visibility and clipboard capture,
   plus `Alt+Enter` maximize/restore.
 - Clipboard captures use readable local timestamps in compact separator lines.

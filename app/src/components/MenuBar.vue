@@ -48,7 +48,7 @@ defineEmits<{
   windowOpacity: []
   reminderList: []
   processText: [action: string]
-  helpTopic: [topic: 'software' | 'shortcuts' | 'expression' | 'about']
+  helpTopic: [topic: 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about']
   updatePreviewMode: [mode: EditorMode]
 }>()
 
@@ -409,6 +409,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
       <button type="button" class="menu-title">{{ messages.help }}</button>
       <div class="menu-popover">
         <button type="button" @click="$emit('helpTopic', 'software')">{{ messages.softwareHelp }}</button>
+        <button type="button" @click="$emit('helpTopic', 'markdown')">{{ messages.markdownGuide }}</button>
         <button type="button" @click="$emit('helpTopic', 'shortcuts')">{{ messages.shortcutList }}</button>
         <button type="button" @click="$emit('helpTopic', 'expression')">{{ messages.expressionGuide }}</button>
         <div class="menu-separator" role="separator" />

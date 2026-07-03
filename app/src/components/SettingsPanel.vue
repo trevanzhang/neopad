@@ -16,6 +16,7 @@ defineProps<{
   language: AppLanguage
   workspacePath: string
   runAtStartup: boolean
+  startHidden: boolean
   closeToMinimize: boolean
   snapToEdges: boolean
   transparencyEnabled: boolean
@@ -43,6 +44,7 @@ const emit = defineEmits<{
   'update:editorModeShortcut': [shortcut: EditorModeShortcut]
   'update:language': [language: AppLanguage]
   'update:runAtStartup': [value: boolean]
+  'update:startHidden': [value: boolean]
   'update:closeToMinimize': [value: boolean]
   'update:snapToEdges': [value: boolean]
   'update:transparencyEnabled': [value: boolean]
@@ -131,6 +133,15 @@ function deleteCustomText(current: string[]) {
               @change="$emit('update:runAtStartup', ($event.target as HTMLInputElement).checked)"
             />
             <span>{{ messages.runAtStartup }}</span>
+          </label>
+          <label class="settings-check-row">
+            <input
+              :checked="startHidden"
+              :disabled="!runAtStartup"
+              type="checkbox"
+              @change="$emit('update:startHidden', ($event.target as HTMLInputElement).checked)"
+            />
+            <span>{{ messages.startHidden }}</span>
           </label>
           <label class="settings-check-row">
             <input
