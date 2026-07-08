@@ -615,6 +615,7 @@ async function renameTab(tab: NoteTab) {
 
 async function deleteTab(tab: NoteTab) {
   if (tab.id === 'inbox' || tab.id === 'clipboard') return
+  const wasActiveTab = activeTabId.value === tab.id
   const confirmed = await requestConfirmation(
     t.value.tabs.confirmDeleteTitle,
     t.value.tabs.confirmDeleteMessage.replace('{title}', tab.title),
@@ -623,6 +624,9 @@ async function deleteTab(tab: NoteTab) {
 
   if (isTauriRuntime()) {
     try {
+      if (wasActiveTab && !(await forceSave())) {
+        return
+      }
       await deleteNote(tab.id)
     } catch {
       saveState.value = 'Failed'
@@ -1480,9 +1484,9 @@ function setContentFromLoad(nextContent: string) {
 async function forceSave() {
   if (!isTauriRuntime()) {
     saveState.value = 'Saved'
-    return
+    return true
   }
-  await autosave.flush()
+  return autosave.flush()
 }
 
 function forceSaveOnExit() {
@@ -1520,6 +1524,25 @@ function matchesEditorModeShortcut(event: KeyboardEvent) {
 }
 
 function handleKeydown(event: KeyboardEvent) {
+  const modalOpen = Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value)
+  if (modalOpen && event.key !== 'Escape') {
+    const key = event.key.toLowerCase()
+    const isCtrlShortcut =
+      event.ctrlKey && !event.altKey && !event.metaKey && (key === 'tab' || key === 'n' || key === 'w' || key === 'o')
+    const isFunctionShortcut =
+      !event.ctrlKey &&
+      !event.altKey &&
+      !event.shiftKey &&
+      !event.metaKey &&
+      (event.key === 'F5' || event.key === 'F7' || event.key === 'F9' || event.key === 'F11')
+    const isEditorModeShortcut = matchesEditorModeShortcut(event)
+    if (isCtrlShortcut || isFunctionShortcut || isEditorModeShortcut) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    return
+  }
+
   if (event.key === 'Tab' && event.ctrlKey && !event.altKey && !event.metaKey) {
     event.preventDefault()
     event.stopPropagation()

@@ -497,7 +497,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
   zh: {
     tabs: {
       inbox: '\u9ed8\u8ba4',
-      clipboard: '\u526a\u5207\u677f',
+      clipboard: '\u526a\u8d34\u677f',
       untitled: '\u672a\u547d\u540d',
       rename: '\u91cd\u547d\u540d',
       delete: '\u5220\u9664',
