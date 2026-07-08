@@ -52,6 +52,7 @@ export type AppMessages = {
     ctrlShiftF: string
     ctrlA: string
     ctrlN: string
+    f2: string
     ctrlO: string
     tabBarDisplay: string
     horizontal: string
@@ -113,6 +114,7 @@ export type AppMessages = {
     f8: string
     search: string
     settings: string
+    f1: string
     softwareHelp: string
     markdownGuide: string
     shortcutList: string
@@ -306,6 +308,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
       ctrlN: 'Ctrl+N',
+      f2: 'F2',
       ctrlO: 'Ctrl+O',
       tabBarDisplay: 'Tab Bar Position(F10)',
       horizontal: 'Top(H)',
@@ -315,7 +318,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       toggleTheme: 'Toggle Theme(T)',
       wordWrap: 'Word Wrap(W)',
       ctrlW: 'Ctrl+W',
-      editorMode: 'Editor Mode(F7)',
+      editorMode: 'Editor Mode(F4)',
       cycleEditorMode: 'Cycle Editor Mode(C)',
       editMode: 'Edit',
       splitMode: 'Hybrid',
@@ -367,6 +370,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f8: 'F8',
       search: 'Search',
       settings: 'Settings',
+      f1: 'F1',
       softwareHelp: 'Software Help(R)...',
       markdownGuide: 'Markdown Quick Guide(M)...',
       shortcutList: 'Shortcut List(S)...',
@@ -558,6 +562,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlShiftF: 'Ctrl+Shift+F',
       ctrlA: 'Ctrl+A',
       ctrlN: 'Ctrl+N',
+      f2: 'F2',
       ctrlO: 'Ctrl+O',
       tabBarDisplay: '\u6807\u7b7e\u680f\u4f4d\u7f6e(F10)',
       horizontal: '\u9876\u90e8(H)',
@@ -567,7 +572,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       toggleTheme: '\u5207\u6362\u4e3b\u9898(T)',
       wordWrap: '\u81ea\u52a8\u6362\u884c(W)',
       ctrlW: 'Ctrl+W',
-      editorMode: '\u7f16\u8f91\u5668\u6a21\u5f0f(F7)',
+      editorMode: '\u7f16\u8f91\u5668\u6a21\u5f0f(F4)',
       cycleEditorMode: '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f(C)',
       editMode: '\u7f16\u8f91',
       splitMode: '\u6df7\u5408',
@@ -619,6 +624,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f8: 'F8',
       search: '\u641c\u7d22',
       settings: '\u8bbe\u7f6e',
+      f1: 'F1',
       softwareHelp: '\u8f6f\u4ef6\u8bf4\u660e(R)...',
       markdownGuide: 'Markdown \u7b80\u660e\u6307\u5357(M)...',
       shortcutList: '\u5feb\u6377\u952e\u5217\u8868(S)...',

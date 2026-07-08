@@ -59,7 +59,7 @@ pub struct UiConfig {
 }
 
 fn default_editor_mode_shortcut() -> String {
-    "F7".to_owned()
+    "F4".to_owned()
 }
 
 fn default_true() -> bool {
@@ -203,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn old_ui_config_without_editor_mode_shortcut_uses_f7() {
+    fn old_ui_config_without_editor_mode_shortcut_uses_f4() {
         let mut value = serde_json::to_value(UiConfig::default()).expect("serialize UI config");
         value
             .as_object_mut()
@@ -211,7 +211,7 @@ mod tests {
             .remove("editorModeShortcut");
 
         let config: UiConfig = serde_json::from_value(value).expect("legacy UI config");
-        assert_eq!(config.editor_mode_shortcut, "F7");
+        assert_eq!(config.editor_mode_shortcut, "F4");
     }
 
     #[test]

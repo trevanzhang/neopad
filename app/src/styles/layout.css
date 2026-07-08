@@ -260,7 +260,7 @@ body {
   background: #eeeeee;
   border-color: #777777;
   border-bottom-color: #f7f7f7;
-  box-shadow: inset 0 -3px rgba(0, 0, 0, 0.32), inset 1px 1px #ffffff, 0 1px 2px rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 -3px #f4c542, inset 1px 1px #ffffff, 0 1px 2px rgba(0, 0, 0, 0.18);
   font-weight: 700;
   transform: translateY(-1px);
 }
@@ -616,7 +616,7 @@ body {
 .theme-dark .tab-item.active {
   background: var(--np-control-active);
   border-bottom-color: var(--np-control-active);
-  box-shadow: inset 0 -3px rgba(255, 255, 255, 0.5), inset 1px 1px #454c56, 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 -3px #ffd166, inset 1px 1px #454c56, 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 .theme-dark .markdown-preview code,

@@ -545,8 +545,8 @@ function initialTitleDoubleClickAction(): TitleDoubleClickAction {
 }
 
 function initialEditorModeShortcut(): EditorModeShortcut {
-  const value = initialStringSetting('neopad.editorModeShortcut', 'F7')
-  return value === 'Ctrl+Shift+M' || value === 'disabled' ? value : 'F7'
+  const value = initialStringSetting('neopad.editorModeShortcut', 'F4')
+  return value === 'Ctrl+Shift+M' || value === 'disabled' ? value : 'F4'
 }
 
 function initialDateTimeSeparatorTemplate() {
@@ -1403,7 +1403,7 @@ async function loadNativeUiConfig() {
     customInsertTexts.value = ui.customInsertTexts
     editorModeShortcut.value = ui.editorModeShortcut === 'Ctrl+Shift+M' || ui.editorModeShortcut === 'disabled'
       ? ui.editorModeShortcut
-      : 'F7'
+      : 'F4'
     uiConfigLoaded = true
   } catch {
     saveState.value = 'Failed'
@@ -1645,10 +1645,20 @@ function cycleEditorMode() {
 
 function matchesEditorModeShortcut(event: KeyboardEvent) {
   if (editorModeShortcut.value === 'disabled') return false
-  if (editorModeShortcut.value === 'F7') {
-    return event.key === 'F7' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
+  if (editorModeShortcut.value === 'F4') {
+    return event.key === 'F4' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
   }
   return event.key.toLowerCase() === 'm' && event.ctrlKey && event.shiftKey && !event.altKey && !event.metaKey
+}
+
+function isEditableElement(element: EventTarget | null) {
+  if (!(element instanceof HTMLElement)) return false
+  return (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement ||
+    element.isContentEditable
+  )
 }
 
 function handleKeydown(event: KeyboardEvent) {
@@ -1662,12 +1672,27 @@ function handleKeydown(event: KeyboardEvent) {
       !event.altKey &&
       !event.shiftKey &&
       !event.metaKey &&
-      (event.key === 'F5' || event.key === 'F7' || event.key === 'F9' || event.key === 'F11')
+      (event.key === 'F4' || event.key === 'F5' || event.key === 'F9' || event.key === 'F11')
     const isEditorModeShortcut = matchesEditorModeShortcut(event)
     if (isCtrlShortcut || isFunctionShortcut || isEditorModeShortcut) {
       event.preventDefault()
       event.stopPropagation()
     }
+    return
+  }
+
+  if (
+    event.key === 'F1' &&
+    !event.ctrlKey &&
+    !event.altKey &&
+    !event.shiftKey &&
+    !event.metaKey &&
+    (!isEditableElement(event.target) || Boolean(editorPane.value?.isEditorFocused())) &&
+    !document.querySelector('.menu-root:focus-within, .tab-context-menu')
+  ) {
+    event.preventDefault()
+    event.stopPropagation()
+    openHelpTopic('shortcuts')
     return
   }
 
@@ -1766,6 +1791,24 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
     event.stopPropagation()
     cycleEditorMode()
+    return
+  }
+
+  if (
+    event.key === 'F2' &&
+    !event.ctrlKey &&
+    !event.altKey &&
+    !event.shiftKey &&
+    !event.metaKey &&
+    !reminderListOpen.value &&
+    !settingsOpen.value &&
+    !helpTopic.value &&
+    !searchOpen.value &&
+    !document.querySelector('.menu-root:focus-within, .tab-context-menu')
+  ) {
+    event.preventDefault()
+    event.stopPropagation()
+    void renameActivePage()
     return
   }
 
@@ -2297,8 +2340,10 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       lines: [
         `${formatShortcutLabel(shortcutBaseKey.value, shortcutModifiers.value)} - ` + (zh ? '\u663e\u793a/\u9690\u85cf\u7a97\u53e3' : 'Show/hide window'),
         `${formatShortcutLabel(clipboardShortcutBaseKey.value, clipboardShortcutModifiers.value)} - ` + (zh ? '\u4fdd\u5b58\u526a\u8d34\u677f' : 'Save clipboard'),
+        'F1 - ' + (zh ? '\u6253\u5f00\u5feb\u6377\u952e\u5e2e\u52a9' : 'Open shortcut help'),
         'Alt+Enter - ' + (zh ? '\u6700\u5927\u5316/\u8fd8\u539f\u7a97\u53e3' : 'Maximize/restore window'),
         'Ctrl+N - ' + (zh ? '\u65b0\u5efa\u6807\u7b7e\u9875' : 'New tab'),
+        'F2 - ' + (zh ? '\u91cd\u547d\u540d\u6807\u7b7e\u9875' : 'Rename tab'),
         'Ctrl+W - ' + (zh ? '\u5173\u95ed\u6807\u7b7e\u9875' : 'Close tab'),
         'Ctrl+O - ' + (zh ? '\u4ece\u6587\u4ef6\u8f7d\u5165' : 'Load from file'),
         'Ctrl+Tab / Ctrl+Shift+Tab - ' + (zh ? '\u5207\u6362\u4e0b\u4e00\u4e2a/\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875' : 'Switch next/previous tab'),

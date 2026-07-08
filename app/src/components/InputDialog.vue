@@ -16,6 +16,11 @@ const emit = defineEmits<{
 const value = ref(props.initialValue)
 const input = ref<HTMLInputElement | null>(null)
 
+function confirmInput(event?: KeyboardEvent) {
+  if (event?.isComposing) return
+  emit('confirm', value.value)
+}
+
 onMounted(() => {
   void nextTick(() => {
     input.value?.focus()
@@ -26,7 +31,7 @@ onMounted(() => {
 
 <template>
   <div class="input-dialog-backdrop" role="presentation" @mousedown.self="$emit('cancel')">
-    <form class="input-dialog" role="dialog" aria-modal="true" :aria-label="title" @submit.prevent="$emit('confirm', value)">
+    <form class="input-dialog" role="dialog" aria-modal="true" :aria-label="title" @submit.prevent="confirmInput()">
       <header class="input-dialog-header">
         <strong>{{ title }}</strong>
         <button type="button" :aria-label="cancelLabel" :title="cancelLabel" @click="$emit('cancel')">&times;</button>
@@ -34,7 +39,7 @@ onMounted(() => {
       <div class="input-dialog-body">
         <label>
           <span>{{ title }}</span>
-          <input ref="input" v-model="value" type="text" />
+          <input ref="input" v-model="value" type="text" @keydown.enter.prevent.stop="confirmInput($event)" />
         </label>
       </div>
       <footer class="input-dialog-actions">
