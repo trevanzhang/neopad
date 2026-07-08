@@ -6,7 +6,18 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.3.0 - 2026-07-03
+
 ### Added
+
+- Markdown-native reminders in the form
+  `- [ ] @提醒 YYYY-MM-DD HH:mm content`, with a compact `Ctrl+E` editor,
+  dedicated status-sorted list, source-line navigation, completion through
+  standard Markdown checkboxes, and native notifications while NeoPad runs.
+- Persisted reminder delivery state prevents due notifications from repeating
+  after application restart.
+- `F5` toggles the reminder list, which provides per-row completion and a
+  "Clear Due" batch action without deleting Markdown reminder lines.
 
 - `Ctrl+Tab` and `Ctrl+Shift+Tab` cycle through note tabs; the tab bar arrow
   buttons now provide the same previous/next actions for mouse users.

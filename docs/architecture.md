@@ -46,6 +46,7 @@ The default workspace is `~/.neopad/`.
     page-*.md
   meta/
     tabs.json
+    reminders.json
   config.json
   trash/
   backups/
@@ -54,6 +55,8 @@ The default workspace is `~/.neopad/`.
 The app presents notes as tabs. The durable source of note content is always a
 Markdown file in `notes/`. `tabs.json` stores tab metadata such as title, file
 name, timestamps, pinned state, active tab, and optional tab color.
+`reminders.json` stores only notification delivery signatures so reminder text
+continues to live in ordinary Markdown note lines.
 
 Desktop preferences are persisted in `config.json`. Browser `localStorage`
 supports frontend startup, while native `config.json` is authoritative in the
@@ -70,6 +73,7 @@ configuration shapes.
 - Atomic writes through temporary files and replace/rename behavior.
 - mtime-checked writes for MCP update conflict protection.
 - Full-text search over Markdown note files.
+- Reminder parsing, ordering, and notification delivery-state persistence.
 - Config and tab metadata defaults.
 
 Path safety is mandatory. Public operations must not accept paths that escape
@@ -92,6 +96,12 @@ the configured workspace.
 - Compact settings dialog with independently scrollable content and a dedicated
   Advanced tab for optional editor features.
 - Autosave and status reporting.
+- Compact reminder creation and list surfaces. Reminder lines use
+  `- [ ] @提醒 YYYY-MM-DD HH:mm content`; checking the Markdown task completes
+  the reminder.
+- `F5` toggles the reminder list. Single and bulk overdue completion operations
+  atomically change `[ ]` to `[x]` while preserving the reminder lines.
+- Native reminder notifications while the desktop process remains running.
 - Tray menu: show, hide, new note, save clipboard, settings, quit.
 - Global shortcuts:
   - `Alt+Z`: toggle window.

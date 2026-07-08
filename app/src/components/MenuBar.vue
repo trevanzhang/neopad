@@ -371,7 +371,10 @@ function handleMenuKeydown(event: KeyboardEvent) {
             <button type="button" @click="$emit('processText', 'sha256Hash')">{{ messages.sha256Hash }}</button>
           </div>
         </div>
-        <button type="button" @click="$emit('reminderList')">{{ messages.reminderList }}</button>
+        <button type="button" class="menu-command" @click="$emit('reminderList')">
+          <span>{{ messages.reminderList }}</span>
+          <span class="menu-shortcut">{{ messages.f5 }}</span>
+        </button>
         <div class="menu-separator" role="separator" />
         <button type="button" class="menu-command" @click="$emit('settings')">
           <span>{{ messages.settingsWithKey }}</span>
@@ -409,9 +412,9 @@ function handleMenuKeydown(event: KeyboardEvent) {
       <button type="button" class="menu-title">{{ messages.help }}</button>
       <div class="menu-popover">
         <button type="button" @click="$emit('helpTopic', 'software')">{{ messages.softwareHelp }}</button>
-        <button type="button" @click="$emit('helpTopic', 'markdown')">{{ messages.markdownGuide }}</button>
         <button type="button" @click="$emit('helpTopic', 'shortcuts')">{{ messages.shortcutList }}</button>
         <button type="button" @click="$emit('helpTopic', 'expression')">{{ messages.expressionGuide }}</button>
+        <button type="button" @click="$emit('helpTopic', 'markdown')">{{ messages.markdownGuide }}</button>
         <div class="menu-separator" role="separator" />
         <button type="button" @click="$emit('helpTopic', 'about')">{{ messages.about }}</button>
       </div>

@@ -6,6 +6,8 @@ import EditorPane from './components/EditorPane.vue'
 import InputDialog from './components/InputDialog.vue'
 import MenuBar from './components/MenuBar.vue'
 import PreviewPane from './components/PreviewPane.vue'
+import ReminderDialog from './components/ReminderDialog.vue'
+import ReminderList from './components/ReminderList.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import StatusBar from './components/StatusBar.vue'
@@ -18,7 +20,11 @@ import {
   getUiConfig,
   getWorkspace,
   hideWindow,
+  claimDueReminders,
+  completeDueReminders,
+  completeReminder,
   listNotes,
+  listReminders,
   openTrash,
   quitApp,
   readNote,
@@ -46,11 +52,12 @@ import { isTauriRuntime } from './lib/runtime'
 import { AutosaveCoordinator } from './lib/autosave'
 import { editorBackgroundForTheme } from './lib/theme'
 import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
-import type { NoteTab, SearchResult } from './types/note'
+import type { NoteTab, Reminder, SearchResult } from './types/note'
 import { isEditorMode, nextEditorMode, type EditorMode, type EditorModeShortcut } from './types/editor'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification'
 
 type TabBarOrientation = 'horizontal' | 'vertical'
 type HelpTopic = 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about'
@@ -91,6 +98,10 @@ const previewMode = ref<EditorMode>('edit')
 const defaultEditorMode = ref<EditorMode>('edit')
 const editorModeShortcut = ref<EditorModeShortcut>(initialEditorModeShortcut())
 const searchOpen = ref(false)
+const reminderDialogOpen = ref(false)
+const reminderListOpen = ref(false)
+const reminders = ref<Reminder[]>([])
+const remindersLoading = ref(false)
 const settingsOpen = ref(false)
 const helpTopic = ref<HelpTopic | null>(null)
 const inputDialog = ref<InputDialogState | null>(null)
@@ -165,11 +176,13 @@ const themeToggleLabel = computed(() => theme.value === 'dark' ? t.value.status.
 let searchTimer: number | null = null
 let uiConfigTimer: number | null = null
 let nativeSettingsTimer: number | null = null
+let reminderPollTimer: number | null = null
 let unlistenNewNoteRequested: UnlistenFn | null = null
 let unlistenSaveClipboardRequested: UnlistenFn | null = null
 let unlistenOpenSettings: UnlistenFn | null = null
 let suppressedLoadedContent: string | null = null
 let uiConfigLoaded = false
+let notificationPermissionDenied = false
 const autosave = new AutosaveCoordinator({
   delayMs: 500,
   save: ({ noteId, content: nextContent }: { noteId: string; content: string }) => writeNote(noteId, nextContent),
@@ -208,6 +221,8 @@ onMounted(async () => {
     void syncNativeSettings()
   }, 5000)
   void registerNativeEventListeners()
+  await checkDueReminders()
+  reminderPollTimer = window.setInterval(() => void checkDueReminders(), 30_000)
 })
 
 async function registerNativeEventListeners() {
@@ -244,6 +259,7 @@ onBeforeUnmount(() => {
   clearSearchTimer()
   if (uiConfigTimer) window.clearTimeout(uiConfigTimer)
   if (nativeSettingsTimer) window.clearTimeout(nativeSettingsTimer)
+  if (reminderPollTimer) window.clearInterval(reminderPollTimer)
   void unlistenNewNoteRequested?.()
   void unlistenSaveClipboardRequested?.()
   void unlistenOpenSettings?.()
@@ -940,7 +956,18 @@ function insertDateTimeSeparator() {
 }
 
 function insertReminder() {
-  insertEditorText(`- [ ] ${formatDateTime(new Date())} `)
+  reminderDialogOpen.value = true
+}
+
+function closeReminderDialog() {
+  reminderDialogOpen.value = false
+}
+
+function confirmReminder(value: { content: string; dueText: string }) {
+  reminderDialogOpen.value = false
+  if (editorPane.value?.insertLine(`- [ ] @提醒 ${value.dueText} ${value.content}`)) {
+    statusMessage.value = t.value.status.inserted
+  }
 }
 
 function openInsertTextSettings() {
@@ -1017,9 +1044,84 @@ async function togglePin() {
   }
 }
 
-function openReminderList() {
-  searchQuery.value = '- [ ]'
-  showSearchPlaceholder()
+async function openReminderList() {
+  closeSearch()
+  closeSettings()
+  closeHelp()
+  reminderListOpen.value = true
+  await refreshReminders()
+}
+
+function closeReminderList() {
+  reminderListOpen.value = false
+}
+
+async function refreshReminders() {
+  if (!isTauriRuntime()) return
+  remindersLoading.value = true
+  try {
+    await forceSave()
+    reminders.value = await listReminders()
+  } catch {
+    saveState.value = 'Failed'
+  } finally {
+    remindersLoading.value = false
+  }
+}
+
+async function selectReminder(reminder: Reminder) {
+  await forceSave()
+  activeTabId.value = reminder.noteId
+  await loadActiveNote()
+  closeReminderList()
+  if (previewMode.value === 'preview') previewMode.value = 'edit'
+  await nextTick()
+  editorPane.value?.goToLine(reminder.lineNumber)
+}
+
+async function completeReminderItem(reminder: Reminder) {
+  try {
+    await forceSave()
+    await completeReminder(reminder)
+    if (reminder.noteId === activeTabId.value) await loadActiveNote()
+    await refreshReminders()
+  } catch {
+    saveState.value = 'Failed'
+    await refreshReminders()
+  }
+}
+
+async function completeAllDueReminders() {
+  try {
+    await forceSave()
+    await completeDueReminders()
+    await loadActiveNote()
+    await refreshReminders()
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function checkDueReminders() {
+  if (!isTauriRuntime() || notificationPermissionDenied) return
+  try {
+    const current = await listReminders()
+    if (!current.some((reminder) => reminder.status === 'due')) return
+    let granted = await isPermissionGranted()
+    if (!granted) granted = (await requestPermission()) === 'granted'
+    if (!granted) {
+      notificationPermissionDenied = true
+      return
+    }
+
+    const due = await claimDueReminders()
+    for (const reminder of due) {
+      sendNotification({ title: t.value.reminders.notificationTitle, body: reminder.content })
+    }
+    if (reminderListOpen.value && due.length > 0) await refreshReminders()
+  } catch {
+    // Notification failures must not interrupt note editing.
+  }
 }
 
 async function processEditorText(action: string) {
@@ -1432,6 +1534,14 @@ function handleKeydown(event: KeyboardEvent) {
     return
   }
 
+  if (event.key === 'F5' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (reminderListOpen.value) closeReminderList()
+    else void openReminderList()
+    return
+  }
+
   if (event.key === 'F11' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
     event.preventDefault()
     event.stopPropagation()
@@ -1440,6 +1550,20 @@ function handleKeydown(event: KeyboardEvent) {
   }
 
   if (event.key === 'Escape') {
+    if (reminderDialogOpen.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeReminderDialog()
+      return
+    }
+
+    if (reminderListOpen.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeReminderList()
+      return
+    }
+
     if (confirmationDialog.value) {
       event.preventDefault()
       event.stopPropagation()
@@ -1719,16 +1843,6 @@ function downloadText(fileName: string, text: string) {
   link.download = fileName
   link.click()
   URL.revokeObjectURL(url)
-}
-
-function formatDateTime(date: Date) {
-  const pad = (value: number) => String(value).padStart(2, '0')
-  const year = date.getFullYear()
-  const month = pad(date.getMonth() + 1)
-  const day = pad(date.getDate())
-  const hours = pad(date.getHours())
-  const minutes = pad(date.getMinutes())
-  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 function renderInsertTemplate(template: string) {
@@ -2042,6 +2156,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         'Ctrl+- - ' + (zh ? '\u63d2\u5165\u5206\u9694\u884c' : 'Insert separator'),
         'Ctrl+Shift+- - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4\u5206\u9694\u884c' : 'Insert date time separator'),
         'Ctrl+E - ' + (zh ? '\u63d2\u5165\u63d0\u9192' : 'Insert reminder'),
+        'F5 - ' + (zh ? '\u6253\u5f00/\u5173\u95ed\u63d0\u9192\u5217\u8868' : 'Open/close reminder list'),
         'F6 - ' + (zh ? '\u5207\u6362\u7a97\u53e3\u7f6e\u9876' : 'Toggle window on top'),
         (editorModeShortcut.value === 'disabled' ? (zh ? '\u672a\u7ed1\u5b9a' : 'Unbound') : editorModeShortcut.value) +
           ' - ' + (zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f' : 'Cycle editor mode'),
@@ -2249,6 +2364,18 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       @select="selectSearchResult"
     />
 
+    <ReminderList
+      v-if="reminderListOpen"
+      :reminders="reminders"
+      :loading="remindersLoading"
+      :messages="t.reminders"
+      @close="closeReminderList"
+      @refresh="refreshReminders"
+      @select="selectReminder"
+      @complete="completeReminderItem"
+      @complete-due="completeAllDueReminders"
+    />
+
     <SettingsPanel
       v-if="settingsOpen"
       :always-on-top="alwaysOnTop"
@@ -2311,6 +2438,18 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       :cancel-label="t.settings.cancel"
       @confirm="finishInputDialog"
       @cancel="finishInputDialog(null)"
+    />
+
+    <ReminderDialog
+      v-if="reminderDialogOpen"
+      :title="t.reminders.createTitle"
+      :content-label="t.reminders.contentLabel"
+      :date-label="t.reminders.dateLabel"
+      :time-label="t.reminders.timeLabel"
+      :confirm-label="t.reminders.insert"
+      :cancel-label="t.reminders.cancel"
+      @confirm="confirmReminder"
+      @cancel="closeReminderDialog"
     />
 
     <ConfirmationDialog

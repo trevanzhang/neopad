@@ -33,13 +33,15 @@ This file tracks the implemented MVP relative to the original task plan.
 - Tray menu and close-to-hide behavior.
 - Global shortcuts for toggle window and clipboard capture.
 - Full-text search.
+- Markdown-native reminder creation, reminder aggregation, source-line
+  navigation, delivery deduplication, and native due notifications.
 - Manual clipboard capture to `clipboard.md`.
 - Standalone `neopad-mcp` read and write tools.
 - MCP stdio child-process integration tests.
 - Windows Tauri WebDriver smoke tests for the critical note workflow.
 - Windows icon, tray/taskbar icon, MSI branding, desktop shortcut icon, and
   hidden release console window.
-- Synchronized `0.2.0` application versions with a CI consistency check and
+- Synchronized application versions with a CI consistency check and
   release changelog.
 
 ## Current Build Targets

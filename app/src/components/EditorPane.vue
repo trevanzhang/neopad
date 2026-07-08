@@ -386,6 +386,36 @@ function insertText(text: string) {
   return true
 }
 
+function insertLine(text: string) {
+  if (!editorView) {
+    return false
+  }
+
+  const selection = editorView.state.selection.main
+  const needsLeadingBreak = selection.from > 0
+    && editorView.state.doc.sliceString(selection.from - 1, selection.from) !== '\n'
+  const needsTrailingBreak = selection.to < editorView.state.doc.length
+    && editorView.state.doc.sliceString(selection.to, selection.to + 1) !== '\n'
+  const insertion = `${needsLeadingBreak ? '\n' : ''}${text}${needsTrailingBreak ? '\n' : ''}`
+  editorView.dispatch(editorView.state.replaceSelection(insertion))
+  editorView.focus()
+  return true
+}
+
+function goToLine(lineNumber: number) {
+  if (!editorView || lineNumber < 1 || lineNumber > editorView.state.doc.lines) {
+    return false
+  }
+
+  const line = editorView.state.doc.line(lineNumber)
+  editorView.dispatch({
+    selection: EditorSelection.cursor(line.from),
+    effects: EditorView.scrollIntoView(line.from, { y: 'center' }),
+  })
+  editorView.focus()
+  return true
+}
+
 async function transformText(transform: (text: string) => string | Promise<string>) {
   if (!editorView) {
     return false
@@ -622,6 +652,8 @@ defineExpose({
   openEditorReplace,
   findNextMatch,
   insertText,
+  insertLine,
+  goToLine,
   transformText,
   appendCurrentLineCalculation,
 })
