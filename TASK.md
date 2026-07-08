@@ -44,10 +44,11 @@ Implemented MVP capabilities:
   opens a compact reminder editor, the reminder list derives its rows from
   note content, and due reminders use native notifications while NeoPad is
   running.
-  `F5` toggles the list, and list actions complete reminder checkboxes without
-  deleting their Markdown lines.
-- Native Save As for exporting the active note or a combined all-notes document
-  to a user-selected Markdown file.
+  `F5` toggles the list, list filters can narrow reminders by status, and list
+  actions complete or reopen reminder checkboxes without deleting their
+  Markdown lines.
+- Native Save As for exporting the active note to Markdown or all notes to a
+  ZIP archive with one Markdown file per tab.
 - Manual clipboard capture into `clipboard.md` with readable local timestamp
   separator lines.
 - Tray menu.

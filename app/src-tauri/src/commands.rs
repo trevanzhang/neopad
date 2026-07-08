@@ -1,10 +1,13 @@
 use neopad_core::{
     append_to_clipboard_note, claim_due_reminders, complete_due_reminders, complete_reminder,
     create_note, delete_note_to_trash, export_note_file, list_notes, list_reminders, load_config,
-    lock_workspace_for_write, read_note, rename_note, save_config, search_notes, write_note_atomic,
-    NoteContent, NoteTab, PreviewMode, Reminder, SearchResult, Theme, UiConfig, Workspace,
+    lock_workspace_for_write, read_note, rename_note, reopen_reminder, save_config, search_notes,
+    write_note_atomic, NoteContent, NoteTab, PreviewMode, Reminder, SearchResult, Theme, UiConfig,
+    Workspace,
 };
 use serde::Serialize;
+use std::fs::File;
+use std::io::Write;
 use std::process::Command;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -191,6 +194,17 @@ pub fn complete_reminder_command(
 }
 
 #[tauri::command]
+pub fn reopen_reminder_command(
+    state: State<'_, AppState>,
+    note_id: String,
+    line_number: usize,
+    reminder_id: String,
+) -> Result<(), String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reopen_reminder(&state.workspace, &note_id, line_number, &reminder_id).map_err(display_error)
+}
+
+#[tauri::command]
 pub fn complete_due_reminders_command(state: State<'_, AppState>) -> Result<usize, String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     complete_due_reminders(&state.workspace).map_err(display_error)
@@ -215,6 +229,46 @@ pub async fn save_markdown_file_command(
         };
 
         export_note_file(&path, &content).map_err(display_error)?;
+        Ok(true)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn export_all_notes_zip_command(
+    window: tauri::WebviewWindow,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let workspace = state.workspace.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = rfd::FileDialog::new()
+            .set_parent(&window)
+            .set_title("Export NeoPad notes")
+            .set_file_name("neopad-export.zip")
+            .add_filter("Zip archive", &["zip"])
+            .save_file();
+
+        let Some(path) = path else {
+            return Ok(false);
+        };
+
+        let file = File::create(&path).map_err(|error| error.to_string())?;
+        let mut archive = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        for tab in list_notes(&workspace).map_err(display_error)? {
+            let note = read_note(&workspace, &tab.id).map_err(display_error)?;
+            archive
+                .start_file(&tab.file_name, options)
+                .map_err(|error| error.to_string())?;
+            archive
+                .write_all(note.content.as_bytes())
+                .map_err(|error| error.to_string())?;
+        }
+
+        archive.finish().map_err(|error| error.to_string())?;
         Ok(true)
     })
     .await

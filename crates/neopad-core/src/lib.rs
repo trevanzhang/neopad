@@ -17,7 +17,7 @@ pub use note::{
 };
 pub use reminder::{
     claim_due_reminders, complete_due_reminders, complete_reminder, list_reminders,
-    parse_reminder_line, Reminder, ReminderStatus,
+    parse_reminder_line, reopen_reminder, Reminder, ReminderStatus,
 };
 pub use search::{search_notes, SearchResult};
 pub use tab::{NoteTab, TabsState};

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nextTick, onMounted, ref } from 'vue'
 import type { AppMessages } from '../lib/i18n'
 import type { SearchResult } from '../types/note'
 
@@ -14,16 +15,31 @@ defineEmits<{
   close: []
   select: [result: SearchResult]
 }>()
+
+const searchInput = ref<HTMLInputElement | null>(null)
+
+onMounted(() => {
+  void nextTick(focusSearchInput)
+})
+
+function focusSearchInput() {
+  searchInput.value?.focus()
+  searchInput.value?.select()
+}
+
+defineExpose({
+  focusSearchInput,
+})
 </script>
 
 <template>
   <aside class="search-panel" :aria-label="messages.title">
     <header class="search-header">
       <input
+        ref="searchInput"
         :value="query"
         type="search"
         :placeholder="messages.placeholder"
-        autofocus
         @input="$emit('update:query', ($event.target as HTMLInputElement).value)"
       />
       <button type="button" :aria-label="messages.close" :title="messages.close" @click="$emit('close')">

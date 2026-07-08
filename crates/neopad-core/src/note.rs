@@ -18,7 +18,10 @@ pub struct NoteContent {
 }
 
 pub fn list_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
-    let tabs = load_tabs(workspace)?;
+    let mut tabs = load_tabs(workspace)?;
+    if reconcile_trashed_tabs(workspace, &mut tabs)? {
+        save_tabs(workspace, &tabs)?;
+    }
     Ok(tabs.tabs.into_iter().filter(|tab| !tab.deleted).collect())
 }
 
@@ -232,6 +235,44 @@ fn save_tabs(workspace: &Workspace, tabs: &TabsState) -> Result<()> {
     write_atomic(&workspace.tabs_path, &contents)
 }
 
+fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result<bool> {
+    let mut changed = false;
+    let trash_file_names = fs::read_dir(&workspace.trash_dir)
+        .with_context(|| format!("failed to read trash dir {}", workspace.trash_dir.display()))?
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+
+    for tab in &mut tabs.tabs {
+        if tab.deleted || tab.pinned {
+            continue;
+        }
+
+        let note_path = note_file_path(workspace, &tab.file_name)?;
+        let has_matching_trash_file = trash_file_names.iter().any(|file_name| {
+            file_name.starts_with("deleted-") && file_name.ends_with(&tab.file_name)
+        });
+        if !note_path.exists() && has_matching_trash_file {
+            tab.deleted = true;
+            tab.updated_at = now_ms()?;
+            changed = true;
+        }
+    }
+
+    let active_is_available = tabs
+        .tabs
+        .iter()
+        .any(|tab| tab.id == tabs.active_tab_id && !tab.deleted);
+    if !active_is_available {
+        if let Some(next_tab) = tabs.tabs.iter().find(|tab| !tab.deleted) {
+            tabs.active_tab_id = next_tab.id.clone();
+            changed = true;
+        }
+    }
+
+    Ok(changed)
+}
+
 fn find_note_tab(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
     let tabs = load_tabs(workspace)?;
     tabs.tabs
@@ -348,6 +389,32 @@ mod tests {
         assert!(rename_note(&workspace, "clipboard", "Other".to_owned()).is_err());
         assert!(workspace.inbox_path().is_file());
         assert!(workspace.clipboard_path().is_file());
+    }
+
+    #[test]
+    fn list_notes_reconciles_tabs_when_note_was_already_moved_to_trash() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, None).expect("create note");
+        let source = note_file_path(&workspace, &created.file_name).expect("note path");
+        let target = trash_file_path(
+            &workspace,
+            &format!("deleted-{}-{}", now_ms().expect("now"), created.file_name),
+        )
+        .expect("trash path");
+        fs::rename(source, target).expect("move to trash without updating tabs");
+
+        let listed = list_notes(&workspace).expect("list");
+
+        assert!(listed.iter().all(|tab| tab.id != created.id));
+        let tabs = load_tabs(&workspace).expect("tabs");
+        assert!(
+            tabs.tabs
+                .iter()
+                .find(|tab| tab.id == created.id)
+                .expect("created tab")
+                .deleted
+        );
     }
 
     #[test]

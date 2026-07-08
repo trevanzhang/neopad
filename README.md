@@ -36,12 +36,14 @@ The repository currently contains a working Windows-focused MVP:
   bar.
 - Lightweight Markdown reminders using
   `- [ ] @提醒 YYYY-MM-DD HH:mm content`, with a compact `Ctrl+E` editor,
-  sortable reminder list, source-line navigation, and native notifications
-  while NeoPad is running in the tray.
-- `F5` opens or closes the reminder list. "Mark Completed" and "Clear Due"
-  update reminder checkboxes directly without deleting note content.
+  sortable and filterable reminder list, source-line navigation, and native
+  notifications while NeoPad is running in the tray.
+- `F5` opens or closes the reminder list. "Mark Completed", "Mark Unfinished",
+  and "Clear Due" update reminder checkboxes directly without deleting note
+  content.
 - Tab context menu with rename, trash, and persistent color choices.
-- Native Save As dialogs for exporting the active note or all notes as Markdown.
+- Native Save As dialogs for exporting the active note as Markdown or all notes
+  as a ZIP archive containing one Markdown file per tab.
 - Standalone `neopad-mcp` stdio server with read-only tools by default and
   opt-in write tools via `--allow-write`.
 - Windows MSI packaging with app icon, branded WiX installer images, and desktop
@@ -134,7 +136,7 @@ pnpm tauri:build
 The MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.3.0_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.3.6_x64_en-US.msi
 ```
 
 ## MCP Server

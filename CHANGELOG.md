@@ -6,6 +6,35 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.3.6 - 2026-07-08
+
+### Added
+
+- Reminder list filtering for all reminders, pending reminders, due reminders,
+  and completed reminders.
+- Completed reminders can now be marked unfinished directly from the reminder
+  list.
+- Vim Normal-mode `gt` and `gT` now switch to the next and previous NeoPad tab.
+
+### Changed
+
+- Reminder list actions now use clearer labels: "Mark Completed" and
+  "Mark Unfinished".
+- The all-notes export now writes a `.zip` archive with one Markdown file per
+  tab instead of combining every note into a single Markdown document.
+- Reminder list controls now share a more consistent compact button style.
+
+### Fixed
+
+- Closing a tab with `Ctrl+W` now handles the active-tab switch before trashing
+  the note, avoiding stale UI tabs and failed repeated delete attempts.
+- Tab metadata now reconciles notes that were already moved to `trash/`, so
+  deleted tabs do not remain visible after restart or refresh.
+- Delete confirmation dialogs now focus the delete button by default and support
+  keyboard-only confirmation, cancellation, and focus cycling.
+- Opening global search from its shortcut now focuses and selects the search
+  field immediately.
+
 ## 0.3.0 - 2026-07-03
 
 ### Added

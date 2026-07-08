@@ -207,7 +207,13 @@ export type AppMessages = {
     completed: string
     actions: string
     complete: string
+    reopen: string
     completeAllDue: string
+    filterLabel: string
+    filterAll: string
+    filterPending: string
+    filterDue: string
+    filterCompleted: string
     notificationTitle: string
   }
   status: {
@@ -455,7 +461,13 @@ export const messages: Record<AppLanguage, AppMessages> = {
       completed: 'Completed',
       actions: 'Actions',
       complete: 'Mark Completed',
+      reopen: 'Mark Open',
       completeAllDue: 'Clear Due',
+      filterLabel: 'Show',
+      filterAll: 'All',
+      filterPending: 'Pending only',
+      filterDue: 'Due only',
+      filterCompleted: 'Completed only',
       notificationTitle: 'NeoPad Reminder',
     },
     status: {
@@ -700,8 +712,14 @@ export const messages: Record<AppLanguage, AppMessages> = {
       due: '\u5df2\u5230\u671f',
       completed: '\u5df2\u5b8c\u6210',
       actions: '\u64cd\u4f5c',
-      complete: '\u8bbe\u7f6e\u5df2\u5b8c\u6210',
+      complete: '\u6807\u8bb0\u5df2\u5b8c\u6210',
+      reopen: '\u6807\u8bb0\u672a\u5b8c\u6210',
       completeAllDue: '\u6e05\u7406\u5df2\u5230\u671f',
+      filterLabel: '\u7b5b\u9009',
+      filterAll: '\u5168\u90e8',
+      filterPending: '\u53ea\u770b\u672a\u5230\u671f',
+      filterDue: '\u53ea\u770b\u5df2\u5230\u671f',
+      filterCompleted: '\u53ea\u770b\u5df2\u5b8c\u6210',
       notificationTitle: 'NeoPad \u63d0\u9192',
     },
     status: {

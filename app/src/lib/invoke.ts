@@ -95,12 +95,24 @@ export function completeReminder(reminder: Reminder): Promise<void> {
   })
 }
 
+export function reopenReminder(reminder: Reminder): Promise<void> {
+  return invoke('reopen_reminder_command', {
+    noteId: reminder.noteId,
+    lineNumber: reminder.lineNumber,
+    reminderId: reminder.id,
+  })
+}
+
 export function completeDueReminders(): Promise<number> {
   return invoke('complete_due_reminders_command')
 }
 
 export function saveMarkdownFile(suggestedFileName: string, content: string): Promise<boolean> {
   return invoke('save_markdown_file_command', { suggestedFileName, content })
+}
+
+export function exportAllNotesZip(): Promise<boolean> {
+  return invoke('export_all_notes_zip_command')
 }
 
 export function showWindow(): Promise<void> {

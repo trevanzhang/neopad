@@ -34,7 +34,9 @@ This file tracks the implemented MVP relative to the original task plan.
 - Global shortcuts for toggle window and clipboard capture.
 - Full-text search.
 - Markdown-native reminder creation, reminder aggregation, source-line
-  navigation, delivery deduplication, and native due notifications.
+  navigation, status filtering, completion reopening, delivery deduplication,
+  and native due notifications.
+- ZIP export for all tabs, preserving each tab as its own Markdown file.
 - Manual clipboard capture to `clipboard.md`.
 - Standalone `neopad-mcp` read and write tools.
 - MCP stdio child-process integration tests.

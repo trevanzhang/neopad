@@ -571,9 +571,20 @@ body {
 }
 
 .theme-dark .reminder-list-header button,
+.theme-dark .reminder-list-header select,
 .theme-dark .reminder-actions button {
   color: var(--np-text);
   background: var(--np-control);
+  border-color: var(--np-border);
+}
+
+.theme-dark .reminder-filter {
+  color: var(--np-muted);
+}
+
+.theme-dark .reminder-action-button.secondary {
+  color: var(--np-text);
+  background: var(--np-surface);
   border-color: var(--np-border);
 }
 
@@ -861,17 +872,52 @@ body {
   border-bottom: 1px solid #b7b7b7;
 }
 
-.reminder-list-header > div {
+.reminder-toolbar {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
-.reminder-list-header button {
-  height: 28px;
-  padding: 0 12px;
+.reminder-filter {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: #4f4f4f;
+  font-size: 12px;
+}
+
+.reminder-filter select,
+.reminder-button {
+  height: 30px;
   color: #111111;
   background: #eeeeee;
   border: 1px solid #8f8f8f;
+  border-radius: 4px;
+}
+
+.reminder-filter select {
+  min-width: 124px;
+  padding: 0 26px 0 8px;
+}
+
+.reminder-button {
+  padding: 0 12px;
+}
+
+.reminder-button:hover:not(:disabled),
+.reminder-button:focus-visible:not(:disabled),
+.reminder-action-button:hover:not(:disabled),
+.reminder-action-button:focus-visible:not(:disabled) {
+  border-color: #2b65c8;
+  box-shadow: 0 0 0 2px rgba(43, 101, 200, 0.16);
+}
+
+.reminder-button:disabled,
+.reminder-action-button:disabled,
+.reminder-filter select:disabled {
+  cursor: default;
+  opacity: 0.58;
 }
 
 .reminder-list-body {
@@ -907,7 +953,7 @@ body {
 .reminder-table th:nth-child(2) { width: 180px; }
 .reminder-table th:nth-child(3) { width: 32%; }
 .reminder-table th:nth-child(4) { width: 150px; }
-.reminder-table th:nth-child(5) { width: 116px; }
+.reminder-table th:nth-child(5) { width: 128px; }
 
 .reminder-table tbody tr {
   cursor: pointer;
@@ -927,13 +973,21 @@ body {
   color: #667085;
 }
 
-.reminder-actions button {
+.reminder-action-button {
   width: 100%;
-  height: 24px;
-  padding: 0 6px;
+  height: 26px;
+  padding: 0 8px;
+  color: #ffffff;
+  background: #2b65c8;
+  border: 1px solid #2b65c8;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.reminder-action-button.secondary {
   color: #111111;
-  background: #eeeeee;
-  border: 1px solid #8f8f8f;
+  background: #ffffff;
+  border-color: #8f8f8f;
 }
 
 .search-result strong {

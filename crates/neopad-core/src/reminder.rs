@@ -169,6 +169,25 @@ pub fn complete_reminder(
     line_number: usize,
     reminder_id: &str,
 ) -> Result<()> {
+    set_reminder_completion(workspace, note_id, line_number, reminder_id, true)
+}
+
+pub fn reopen_reminder(
+    workspace: &Workspace,
+    note_id: &str,
+    line_number: usize,
+    reminder_id: &str,
+) -> Result<()> {
+    set_reminder_completion(workspace, note_id, line_number, reminder_id, false)
+}
+
+fn set_reminder_completion(
+    workspace: &Workspace,
+    note_id: &str,
+    line_number: usize,
+    reminder_id: &str,
+    completed: bool,
+) -> Result<()> {
     if line_number == 0 {
         bail!("reminder line number must be positive");
     }
@@ -185,12 +204,19 @@ pub fn complete_reminder(
         let Some(parsed) = parse_reminder_line(line.trim_end_matches(['\r', '\n'])) else {
             bail!("reminder no longer exists at line {line_number}");
         };
-        if parsed.completed
-            || reminder_signature(note_id, parsed.due_at, &parsed.content) != reminder_id
-        {
-            bail!("reminder changed before it could be completed");
+        if reminder_signature(note_id, parsed.due_at, &parsed.content) != reminder_id {
+            bail!("reminder changed before it could be updated");
         }
-        next_content.push_str(&line.replacen("- [ ]", "- [x]", 1));
+        if parsed.completed == completed {
+            bail!("reminder is already in the requested completion state");
+        }
+        if completed {
+            next_content.push_str(&line.replacen("- [ ]", "- [x]", 1));
+        } else if line.trim_start().starts_with("- [X]") {
+            next_content.push_str(&line.replacen("- [X]", "- [ ]", 1));
+        } else {
+            next_content.push_str(&line.replacen("- [x]", "- [ ]", 1));
+        }
         found = true;
     }
 
@@ -315,6 +341,27 @@ mod tests {
         assert_eq!(
             read_note(&workspace, &note.id).expect("read").content,
             "heading\r\n- [x] @提醒 2000-01-01 09:00 first\r\n- [ ] ordinary\r\n"
+        );
+    }
+
+    #[test]
+    fn reopens_one_completed_reminder_without_reformatting_other_content() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp.path().join("workspace"))).expect("workspace");
+        let note = create_note(&workspace, Some("Plans".to_owned())).expect("create");
+        let content = format!(
+            "heading\r\n- [X] {REMINDER_MARKER} 2000-01-01 09:00 first\r\n- [ ] ordinary\r\n"
+        );
+        write_note_atomic(&workspace, &note.id, &content).expect("write");
+        let reminder = list_reminders(&workspace).expect("list").remove(0);
+
+        reopen_reminder(&workspace, &note.id, reminder.line_number, &reminder.id).expect("reopen");
+
+        assert_eq!(
+            read_note(&workspace, &note.id).expect("read").content,
+            format!(
+                "heading\r\n- [ ] {REMINDER_MARKER} 2000-01-01 09:00 first\r\n- [ ] ordinary\r\n"
+            )
         );
     }
 

@@ -16,6 +16,7 @@ import {
   createNote,
   completeStartup,
   deleteNote,
+  exportAllNotesZip,
   getShortcutWarnings,
   getUiConfig,
   getWorkspace,
@@ -29,6 +30,7 @@ import {
   quitApp,
   readNote,
   renameNote,
+  reopenReminder,
   saveClipboard,
   saveMarkdownFile,
   saveUiConfig,
@@ -143,6 +145,7 @@ const customInsertTexts = ref<string[]>(initialJsonSetting('neopad.customInsertT
 const fileInput = ref<HTMLInputElement | null>(null)
 const backgroundColorInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
+const searchPanel = ref<InstanceType<typeof SearchPanel> | null>(null)
 const workspacePath = ref('~/.neopad')
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
 const t = computed(() => messages[language.value])
@@ -183,6 +186,7 @@ let unlistenOpenSettings: UnlistenFn | null = null
 let suppressedLoadedContent: string | null = null
 let uiConfigLoaded = false
 let notificationPermissionDenied = false
+const deletingTabIds = new Set<string>()
 const autosave = new AutosaveCoordinator({
   delayMs: 500,
   save: ({ noteId, content: nextContent }: { noteId: string; content: string }) => writeNote(noteId, nextContent),
@@ -615,29 +619,42 @@ async function renameTab(tab: NoteTab) {
 
 async function deleteTab(tab: NoteTab) {
   if (tab.id === 'inbox' || tab.id === 'clipboard') return
+  if (deletingTabIds.has(tab.id)) return
   const wasActiveTab = activeTabId.value === tab.id
+  const nextActiveTabId = wasActiveTab
+    ? tabs.value.find((item) => item.id !== tab.id)?.id
+    : activeTabId.value
   const confirmed = await requestConfirmation(
     t.value.tabs.confirmDeleteTitle,
     t.value.tabs.confirmDeleteMessage.replace('{title}', tab.title),
   )
   if (!confirmed) return
 
+  deletingTabIds.add(tab.id)
   if (isTauriRuntime()) {
     try {
-      if (wasActiveTab && !(await forceSave())) {
+      if (!(await forceSave())) {
+        saveState.value = 'Failed'
         return
+      }
+      if (wasActiveTab) {
+        activeTabId.value = nextActiveTabId ?? 'inbox'
+        await loadActiveNote()
       }
       await deleteNote(tab.id)
     } catch {
       saveState.value = 'Failed'
       return
+    } finally {
+      deletingTabIds.delete(tab.id)
     }
   }
   tabs.value = tabs.value.filter((item) => item.id !== tab.id)
   if (activeTabId.value === tab.id) {
-    activeTabId.value = tabs.value[0]?.id ?? 'inbox'
+    activeTabId.value = nextActiveTabId ?? tabs.value[0]?.id ?? 'inbox'
     await loadActiveNote()
   }
+  deletingTabIds.delete(tab.id)
 }
 
 async function createLocalTab() {
@@ -775,17 +792,16 @@ async function exportAllNotes() {
   await forceSave()
 
   try {
-    const sections: string[] = []
-    for (const tab of tabs.value) {
-      const noteContent = isTauriRuntime() ? (await readNote(tab.id)).content : tab.id === activeTabId.value ? content.value : ''
-      sections.push(`## ${tab.title}\n\n<!-- file: ${tab.fileName} -->\n\n${noteContent.trimEnd()}\n`)
-    }
-
-    const exportContent = `# Exported from NeoPad\n\n${sections.join('\n---\n\n')}`
     if (isTauriRuntime()) {
-      const saved = await saveMarkdownFile('neopad-export.md', exportContent)
+      const saved = await exportAllNotesZip()
       if (!saved) return
     } else {
+      const sections: string[] = []
+      for (const tab of tabs.value) {
+        const noteContent = tab.id === activeTabId.value ? content.value : ''
+        sections.push(`## ${tab.title}\n\n<!-- file: ${tab.fileName} -->\n\n${noteContent.trimEnd()}\n`)
+      }
+      const exportContent = `# Exported from NeoPad\n\n${sections.join('\n---\n\n')}`
       downloadText('neopad-export.md', exportContent)
     }
     statusMessage.value = t.value.status.exported
@@ -996,6 +1012,7 @@ function showSearchPlaceholder() {
   if (searchQuery.value.trim()) {
     scheduleSearch()
   }
+  void nextTick(() => searchPanel.value?.focusSearchInput())
 }
 
 function showSettingsPlaceholder() {
@@ -1087,6 +1104,18 @@ async function completeReminderItem(reminder: Reminder) {
   try {
     await forceSave()
     await completeReminder(reminder)
+    if (reminder.noteId === activeTabId.value) await loadActiveNote()
+    await refreshReminders()
+  } catch {
+    saveState.value = 'Failed'
+    await refreshReminders()
+  }
+}
+
+async function reopenReminderItem(reminder: Reminder) {
+  try {
+    await forceSave()
+    await reopenReminder(reminder)
     if (reminder.noteId === activeTabId.value) await loadActiveNote()
     await refreshReminders()
   } catch {
@@ -2373,12 +2402,14 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         :vim-mode="vimMode"
         :vim-insert-exit-key="vimInsertExitKey"
         @vim-mode-change="activeVimMode = $event"
+        @vim-tab-switch="cycleTab"
       />
       <PreviewPane v-if="previewMode !== 'edit'" :content="content" />
     </div>
 
     <SearchPanel
       v-if="searchOpen"
+      ref="searchPanel"
       v-model:query="searchQuery"
       :results="searchResults"
       :searching="searching"
@@ -2396,6 +2427,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       @refresh="refreshReminders"
       @select="selectReminder"
       @complete="completeReminderItem"
+      @reopen="reopenReminderItem"
       @complete-due="completeAllDueReminders"
     />
 

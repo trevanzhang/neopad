@@ -25,6 +25,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   vimModeChange: [mode: string]
+  vimTabSwitch: [offset: -1 | 1]
 }>()
 
 const model = defineModel<string>({ required: true })
@@ -37,6 +38,20 @@ const vimSupport = new Compartment()
 let vimModeChangeHandler: ((event: { mode: string; subMode?: string }) => void) | null = null
 let mappedInsertExitKey = ''
 type ExpressionToken = { type: 'number'; value: number } | { type: 'operator'; value: string } | { type: 'paren'; value: '(' | ')' }
+
+function registerNeopadVimTabMappings() {
+  const neopadVim = Vim as typeof Vim & { neopadTabMappingsRegistered?: boolean }
+  if (neopadVim.neopadTabMappingsRegistered) return
+  neopadVim.neopadTabMappingsRegistered = true
+  Vim.defineAction('neopadNextTab', (cm) => {
+    cm.cm6.dom.dispatchEvent(new CustomEvent('neopad-vim-tab-switch', { bubbles: true, detail: 1 }))
+  })
+  Vim.defineAction('neopadPreviousTab', (cm) => {
+    cm.cm6.dom.dispatchEvent(new CustomEvent('neopad-vim-tab-switch', { bubbles: true, detail: -1 }))
+  })
+  Vim.mapCommand('gt', 'action', 'neopadNextTab', {}, { context: 'normal' })
+  Vim.mapCommand('gT', 'action', 'neopadPreviousTab', {}, { context: 'normal' })
+}
 
 const extensions = [
   vimSupport.of(props.vimMode ? vim() : []),
@@ -175,6 +190,7 @@ onMounted(() => {
     return
   }
 
+  registerNeopadVimTabMappings()
   updateInsertExitMapping(props.vimInsertExitKey)
   editorView = new EditorView({
     state: EditorState.create({
@@ -184,14 +200,21 @@ onMounted(() => {
     parent: editorRoot.value,
   })
   connectVimModeListener()
+  editorRoot.value.addEventListener('neopad-vim-tab-switch', handleVimTabSwitch)
 })
 
 onBeforeUnmount(() => {
+  editorRoot.value?.removeEventListener('neopad-vim-tab-switch', handleVimTabSwitch)
   disconnectVimModeListener()
   updateInsertExitMapping('')
   editorView?.destroy()
   editorView = null
 })
+
+function handleVimTabSwitch(event: Event) {
+  const offset = (event as CustomEvent<number>).detail === -1 ? -1 : 1
+  emit('vimTabSwitch', offset)
+}
 
 watch(
   () => props.vimMode,
