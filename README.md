@@ -34,6 +34,12 @@ The repository currently contains a working Windows-focused MVP:
   priority over conflicting Vim mappings.
 - Persistent light and dark themes available from the Format menu and status
   bar.
+- Lightweight Markdown reminders using
+  `- [ ] @提醒 YYYY-MM-DD HH:mm content`, with a compact `Ctrl+E` editor,
+  sortable reminder list, source-line navigation, and native notifications
+  while NeoPad is running in the tray.
+- `F5` opens or closes the reminder list. "Mark Completed" and "Clear Due"
+  update reminder checkboxes directly without deleting note content.
 - Tab context menu with rename, trash, and persistent color choices.
 - Native Save As dialogs for exporting the active note or all notes as Markdown.
 - Standalone `neopad-mcp` stdio server with read-only tools by default and
@@ -65,6 +71,7 @@ Important files and directories:
 ~/.neopad/
   notes/              Markdown note bodies
   meta/tabs.json      Tab metadata
+  meta/reminders.json Notification delivery state
   config.json         App settings
   trash/              Deleted notes are moved here
   backups/            Reserved for future backup support
@@ -127,7 +134,7 @@ pnpm tauri:build
 The MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.2.0_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.3.0_x64_en-US.msi
 ```
 
 ## MCP Server

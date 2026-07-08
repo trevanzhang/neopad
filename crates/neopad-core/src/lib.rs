@@ -3,6 +3,7 @@ pub mod config;
 mod lock;
 pub mod note;
 pub mod path;
+pub mod reminder;
 pub mod search;
 pub mod tab;
 pub mod workspace;
@@ -13,6 +14,10 @@ pub use note::{
     append_to_clipboard_note, append_to_note, create_note, delete_note_to_trash, list_notes,
     read_note, rename_note, set_note_color, write_note_atomic, write_note_atomic_checked,
     NoteContent,
+};
+pub use reminder::{
+    claim_due_reminders, complete_due_reminders, complete_reminder, list_reminders,
+    parse_reminder_line, Reminder, ReminderStatus,
 };
 pub use search::{search_notes, SearchResult};
 pub use tab::{NoteTab, TabsState};

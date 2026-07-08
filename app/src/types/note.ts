@@ -37,3 +37,18 @@ export type SearchResult = {
   before: string[]
   after: string[]
 }
+
+export type ReminderStatus = 'pending' | 'due' | 'completed'
+
+export type Reminder = {
+  id: string
+  noteId: string
+  title: string
+  fileName: string
+  lineNumber: number
+  dueAt: number
+  dueText: string
+  content: string
+  completed: boolean
+  status: ReminderStatus
+}

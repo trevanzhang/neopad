@@ -539,6 +539,49 @@ body {
   color: var(--np-text);
 }
 
+.theme-dark .search-header {
+  background: var(--np-chrome);
+  border-color: var(--np-border);
+}
+
+.theme-dark .search-header button,
+.theme-dark .search-result {
+  color: var(--np-text);
+  background: var(--np-surface);
+  border-color: var(--np-border);
+}
+
+.theme-dark .search-result:hover {
+  background: var(--np-control-active);
+}
+
+.theme-dark .search-empty,
+.theme-dark .search-result-meta,
+.theme-dark .search-context {
+  color: var(--np-muted);
+}
+
+.theme-dark .reminder-list-panel,
+.theme-dark .reminder-list-header,
+.theme-dark .reminder-table th,
+.theme-dark .reminder-table td {
+  color: var(--np-text);
+  background: var(--np-menu);
+  border-color: var(--np-border);
+}
+
+.theme-dark .reminder-list-header button,
+.theme-dark .reminder-actions button {
+  color: var(--np-text);
+  background: var(--np-control);
+  border-color: var(--np-border);
+}
+
+.theme-dark .reminder-table tbody tr:hover td,
+.theme-dark .reminder-table tbody tr:focus td {
+  background: var(--np-control-active);
+}
+
 .theme-dark .menu-separator {
   background: var(--np-border);
 }
@@ -771,6 +814,126 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
+}
+
+.reminder-dialog {
+  width: min(430px, calc(100vw - 32px));
+}
+
+.reminder-dialog-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.reminder-dialog-fields label {
+  display: grid;
+  gap: 5px;
+}
+
+.reminder-date-time {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.reminder-list-panel {
+  position: absolute;
+  inset: 74px 16px 38px;
+  z-index: 14;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  overflow: hidden;
+  color: #111111;
+  background: #ffffff;
+  border: 1px solid #8f8f8f;
+  border-radius: 8px;
+  box-shadow: 3px 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+.reminder-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: #efefef;
+  border-bottom: 1px solid #b7b7b7;
+}
+
+.reminder-list-header > div {
+  display: flex;
+  gap: 8px;
+}
+
+.reminder-list-header button {
+  height: 28px;
+  padding: 0 12px;
+  color: #111111;
+  background: #eeeeee;
+  border: 1px solid #8f8f8f;
+}
+
+.reminder-list-body {
+  min-height: 0;
+  overflow: auto;
+}
+
+.reminder-list-empty {
+  margin: 24px;
+  color: #666666;
+}
+
+.reminder-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.reminder-table th,
+.reminder-table td {
+  overflow: hidden;
+  padding: 7px 8px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-right: 1px solid #d3d3d3;
+  border-bottom: 1px solid #d3d3d3;
+}
+
+.reminder-table th:nth-child(1) { width: 86px; }
+.reminder-table th:nth-child(2) { width: 180px; }
+.reminder-table th:nth-child(3) { width: 32%; }
+.reminder-table th:nth-child(4) { width: 150px; }
+.reminder-table th:nth-child(5) { width: 116px; }
+
+.reminder-table tbody tr {
+  cursor: pointer;
+}
+
+.reminder-table tbody tr:hover td,
+.reminder-table tbody tr:focus td {
+  background: #e8f0ff;
+  outline: none;
+}
+
+.reminder-status-due {
+  color: #b42318;
+}
+
+.reminder-status-completed {
+  color: #667085;
+}
+
+.reminder-actions button {
+  width: 100%;
+  height: 24px;
+  padding: 0 6px;
+  color: #111111;
+  background: #eeeeee;
+  border: 1px solid #8f8f8f;
 }
 
 .search-result strong {

@@ -108,6 +108,7 @@ export type AppMessages = {
     sha1Hash: string
     sha256Hash: string
     reminderList: string
+    f5: string
     settingsWithKey: string
     f8: string
     search: string
@@ -185,6 +186,29 @@ export type AppMessages = {
     searching: string
     noResults: string
     line: string
+  }
+  reminders: {
+    title: string
+    createTitle: string
+    contentLabel: string
+    dateLabel: string
+    timeLabel: string
+    insert: string
+    cancel: string
+    close: string
+    refresh: string
+    empty: string
+    status: string
+    dueAt: string
+    content: string
+    page: string
+    pending: string
+    due: string
+    completed: string
+    actions: string
+    complete: string
+    completeAllDue: string
+    notificationTitle: string
   }
   status: {
     editMode: string
@@ -332,6 +356,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       sha1Hash: 'SHA1 Hash',
       sha256Hash: 'SHA256 Hash',
       reminderList: 'Reminder List(R)...',
+      f5: 'F5',
       settingsWithKey: 'Settings(O)...',
       f8: 'F8',
       search: 'Search',
@@ -409,6 +434,29 @@ export const messages: Record<AppLanguage, AppMessages> = {
       searching: 'Searching...',
       noResults: 'No results',
       line: 'line',
+    },
+    reminders: {
+      title: 'Reminder List',
+      createTitle: 'Create Reminder',
+      contentLabel: 'Reminder',
+      dateLabel: 'Date',
+      timeLabel: 'Time',
+      insert: 'Insert',
+      cancel: 'Cancel',
+      close: 'Close',
+      refresh: 'Refresh',
+      empty: 'No reminders',
+      status: 'Status',
+      dueAt: 'Due at',
+      content: 'Reminder',
+      page: 'Page',
+      pending: 'Pending',
+      due: 'Due',
+      completed: 'Completed',
+      actions: 'Actions',
+      complete: 'Mark Completed',
+      completeAllDue: 'Clear Due',
+      notificationTitle: 'NeoPad Reminder',
     },
     status: {
       editMode: 'Edit mode',
@@ -554,6 +602,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       sha1Hash: 'SHA1 Hash',
       sha256Hash: 'SHA256 Hash',
       reminderList: '\u63d0\u9192\u5217\u8868(R)...',
+      f5: 'F5',
       settingsWithKey: '\u8bbe\u7f6e(O)...',
       f8: 'F8',
       search: '\u641c\u7d22',
@@ -631,6 +680,29 @@ export const messages: Record<AppLanguage, AppMessages> = {
       searching: '\u641c\u7d22\u4e2d...',
       noResults: '\u6ca1\u6709\u7ed3\u679c',
       line: '\u884c',
+    },
+    reminders: {
+      title: '\u63d0\u9192\u5217\u8868',
+      createTitle: '\u521b\u5efa\u63d0\u9192',
+      contentLabel: '\u63d0\u9192\u4e8b\u9879',
+      dateLabel: '\u65e5\u671f',
+      timeLabel: '\u65f6\u95f4',
+      insert: '\u63d2\u5165',
+      cancel: '\u53d6\u6d88',
+      close: '\u5173\u95ed',
+      refresh: '\u5237\u65b0',
+      empty: '\u6682\u65e0\u63d0\u9192',
+      status: '\u72b6\u6001',
+      dueAt: '\u5230\u671f\u65f6\u95f4',
+      content: '\u63d0\u9192\u5185\u5bb9',
+      page: '\u6240\u5728\u9875\u9762',
+      pending: '\u5f85\u63d0\u9192',
+      due: '\u5df2\u5230\u671f',
+      completed: '\u5df2\u5b8c\u6210',
+      actions: '\u64cd\u4f5c',
+      complete: '\u8bbe\u7f6e\u5df2\u5b8c\u6210',
+      completeAllDue: '\u6e05\u7406\u5df2\u5230\u671f',
+      notificationTitle: 'NeoPad \u63d0\u9192',
     },
     status: {
       editMode: '\u7f16\u8f91\u6a21\u5f0f',

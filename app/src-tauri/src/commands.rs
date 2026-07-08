@@ -1,7 +1,8 @@
 use neopad_core::{
-    append_to_clipboard_note, create_note, delete_note_to_trash, export_note_file, list_notes,
-    load_config, lock_workspace_for_write, read_note, rename_note, save_config, search_notes,
-    write_note_atomic, NoteContent, NoteTab, PreviewMode, SearchResult, Theme, UiConfig, Workspace,
+    append_to_clipboard_note, claim_due_reminders, complete_due_reminders, complete_reminder,
+    create_note, delete_note_to_trash, export_note_file, list_notes, list_reminders, load_config,
+    lock_workspace_for_write, read_note, rename_note, save_config, search_notes, write_note_atomic,
+    NoteContent, NoteTab, PreviewMode, Reminder, SearchResult, Theme, UiConfig, Workspace,
 };
 use serde::Serialize;
 use std::process::Command;
@@ -166,6 +167,33 @@ pub fn search_notes_command(
     limit: Option<usize>,
 ) -> Result<Vec<SearchResult>, String> {
     search_notes(&state.workspace, &query, limit.unwrap_or(100)).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn list_reminders_command(state: State<'_, AppState>) -> Result<Vec<Reminder>, String> {
+    list_reminders(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn claim_due_reminders_command(state: State<'_, AppState>) -> Result<Vec<Reminder>, String> {
+    claim_due_reminders(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn complete_reminder_command(
+    state: State<'_, AppState>,
+    note_id: String,
+    line_number: usize,
+    reminder_id: String,
+) -> Result<(), String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    complete_reminder(&state.workspace, &note_id, line_number, &reminder_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn complete_due_reminders_command(state: State<'_, AppState>) -> Result<usize, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    complete_due_reminders(&state.workspace).map_err(display_error)
 }
 
 #[tauri::command]

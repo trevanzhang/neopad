@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import type { NoteContent, NoteTab, SearchResult, WorkspaceInfo } from '../types/note'
+import type { NoteContent, NoteTab, Reminder, SearchResult, WorkspaceInfo } from '../types/note'
 import type { EditorMode, EditorModeShortcut } from '../types/editor'
 
 export interface UiConfig {
@@ -77,6 +77,26 @@ export function setNoteColor(noteId: string, color: string | null): Promise<Note
 
 export function searchNotes(query: string, limit = 100): Promise<SearchResult[]> {
   return invoke('search_notes_command', { query, limit })
+}
+
+export function listReminders(): Promise<Reminder[]> {
+  return invoke('list_reminders_command')
+}
+
+export function claimDueReminders(): Promise<Reminder[]> {
+  return invoke('claim_due_reminders_command')
+}
+
+export function completeReminder(reminder: Reminder): Promise<void> {
+  return invoke('complete_reminder_command', {
+    noteId: reminder.noteId,
+    lineNumber: reminder.lineNumber,
+    reminderId: reminder.id,
+  })
+}
+
+export function completeDueReminders(): Promise<number> {
+  return invoke('complete_due_reminders_command')
 }
 
 export function saveMarkdownFile(suggestedFileName: string, content: string): Promise<boolean> {

@@ -40,6 +40,12 @@ Implemented MVP capabilities:
 - Native whole-window opacity controlled from an in-app slider.
 - Compact settings that remain usable at the minimum supported window size.
 - Full-text search.
+- Lightweight reminders stored as readable Markdown task lines. `Ctrl+E`
+  opens a compact reminder editor, the reminder list derives its rows from
+  note content, and due reminders use native notifications while NeoPad is
+  running.
+  `F5` toggles the list, and list actions complete reminder checkboxes without
+  deleting their Markdown lines.
 - Native Save As for exporting the active note or a combined all-notes document
   to a user-selected Markdown file.
 - Manual clipboard capture into `clipboard.md` with readable local timestamp
@@ -58,7 +64,9 @@ Implemented MVP capabilities:
 ## Data Rules
 
 - User note bodies are stored only as Markdown files under `notes/`.
-- Metadata belongs in `config.json` and `meta/tabs.json`.
+- Metadata belongs in `config.json`, `meta/tabs.json`, and
+  `meta/reminders.json`. Reminder content must remain in `notes/*.md`; the
+  reminder metadata file stores notification delivery state only.
 - Delete operations move notes into `trash/`.
 - Core filesystem access must go through `neopad-core`.
 - Paths must be validated so callers cannot escape the configured workspace.

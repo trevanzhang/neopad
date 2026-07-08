@@ -26,7 +26,9 @@ docs/                 Human-facing project docs
 - Use `neopad-core` for all note, workspace, path, search, and write behavior.
 - Do not duplicate filesystem access logic in the Tauri shell or MCP server.
 - Note content must stay in `~/.neopad/notes/*.md`.
-- Metadata belongs in `config.json` and `meta/tabs.json`.
+- Metadata belongs in `config.json`, `meta/tabs.json`, and
+  `meta/reminders.json`. The reminder file stores delivery state only; reminder
+  content remains in Markdown notes.
 - Never physically delete user notes. Move notes to `trash/`.
 - Keep path safety strict. Reject absolute paths, `..`, and file names that
   escape the workspace.
@@ -56,6 +58,19 @@ For Rust formatting:
 ```powershell
 cargo fmt
 ```
+
+## Git Workflow
+
+- Do not make code changes directly on `main`.
+- Before modifying files, check the current branch and working tree.
+- If the current branch is `main`, create a dedicated branch using the
+  `codex/` prefix before making changes.
+- Use a concise branch name that describes the task, for example
+  `codex/fix-reminder-dark-theme`.
+- Preserve existing uncommitted user changes. Do not discard, reset, or
+  overwrite them.
+- Do not commit, push, or create a pull request unless explicitly requested.
+- Run the relevant validation commands before handing off changes.
 
 ## Versioning
 
