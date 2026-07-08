@@ -1,5 +1,4 @@
-use crate::commands::{set_quitting, AppState};
-use crate::window::{hide_main_window, show_main_window};
+use crate::window::show_main_window;
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
@@ -42,7 +41,7 @@ pub fn create_tray(app: &App) -> tauri::Result<()> {
                 let _ = show_main_window(app);
             }
             "hide" => {
-                let _ = hide_main_window(app);
+                let _ = app.emit("neopad://hide-requested", ());
             }
             "new_note" => {
                 let _ = app.emit("neopad://new-note-requested", ());
@@ -56,9 +55,7 @@ pub fn create_tray(app: &App) -> tauri::Result<()> {
                 let _ = show_main_window(app);
             }
             "quit" => {
-                let state = app.state::<AppState>();
-                set_quitting(&state);
-                app.exit(0);
+                let _ = app.emit("neopad://quit-requested", ());
             }
             _ => {}
         })

@@ -1,6 +1,8 @@
 use crate::commands::AppState;
 use std::sync::atomic::Ordering;
-use tauri::{image::Image, App, AppHandle, Manager, PhysicalPosition, WebviewWindow, WindowEvent};
+use tauri::{
+    image::Image, App, AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, WindowEvent,
+};
 
 const APP_ICON: &[u8] = include_bytes!("../../src/assets/neopad-logo-small.png");
 
@@ -43,11 +45,9 @@ pub fn install_close_to_hide_handler(app: &App) {
     window.on_window_event(move |event| {
         if let WindowEvent::CloseRequested { api, .. } = event {
             let state = app_handle.state::<AppState>();
-            if !state.is_quitting.load(Ordering::SeqCst)
-                && state.close_to_minimize.load(Ordering::SeqCst)
-            {
+            if !state.is_quitting.load(Ordering::SeqCst) {
                 api.prevent_close();
-                let _ = window_for_event.hide();
+                let _ = app_handle.emit("neopad://close-requested", ());
             }
         }
 
@@ -91,7 +91,7 @@ pub fn toggle_main_window(app: &AppHandle) -> tauri::Result<()> {
             restore_main_window_opacity(app, &window);
             window.set_focus()?;
         } else if window.is_visible()? {
-            window.hide()?;
+            app.emit("neopad://hide-requested", ())?;
         } else {
             window.show()?;
             restore_main_window_opacity(app, &window);

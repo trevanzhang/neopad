@@ -183,13 +183,19 @@ let reminderPollTimer: number | null = null
 let unlistenNewNoteRequested: UnlistenFn | null = null
 let unlistenSaveClipboardRequested: UnlistenFn | null = null
 let unlistenOpenSettings: UnlistenFn | null = null
+let unlistenCloseRequested: UnlistenFn | null = null
+let unlistenHideRequested: UnlistenFn | null = null
+let unlistenQuitRequested: UnlistenFn | null = null
 let suppressedLoadedContent: string | null = null
 let uiConfigLoaded = false
 let notificationPermissionDenied = false
+let noteLoadGeneration = 0
+let loadingNoteGeneration: number | null = null
 const deletingTabIds = new Set<string>()
 const autosave = new AutosaveCoordinator({
   delayMs: 500,
-  save: ({ noteId, content: nextContent }: { noteId: string; content: string }) => writeNote(noteId, nextContent),
+  save: ({ noteId, content: nextContent, expectedUpdatedAt }: { noteId: string; content: string; expectedUpdatedAt: number }) =>
+    writeNote(noteId, nextContent, expectedUpdatedAt),
   onSaved: ({ noteId }, saved) => {
     const tab = tabs.value.find((item) => item.id === noteId)
     if (tab) tab.updatedAt = saved.updatedAt
@@ -215,6 +221,7 @@ onMounted(async () => {
   window.addEventListener('keydown', handleKeydown, { capture: true })
   window.addEventListener('beforeunload', forceSaveOnExit)
   document.addEventListener('visibilitychange', forceSaveOnHide)
+  await registerNativeEventListeners()
   appReady.value = true
   await nextTick()
   await completeStartup().catch(() => {
@@ -224,14 +231,20 @@ onMounted(async () => {
     nativeSettingsTimer = null
     void syncNativeSettings()
   }, 5000)
-  void registerNativeEventListeners()
   await checkDueReminders()
   reminderPollTimer = window.setInterval(() => void checkDueReminders(), 30_000)
 })
 
 async function registerNativeEventListeners() {
   try {
-    const [newNote, saveClipboardRequest, openSettingsRequest] = await Promise.all([
+    const [
+      newNote,
+      saveClipboardRequest,
+      openSettingsRequest,
+      closeRequest,
+      hideRequest,
+      quitRequest,
+    ] = await Promise.all([
       listen('neopad://new-note-requested', () => {
         void createLocalTab()
       }),
@@ -241,10 +254,22 @@ async function registerNativeEventListeners() {
       listen('neopad://open-settings', () => {
         openSettings()
       }),
+      listen('neopad://close-requested', () => {
+        void handleCloseRequested()
+      }),
+      listen('neopad://hide-requested', () => {
+        void handleHideRequested()
+      }),
+      listen('neopad://quit-requested', () => {
+        void handleQuitRequested()
+      }),
     ])
     unlistenNewNoteRequested = newNote
     unlistenSaveClipboardRequested = saveClipboardRequest
     unlistenOpenSettings = openSettingsRequest
+    unlistenCloseRequested = closeRequest
+    unlistenHideRequested = hideRequest
+    unlistenQuitRequested = quitRequest
   } catch {
     saveState.value = 'Failed'
   }
@@ -267,6 +292,9 @@ onBeforeUnmount(() => {
   void unlistenNewNoteRequested?.()
   void unlistenSaveClipboardRequested?.()
   void unlistenOpenSettings?.()
+  void unlistenCloseRequested?.()
+  void unlistenHideRequested?.()
+  void unlistenQuitRequested?.()
   window.removeEventListener('keydown', handleKeydown, { capture: true })
   window.removeEventListener('beforeunload', forceSaveOnExit)
   document.removeEventListener('visibilitychange', forceSaveOnHide)
@@ -283,7 +311,7 @@ watch(content, (nextContent) => {
 
   const tab = activeTab.value
   if (tab) {
-    autosave.markChanged({ noteId: tab.id, content: content.value })
+    autosave.markChanged({ noteId: tab.id, content: content.value, expectedUpdatedAt: tab.updatedAt })
   }
 })
 
@@ -531,9 +559,11 @@ async function selectTab(tabId: string) {
     return
   }
 
+  const generation = nextNoteLoadGeneration()
   await forceSave()
+  if (!isCurrentNoteLoad(generation)) return
   activeTabId.value = tabId
-  await loadActiveNote()
+  await loadActiveNote(generation)
 }
 
 function cycleTab(offset: -1 | 1) {
@@ -658,10 +688,13 @@ async function deleteTab(tab: NoteTab) {
 }
 
 async function createLocalTab() {
+  const generation = nextNoteLoadGeneration()
   if (isTauriRuntime()) {
     await forceSave()
+    if (!isCurrentNoteLoad(generation)) return
     try {
       const note = await createNote()
+      if (!isCurrentNoteLoad(generation)) return
       upsertTab({
         id: note.id,
         title: note.title,
@@ -705,9 +738,12 @@ async function saveCurrentClipboard() {
     return
   }
 
+  const generation = nextNoteLoadGeneration()
   try {
     await forceSave()
+    if (!isCurrentNoteLoad(generation)) return
     const note = await saveClipboard()
+    if (!isCurrentNoteLoad(generation)) return
     upsertTab({
       id: note.id,
       title: note.title,
@@ -739,14 +775,19 @@ async function loadFileFromInput(event: Event) {
     return
   }
 
+  const generation = nextNoteLoadGeneration()
   try {
     await forceSave()
+    if (!isCurrentNoteLoad(generation)) return
     const fileContent = await file.text()
+    if (!isCurrentNoteLoad(generation)) return
     const title = titleFromFileName(file.name)
 
     if (isTauriRuntime()) {
       const created = await createNote(title)
-      const saved = await writeNote(created.id, fileContent)
+      if (!isCurrentNoteLoad(generation)) return
+      const saved = await writeNote(created.id, fileContent, created.updatedAt)
+      if (!isCurrentNoteLoad(generation)) return
       upsertTab({
         id: saved.id,
         title: saved.title,
@@ -828,12 +869,33 @@ async function hideMainWindow() {
     return
   }
 
-  await forceSave()
+  if (!(await saveBeforeWindowAction())) return
   await hideWindow()
 }
 
 async function exitApp() {
-  await forceSave()
+  if (!(await saveBeforeWindowAction())) return
+  if (isTauriRuntime()) {
+    await quitApp()
+  }
+}
+
+async function handleCloseRequested() {
+  if (closeToMinimize.value) {
+    await handleHideRequested()
+  } else {
+    await handleQuitRequested()
+  }
+}
+
+async function handleHideRequested() {
+  if (!isTauriRuntime()) return
+  if (!(await saveBeforeWindowAction())) return
+  await hideWindow()
+}
+
+async function handleQuitRequested() {
+  if (!(await saveBeforeWindowAction())) return
   if (isTauriRuntime()) {
     await quitApp()
   }
@@ -1026,9 +1088,11 @@ function closeSearch() {
 }
 
 async function selectSearchResult(result: SearchResult) {
+  const generation = nextNoteLoadGeneration()
   await forceSave()
+  if (!isCurrentNoteLoad(generation)) return
   activeTabId.value = result.noteId
-  await loadActiveNote()
+  await loadActiveNote(generation)
   closeSearch()
 }
 
@@ -1091,9 +1155,11 @@ async function refreshReminders() {
 }
 
 async function selectReminder(reminder: Reminder) {
+  const generation = nextNoteLoadGeneration()
   await forceSave()
+  if (!isCurrentNoteLoad(generation)) return
   activeTabId.value = reminder.noteId
-  await loadActiveNote()
+  await loadActiveNote(generation)
   closeReminderList()
   if (previewMode.value === 'preview') previewMode.value = 'edit'
   await nextTick()
@@ -1484,21 +1550,46 @@ async function syncClipboardShortcut() {
   }
 }
 
-async function loadActiveNote() {
+function nextNoteLoadGeneration() {
+  noteLoadGeneration += 1
+  return noteLoadGeneration
+}
+
+function isCurrentNoteLoad(generation: number) {
+  return generation === noteLoadGeneration
+}
+
+async function loadActiveNote(generation = nextNoteLoadGeneration()) {
   const tab = activeTab.value
   if (!tab) {
-    return
+    return false
   }
+  const tabId = tab.id
 
   isLoadingNote.value = true
+  loadingNoteGeneration = generation
   try {
-    const note = await readNote(tab.id)
+    const note = await readNote(tabId)
+    if (!isCurrentNoteLoad(generation) || activeTabId.value !== tabId) {
+      return false
+    }
+    const loadedTab = tabs.value.find((item) => item.id === note.id)
+    if (loadedTab) {
+      loadedTab.updatedAt = note.updatedAt
+    }
     setContentFromLoad(note.content)
     saveState.value = 'Saved'
+    return true
   } catch {
-    saveState.value = 'Failed'
+    if (isCurrentNoteLoad(generation)) {
+      saveState.value = 'Failed'
+    }
+    return false
   } finally {
-    isLoadingNote.value = false
+    if (loadingNoteGeneration === generation) {
+      isLoadingNote.value = false
+      loadingNoteGeneration = null
+    }
   }
 }
 
@@ -1516,6 +1607,14 @@ async function forceSave() {
     return true
   }
   return autosave.flush()
+}
+
+async function saveBeforeWindowAction() {
+  const saved = await forceSave()
+  if (!saved) {
+    saveState.value = 'Failed'
+  }
+  return saved
 }
 
 function forceSaveOnExit() {
@@ -1862,6 +1961,7 @@ function upsertTab(tab: NoteTab) {
 }
 
 function createLocalTabFromContent(title: string, nextContent: string) {
+  nextNoteLoadGeneration()
   const createdAt = Date.now()
   const tab: NoteTab = {
     id: `draft-${createdAt}`,

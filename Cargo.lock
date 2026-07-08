@@ -2245,7 +2245,7 @@ dependencies = [
 
 [[package]]
 name = "neopad-app"
-version = "0.3.6"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "neopad-core",
@@ -2265,7 +2265,7 @@ dependencies = [
 
 [[package]]
 name = "neopad-core"
-version = "0.3.6"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2280,7 +2280,7 @@ dependencies = [
 
 [[package]]
 name = "neopad-mcp"
-version = "0.3.6"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "dirs",

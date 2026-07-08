@@ -22,14 +22,14 @@ use std::sync::{atomic::AtomicBool, Mutex};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 use tauri_plugin_window_state::StateFlags;
 
-fn build_state() -> AppState {
+fn build_state() -> anyhow::Result<AppState> {
     let workspace_path = std::env::var_os("NEOPAD_WORKSPACE").map(std::path::PathBuf::from);
-    let workspace = init_workspace(workspace_path).expect("failed to initialize NeoPad workspace");
+    let workspace = init_workspace(workspace_path)?;
     let startup_hidden = std::env::args_os().any(|arg| arg == "--hidden")
         || load_config(&workspace)
             .map(|config| config.ui.start_hidden)
             .unwrap_or(false);
-    AppState {
+    Ok(AppState {
         workspace,
         shortcut_warnings: Mutex::new(Vec::new()),
         is_quitting: AtomicBool::new(false),
@@ -43,11 +43,27 @@ fn build_state() -> AppState {
             Code::KeyV,
         )),
         startup_hidden,
-    }
+    })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let state = match build_state() {
+        Ok(state) => state,
+        Err(error) => {
+            let message = commands::display_error(error);
+            eprintln!("failed to initialize NeoPad workspace: {message}");
+            let _ = rfd::MessageDialog::new()
+                .set_level(rfd::MessageLevel::Error)
+                .set_title("NeoPad failed to start")
+                .set_description(format!(
+                    "NeoPad could not initialize its workspace.\n\n{message}"
+                ))
+                .show();
+            return;
+        }
+    };
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             let _ = window::show_main_window(app);
@@ -57,7 +73,7 @@ pub fn run() {
                 .with_state_flags(StateFlags::POSITION)
                 .build(),
         )
-        .manage(build_state())
+        .manage(state)
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(

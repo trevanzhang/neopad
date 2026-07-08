@@ -136,7 +136,7 @@ pnpm tauri:build
 The MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.3.6_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.4.0_x64_en-US.msi
 ```
 
 ## MCP Server
