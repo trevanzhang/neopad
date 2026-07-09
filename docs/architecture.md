@@ -14,7 +14,7 @@ neopad-core
   crates/neopad-core/   Shared local data model and filesystem logic
 
 neopad-mcp
-  mcp-server/           Standalone MCP stdio server
+  mcp-server/           Standalone MCP HTTP server
 ```
 
 Both the desktop app and MCP server use `neopad-core` for workspace access. Do
@@ -29,7 +29,7 @@ Vue UI
   -> ~/.neopad/notes/*.md
 
 MCP client
-  -> neopad-mcp over stdio
+  -> neopad-mcp over local HTTP
   -> neopad-core
   -> ~/.neopad/notes/*.md
 ```
@@ -60,8 +60,8 @@ continues to live in ordinary Markdown note lines.
 
 Desktop preferences are persisted in `config.json`. Browser `localStorage`
 supports frontend startup, while native `config.json` is authoritative in the
-desktop runtime. The experimental project does not maintain migrations for old
-configuration shapes.
+desktop runtime. Config loading uses defaults for older files so missing fields
+from previous versions do not block startup.
 
 ## Core Responsibilities
 
@@ -93,22 +93,27 @@ the configured workspace.
 - Native Windows whole-window opacity controlled through a Tauri command and
   `SetLayeredWindowAttributes`; CSS opacity is not used for the app shell.
 - Tab context actions for rename, trash, and persistent color selection.
-- Compact settings dialog with independently scrollable content and a dedicated
-  Advanced tab for optional editor features.
+- Compact settings dialog with independently scrollable content. Optional Vim
+  controls live under Advanced settings, while MCP service controls have their
+  own MCP tab.
 - Autosave and status reporting.
-- Compact reminder creation and list surfaces. Reminder lines use
-  `- [ ] @提醒 YYYY-MM-DD HH:mm content`; checking the Markdown task completes
-  the reminder.
+- Compact reminder creation and list surfaces. New reminder lines use
+  `- [ ] @remind YYYY-MM-DD HH:mm content`; checking the Markdown task
+  completes the reminder. Legacy `@提醒` lines continue to parse.
 - Local keyboard shortcuts:
   - `F1`: open shortcut help.
   - `F2`: rename the current page.
-  - `F4`: cycle edit, hybrid, and preview editor modes.
+  - `F4`: cycle edit, split, and preview editor modes.
   - `F5`: toggle the reminder list.
   - `F9`: toggle the light or dark theme.
   - `F11`: toggle immersive fullscreen.
 - Single and bulk overdue completion operations atomically change `[ ]` to
   `[x]` while preserving the reminder lines.
 - Native reminder notifications while the desktop process remains running.
+- The app starts in edit mode by default. `F4` is the fixed local shortcut for
+  cycling edit, split, and preview modes.
+- `Ctrl+O` imports an external Markdown file into the NeoPad workspace. NeoPad
+  does not edit arbitrary external Markdown files in place.
 - Tray menu: show, hide, new note, save clipboard, settings, quit.
 - Global shortcuts:
   - `Alt+Z`: toggle window.
@@ -126,11 +131,15 @@ rejects duplicate window and clipboard shortcut combinations.
 
 ## MCP Responsibilities
 
-`neopad-mcp` owns the MCP protocol surface only. It must keep stdout reserved
-for JSON-RPC responses and write diagnostics to stderr.
+`neopad-mcp` owns the local HTTP MCP protocol surface. It validates bearer
+tokens and local browser origins, then delegates note operations to
+`neopad-core`.
 
-The server is read-only by default. Write tools are available only when started
-with `--allow-write`.
+The service is off by default in the desktop app. When enabled, local agents
+with the token can read and write notes. The desktop process owns lifecycle:
+start on launch when enabled, stop when disabled, keep running while hidden to
+tray, and stop on full app exit. On Windows the sidecar is spawned without a
+console window.
 
 ## Packaging
 
@@ -148,6 +157,7 @@ This custom WiX template exists so the installer can control:
 - Start-menu shortcut icon.
 - Desktop shortcut icon.
 - AppUserModel.ID on shortcuts.
+- Installation of `neopad-mcp.exe` as the desktop app's MCP sidecar.
 
 Installer bitmap assets live in:
 

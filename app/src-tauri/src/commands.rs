@@ -11,7 +11,7 @@ use std::io::Write;
 use std::process::Command;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Mutex,
+    Arc, Mutex,
 };
 use tauri::{AppHandle, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
@@ -21,6 +21,8 @@ use tauri_plugin_global_shortcut::Shortcut;
 pub struct AppState {
     pub workspace: Workspace,
     pub shortcut_warnings: Mutex<Vec<String>>,
+    pub mcp_process: Mutex<Option<std::process::Child>>,
+    pub mcp_error: Arc<Mutex<Option<String>>>,
     pub is_quitting: AtomicBool,
     pub always_on_top: AtomicBool,
     pub close_to_minimize: AtomicBool,
@@ -85,6 +87,7 @@ pub fn save_ui_config_command(
     let mut config = load_config(&state.workspace).map_err(display_error)?;
     config.version = 2;
     config.start_at_login = ui.run_at_startup;
+    config.default_open_mode = "edit".to_owned();
     config.preview_mode = preview_mode;
     config.theme = theme;
     config.default_hotkey = shortcut_label(&ui.shortcut_base_key, &ui.shortcut_modifiers);
@@ -367,6 +370,7 @@ pub fn open_trash_command(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 pub fn quit_app_command(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     set_quitting(&state);
+    crate::mcp::stop_owned_process(&state).map_err(display_error)?;
     app.exit(0);
     Ok(())
 }

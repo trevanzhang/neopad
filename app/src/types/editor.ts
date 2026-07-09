@@ -1,6 +1,6 @@
 export type EditorMode = 'edit' | 'preview' | 'split'
 
-export type EditorModeShortcut = 'F4' | 'Ctrl+Shift+M' | 'disabled'
+export type EditorModeShortcut = 'F4'
 
 export const editorModes: EditorMode[] = ['edit', 'split', 'preview']
 

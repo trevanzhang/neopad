@@ -1,5 +1,6 @@
 mod commands;
 mod hotkey;
+mod mcp;
 mod tray;
 mod window;
 
@@ -18,7 +19,8 @@ use commands::{
     AppState,
 };
 use neopad_core::{init_workspace, load_config};
-use std::sync::{atomic::AtomicBool, Mutex};
+use std::sync::{atomic::AtomicBool, Arc, Mutex};
+use tauri::Manager;
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 use tauri_plugin_window_state::StateFlags;
 
@@ -32,6 +34,8 @@ fn build_state() -> anyhow::Result<AppState> {
     Ok(AppState {
         workspace,
         shortcut_warnings: Mutex::new(Vec::new()),
+        mcp_process: Mutex::new(None),
+        mcp_error: Arc::new(Mutex::new(None)),
         is_quitting: AtomicBool::new(false),
         always_on_top: AtomicBool::new(false),
         close_to_minimize: AtomicBool::new(true),
@@ -87,6 +91,9 @@ pub fn run() {
             window::install_close_to_hide_handler(app);
             tray::create_tray(app)?;
             hotkey::register_global_shortcuts(app);
+            if let Err(error) = mcp::start_if_enabled(app.state::<AppState>().inner()) {
+                eprintln!("failed to start MCP service: {error:#}");
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -126,6 +133,9 @@ pub fn run() {
             toggle_always_on_top_command,
             save_clipboard_command,
             get_shortcut_warnings_command,
+            mcp::get_mcp_status_command,
+            mcp::set_mcp_enabled_command,
+            mcp::regenerate_mcp_token_command,
             tray::set_tray_language_command
         ])
         .run(tauri::generate_context!())

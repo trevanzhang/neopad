@@ -17,7 +17,7 @@ app/                  Vue frontend and Tauri desktop app
 app/src/              Vue components, styles, TypeScript helpers
 app/src-tauri/        Tauri Rust shell, commands, tray, hotkeys, packaging
 crates/neopad-core/   Shared Rust core for workspace and note operations
-mcp-server/           Standalone MCP stdio server
+mcp-server/           Standalone MCP local HTTP server
 docs/                 Human-facing project docs
 ```
 
@@ -32,8 +32,12 @@ docs/                 Human-facing project docs
 - Never physically delete user notes. Move notes to `trash/`.
 - Keep path safety strict. Reject absolute paths, `..`, and file names that
   escape the workspace.
-- MCP must be read-only by default. Write behavior requires `--allow-write`.
-- MCP stdout must contain only JSON-RPC protocol messages. Use stderr for logs.
+- MCP HTTP service must be off by default in the desktop app.
+- When MCP is enabled, local agents with the bearer token can read and write
+  notes.
+- MCP HTTP requests must require `Authorization: Bearer <token>`.
+- Browser-originated MCP requests must pass local Origin validation.
+- MCP diagnostics and startup errors must go to stderr, not protocol responses.
 - Do not introduce cloud sync, accounts, RAG, vector search, backlinks, or an AI
   chat panel unless the task explicitly changes scope.
 
