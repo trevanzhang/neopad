@@ -40,6 +40,7 @@ defineEmits<{
   formatBackground: []
   toggleWordWrap: []
   toggleTheme: []
+  togglePreviewTheme: []
   insertSeparator: []
   insertDateTime: []
   insertDateTimeSeparator: []
@@ -324,7 +325,14 @@ function handleMenuKeydown(event: KeyboardEvent) {
       <div class="menu-popover">
         <button type="button" @click="$emit('formatFont')">{{ messages.font }}</button>
         <button type="button" @click="$emit('formatBackground')">{{ messages.backgroundColor }}</button>
-        <button type="button" @click="$emit('toggleTheme')">{{ messages.toggleTheme }}</button>
+        <button type="button" class="menu-command" @click="$emit('togglePreviewTheme')">
+          <span>{{ messages.togglePreviewTheme }}</span>
+          <span class="menu-shortcut">{{ messages.f7 }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('toggleTheme')">
+          <span>{{ messages.toggleTheme }}</span>
+          <span class="menu-shortcut">{{ messages.f9 }}</span>
+        </button>
         <div class="menu-separator" role="separator" />
         <button type="button" :class="{ checked: wordWrap }" @click="$emit('toggleWordWrap')">{{ messages.wordWrap }}</button>
       </div>
