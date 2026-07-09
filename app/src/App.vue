@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppShell from './components/AppShell.vue'
 import ConfirmationDialog from './components/ConfirmationDialog.vue'
 import EditorPane from './components/EditorPane.vue'
+import FontDialog from './components/FontDialog.vue'
 import InputDialog from './components/InputDialog.vue'
 import MenuBar from './components/MenuBar.vue'
 import PreviewPane from './components/PreviewPane.vue'
@@ -58,7 +59,20 @@ import { AutosaveCoordinator } from './lib/autosave'
 import { editorBackgroundForTheme } from './lib/theme'
 import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
 import type { NoteTab, Reminder, SearchResult } from './types/note'
-import { isEditorMode, nextEditorMode, type EditorMode } from './types/editor'
+import {
+  isEditorMode,
+  isPreviewContentWidth,
+  isPreviewFontFamily,
+  isPreviewLineHeight,
+  isPreviewTheme,
+  nextEditorMode,
+  previewThemes,
+  type EditorMode,
+  type PreviewContentWidth,
+  type PreviewFontFamily,
+  type PreviewLineHeight,
+  type PreviewTheme,
+} from './types/editor'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
@@ -109,6 +123,7 @@ const reminders = ref<Reminder[]>([])
 const remindersLoading = ref(false)
 const settingsOpen = ref(false)
 const helpTopic = ref<HelpTopic | null>(null)
+const fontDialogOpen = ref(false)
 const inputDialog = ref<InputDialogState | null>(null)
 let resolveInputDialog: ((value: string | null) => void) | null = null
 const confirmationDialog = ref<ConfirmationDialogState | null>(null)
@@ -127,7 +142,13 @@ const activeVimMode = ref('')
 const tabBarOrientation = ref<TabBarOrientation>(initialTabBarOrientation())
 const wordWrap = ref(initialBooleanSetting('neopad.wordWrap', true))
 const editorFontFamily = ref(initialStringSetting('neopad.editorFontFamily', '"Segoe UI", Arial, sans-serif'))
+const editorFontSize = ref(initialNumberSetting('neopad.editorFontSize', 14, 12, 22))
 const editorBackgroundColor = ref(initialStringSetting('neopad.editorBackgroundColor', '#ffffff'))
+const previewTheme = ref<PreviewTheme>(initialPreviewTheme())
+const previewFontFamily = ref<PreviewFontFamily>(initialPreviewFontFamily())
+const previewFontSize = ref(initialNumberSetting('neopad.previewFontSize', 14, 12, 22))
+const previewLineHeight = ref<PreviewLineHeight>(initialPreviewLineHeight())
+const previewContentWidth = ref<PreviewContentWidth>(initialPreviewContentWidth())
 const windowOpacity = ref(Number(initialStringSetting('neopad.windowOpacity', '1')))
 const runAtStartup = ref(initialBooleanSetting('neopad.runAtStartup', false))
 const startHidden = ref(initialBooleanSetting('neopad.startHidden', false))
@@ -356,8 +377,32 @@ watch(editorFontFamily, () => {
   window.localStorage.setItem('neopad.editorFontFamily', editorFontFamily.value)
 })
 
+watch(editorFontSize, () => {
+  window.localStorage.setItem('neopad.editorFontSize', String(editorFontSize.value))
+})
+
 watch(editorBackgroundColor, () => {
   window.localStorage.setItem('neopad.editorBackgroundColor', editorBackgroundColor.value)
+})
+
+watch(previewTheme, () => {
+  window.localStorage.setItem('neopad.previewTheme', previewTheme.value)
+})
+
+watch(previewFontFamily, () => {
+  window.localStorage.setItem('neopad.previewFontFamily', previewFontFamily.value)
+})
+
+watch(previewFontSize, () => {
+  window.localStorage.setItem('neopad.previewFontSize', String(previewFontSize.value))
+})
+
+watch(previewLineHeight, () => {
+  window.localStorage.setItem('neopad.previewLineHeight', previewLineHeight.value)
+})
+
+watch(previewContentWidth, () => {
+  window.localStorage.setItem('neopad.previewContentWidth', previewContentWidth.value)
 })
 
 watch(theme, () => {
@@ -460,7 +505,13 @@ watch(
     tabBarOrientation,
     wordWrap,
     editorFontFamily,
+    editorFontSize,
     editorBackgroundColor,
+    previewTheme,
+    previewFontFamily,
+    previewFontSize,
+    previewLineHeight,
+    previewContentWidth,
     theme,
     windowOpacity,
     runAtStartup,
@@ -502,6 +553,32 @@ function initialTheme(): AppTheme {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+function initialPreviewTheme(): PreviewTheme {
+  return normalizePreviewTheme(initialStringSetting('neopad.previewTheme', 'light'))
+}
+
+function normalizePreviewTheme(value: string): PreviewTheme {
+  if (isPreviewTheme(value)) return value
+  if (value === 'neopad' || value === 'paper' || value === 'solomd') return 'light'
+  if (value === 'github') return 'githubLight'
+  return 'light'
+}
+
+function initialPreviewFontFamily(): PreviewFontFamily {
+  const stored = initialStringSetting('neopad.previewFontFamily', 'editor')
+  return isPreviewFontFamily(stored) ? stored : 'editor'
+}
+
+function initialPreviewLineHeight(): PreviewLineHeight {
+  const stored = initialStringSetting('neopad.previewLineHeight', 'standard')
+  return isPreviewLineHeight(stored) ? stored : 'standard'
+}
+
+function initialPreviewContentWidth(): PreviewContentWidth {
+  const stored = initialStringSetting('neopad.previewContentWidth', 'standard')
+  return isPreviewContentWidth(stored) ? stored : 'standard'
+}
+
 function initialTabBarOrientation(): TabBarOrientation {
   if (typeof window === 'undefined') {
     return 'horizontal'
@@ -525,6 +602,15 @@ function initialStringSetting(key: string, fallback: string) {
   }
 
   return window.localStorage.getItem(key) || fallback
+}
+
+function initialNumberSetting(key: string, fallback: number, min: number, max: number) {
+  if (typeof window === 'undefined') {
+    return fallback
+  }
+
+  const value = Number(window.localStorage.getItem(key))
+  return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback
 }
 
 function initialJsonSetting<T>(key: string, fallback: T) {
@@ -933,14 +1019,19 @@ function toggleTabBarOrientation() {
   tabBarOrientation.value = tabBarOrientation.value === 'horizontal' ? 'vertical' : 'horizontal'
 }
 
-async function promptEditorFont() {
-  const nextFont = (await requestInput(t.value.menu.font, editorFontFamily.value))?.trim()
-  if (!nextFont) {
-    return
-  }
+function promptEditorFont() {
+  fontDialogOpen.value = true
+}
 
-  editorFontFamily.value = nextFont
+function confirmEditorFont(nextFont: { fontFamily: string; fontSize: number }) {
+  fontDialogOpen.value = false
+  editorFontFamily.value = nextFont.fontFamily
+  editorFontSize.value = Math.min(22, Math.max(12, Number(nextFont.fontSize) || 14))
   statusMessage.value = t.value.status.fontUpdated
+}
+
+function closeFontDialog() {
+  fontDialogOpen.value = false
 }
 
 function requestInput(title: string, initialValue: string) {
@@ -998,6 +1089,11 @@ function toggleWordWrap() {
 
 function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
+}
+
+function togglePreviewTheme() {
+  const currentIndex = previewThemes.indexOf(previewTheme.value)
+  previewTheme.value = previewThemes[(currentIndex + 1) % previewThemes.length]
 }
 
 async function setImmersiveMode(enabled: boolean) {
@@ -1429,7 +1525,13 @@ async function loadNativeUiConfig() {
     tabBarOrientation.value = ui.tabBarOrientation === 'vertical' ? 'vertical' : 'horizontal'
     wordWrap.value = ui.wordWrap
     editorFontFamily.value = ui.editorFontFamily
+    editorFontSize.value = Math.min(22, Math.max(12, Number(ui.editorFontSize) || 14))
     editorBackgroundColor.value = ui.editorBackgroundColor
+    previewTheme.value = normalizePreviewTheme(ui.previewTheme)
+    previewFontFamily.value = isPreviewFontFamily(ui.previewFontFamily) ? ui.previewFontFamily : 'editor'
+    previewFontSize.value = Math.min(22, Math.max(12, Number(ui.previewFontSize) || 14))
+    previewLineHeight.value = isPreviewLineHeight(ui.previewLineHeight) ? ui.previewLineHeight : 'standard'
+    previewContentWidth.value = isPreviewContentWidth(ui.previewContentWidth) ? ui.previewContentWidth : 'standard'
     windowOpacity.value = Math.min(1, Math.max(0.2, ui.windowOpacity))
     runAtStartup.value = ui.runAtStartup
     startHidden.value = ui.startHidden
@@ -1476,7 +1578,13 @@ function persistUiConfig() {
         tabBarOrientation: tabBarOrientation.value,
         wordWrap: wordWrap.value,
         editorFontFamily: editorFontFamily.value,
+        editorFontSize: editorFontSize.value,
         editorBackgroundColor: editorBackgroundColor.value,
+        previewTheme: previewTheme.value,
+        previewFontFamily: previewFontFamily.value,
+        previewFontSize: previewFontSize.value,
+        previewLineHeight: previewLineHeight.value,
+        previewContentWidth: previewContentWidth.value,
         windowOpacity: windowOpacity.value,
         runAtStartup: runAtStartup.value,
         startHidden: startHidden.value,
@@ -1709,7 +1817,7 @@ function isEditableElement(element: EventTarget | null) {
 }
 
 function handleKeydown(event: KeyboardEvent) {
-  const modalOpen = Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value)
+  const modalOpen = Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value)
   if (modalOpen && event.key !== 'Escape') {
     const key = event.key.toLowerCase()
     const isCtrlShortcut =
@@ -1719,7 +1827,7 @@ function handleKeydown(event: KeyboardEvent) {
       !event.altKey &&
       !event.shiftKey &&
       !event.metaKey &&
-      (event.key === 'F4' || event.key === 'F5' || event.key === 'F9' || event.key === 'F11')
+      (event.key === 'F4' || event.key === 'F5' || event.key === 'F7' || event.key === 'F9' || event.key === 'F11')
     const isEditorModeShortcut = matchesEditorModeShortcut(event)
     if (isCtrlShortcut || isFunctionShortcut || isEditorModeShortcut) {
       event.preventDefault()
@@ -1754,6 +1862,13 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
     event.stopPropagation()
     toggleTheme()
+    return
+  }
+
+  if (event.key === 'F7' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+    event.preventDefault()
+    event.stopPropagation()
+    togglePreviewTheme()
     return
   }
 
@@ -1798,6 +1913,13 @@ function handleKeydown(event: KeyboardEvent) {
       event.preventDefault()
       event.stopPropagation()
       finishInputDialog(null)
+      return
+    }
+
+    if (fontDialogOpen.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeFontDialog()
       return
     }
 
@@ -2400,11 +2522,12 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         'Ctrl+- - ' + (zh ? '\u63d2\u5165\u5206\u9694\u884c' : 'Insert separator'),
         'Ctrl+Shift+- - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4\u5206\u9694\u884c' : 'Insert date time separator'),
         'Ctrl+E - ' + (zh ? '\u63d2\u5165\u63d0\u9192' : 'Insert reminder'),
+        'F4 - ' + (zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f' : 'Cycle editor mode'),
         'F5 - ' + (zh ? '\u6253\u5f00/\u5173\u95ed\u63d0\u9192\u5217\u8868' : 'Open/close reminder list'),
         'F6 - ' + (zh ? '\u5207\u6362\u7a97\u53e3\u7f6e\u9876' : 'Toggle window on top'),
-        'F4 - ' + (zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f' : 'Cycle editor mode'),
+        'F7 - ' + (zh ? '\u5207\u6362\u9884\u89c8\u4e3b\u9898' : 'Toggle preview theme'),
         'F8 - ' + (zh ? '\u6253\u5f00\u8bbe\u7f6e' : 'Open settings'),
-        'F9 - ' + (zh ? '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f' : 'Toggle light/dark theme'),
+        'F9 - ' + (zh ? '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f' : 'Toggle day/night mode'),
         'F11 - ' + (zh ? '\u5207\u6362\u6c89\u6d78\u5f0f\u5168\u5c4f' : 'Toggle immersive fullscreen'),
         'F10 - ' + (zh ? '\u5207\u6362\u6807\u7b7e\u680f\u65b9\u5411' : 'Toggle tab bar orientation'),
         'Esc - ' + (zh ? '\u9690\u85cf\u7a97\u53e3' : 'Hide window'),
@@ -2537,6 +2660,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         @format-background="openBackgroundColorPicker"
         @toggle-word-wrap="toggleWordWrap"
         @toggle-theme="toggleTheme"
+        @toggle-preview-theme="togglePreviewTheme"
         @insert-separator="insertSeparator"
         @insert-date-time="insertDateTime"
         @insert-date-time-separator="insertDateTimeSeparator"
@@ -2589,13 +2713,23 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         :title="activeTab?.title ?? 'Untitled'"
         :word-wrap="wordWrap"
         :font-family="editorFontFamily"
+        :font-size="editorFontSize"
         :background-color="effectiveEditorBackground"
         :vim-mode="vimMode"
         :vim-insert-exit-key="vimInsertExitKey"
         @vim-mode-change="activeVimMode = $event"
         @vim-tab-switch="cycleTab"
       />
-      <PreviewPane v-if="previewMode !== 'edit'" :content="content" />
+      <PreviewPane
+        v-if="previewMode !== 'edit'"
+        :content="content"
+        :editor-font-family="editorFontFamily"
+        :preview-theme="previewTheme"
+        :preview-font-family="previewFontFamily"
+        :preview-font-size="previewFontSize"
+        :preview-line-height="previewLineHeight"
+        :preview-content-width="previewContentWidth"
+      />
     </div>
 
     <SearchPanel
@@ -2646,6 +2780,11 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       :insert-date-time-template="insertDateTimeTemplate"
       :insert-date-time-separator-template="insertDateTimeSeparatorTemplate"
       :custom-insert-texts="customInsertTexts"
+      :preview-theme="previewTheme"
+      :preview-font-family="previewFontFamily"
+      :preview-font-size="previewFontSize"
+      :preview-line-height="previewLineHeight"
+      :preview-content-width="previewContentWidth"
       :mcp-status="mcpStatus"
       :mcp-error="mcpUiError"
       :messages="t.settings"
@@ -2672,6 +2811,11 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       @update:insert-date-time-template="insertDateTimeTemplate = $event"
       @update:insert-date-time-separator-template="insertDateTimeSeparatorTemplate = $event"
       @update:custom-insert-texts="customInsertTexts = $event"
+      @update:preview-theme="previewTheme = $event"
+      @update:preview-font-family="previewFontFamily = $event"
+      @update:preview-font-size="previewFontSize = $event"
+      @update:preview-line-height="previewLineHeight = $event"
+      @update:preview-content-width="previewContentWidth = $event"
       @edit-custom-text="editCustomInsertText"
       @update-mcp-enabled="updateMcpEnabled"
       @copy-mcp-config="copyMcpConfig"
@@ -2686,6 +2830,20 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       :cancel-label="t.settings.cancel"
       @confirm="finishInputDialog"
       @cancel="finishInputDialog(null)"
+    />
+
+    <FontDialog
+      v-if="fontDialogOpen"
+      :title="t.menu.font"
+      :field-label="t.settings.editorFont"
+      :size-label="t.settings.editorFontSize"
+      :sample-text="t.settings.fontSample"
+      :font-family="editorFontFamily"
+      :font-size="editorFontSize"
+      :confirm-label="t.settings.ok"
+      :cancel-label="t.settings.cancel"
+      @confirm="confirmEditorFont"
+      @cancel="closeFontDialog"
     />
 
     <ReminderDialog

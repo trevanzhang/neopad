@@ -6,6 +6,32 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.4.4 - 2026-07-09
+
+### Added
+
+- Added Markdown preview appearance settings with Light, One Dark, Nord,
+  Solarized Light, Solarized Dark, Monokai, GitHub Light, and Dracula presets.
+- Added preview typography controls for font family, font size, line height,
+  and content width.
+- Added a dedicated editor font dialog with preset font choices, font-size
+  control, and live preview.
+- Added `F7` to cycle preview themes.
+- Added `README_CN.md` for Chinese users.
+
+### Changed
+
+- The Format menu now distinguishes preview theme cycling from app day/night
+  mode: `F7` cycles preview themes and `F9` toggles day/night mode.
+- Editor font selection no longer requires users to type CSS font-family
+  strings manually.
+- Bumped distributable version to `0.4.4`.
+
+### Fixed
+
+- The editor font size is now persisted and reapplied through the shared UI
+  configuration.
+
 ## 0.4.2 - 2026-07-09
 
 ### Added
