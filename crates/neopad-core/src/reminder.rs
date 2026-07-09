@@ -6,7 +6,8 @@ use chrono::{Local, NaiveDateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fs};
 
-const REMINDER_MARKER: &str = "@提醒";
+const REMINDER_MARKER: &str = "@remind";
+const LEGACY_REMINDER_MARKER: &str = "@提醒";
 const DATE_TIME_LENGTH: usize = 16;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -67,7 +68,10 @@ pub fn parse_reminder_line(line: &str) -> Option<ParsedReminder> {
     };
 
     let remainder = remainder.trim_start();
-    let remainder = remainder.strip_prefix(REMINDER_MARKER)?.trim_start();
+    let remainder = remainder
+        .strip_prefix(REMINDER_MARKER)
+        .or_else(|| remainder.strip_prefix(LEGACY_REMINDER_MARKER))?
+        .trim_start();
     if remainder.len() <= DATE_TIME_LENGTH || !remainder.is_char_boundary(DATE_TIME_LENGTH) {
         return None;
     }
@@ -284,22 +288,31 @@ mod tests {
 
     #[test]
     fn parses_pending_and_completed_reminders() {
-        let pending = parse_reminder_line("- [ ] @提醒 2030-07-03 16:05 买牛奶").expect("pending");
+        let pending =
+            parse_reminder_line("- [ ] @remind 2030-07-03 16:05 buy milk").expect("pending");
         assert!(!pending.completed);
         assert_eq!(pending.due_text, "2030-07-03 16:05");
-        assert_eq!(pending.content, "买牛奶");
+        assert_eq!(pending.content, "buy milk");
 
-        let completed =
-            parse_reminder_line("  - [X]   @提醒   2030-07-03 16:05   开会 ").expect("completed");
+        let completed = parse_reminder_line("  - [X]   @remind   2030-07-03 16:05   meeting ")
+            .expect("completed");
         assert!(completed.completed);
-        assert_eq!(completed.content, "开会");
+        assert_eq!(completed.content, "meeting");
+    }
+
+    #[test]
+    fn parses_legacy_chinese_reminder_marker() {
+        let reminder =
+            parse_reminder_line("- [ ] @提醒 2030-07-03 16:05 买牛奶").expect("legacy reminder");
+        assert_eq!(reminder.due_text, "2030-07-03 16:05");
+        assert_eq!(reminder.content, "买牛奶");
     }
 
     #[test]
     fn rejects_plain_tasks_and_invalid_reminders() {
-        assert!(parse_reminder_line("- [ ] 普通待办").is_none());
-        assert!(parse_reminder_line("- [ ] @提醒 2030-02-30 16:05 不存在的日期").is_none());
-        assert!(parse_reminder_line("- [ ] @提醒 2030-07-03 16:05").is_none());
+        assert!(parse_reminder_line("- [ ] ordinary task").is_none());
+        assert!(parse_reminder_line("- [ ] @remind 2030-02-30 16:05 invalid date").is_none());
+        assert!(parse_reminder_line("- [ ] @remind 2030-07-03 16:05").is_none());
     }
 
     #[test]
@@ -310,7 +323,7 @@ mod tests {
         write_note_atomic(
             &workspace,
             &note.id,
-            "- [ ] @提醒 2000-01-02 09:00 later\n- [ ] @提醒 2000-01-01 09:00 first\n- [x] @提醒 1999-01-01 09:00 done",
+            "- [ ] @remind 2000-01-02 09:00 later\n- [ ] @remind 2000-01-01 09:00 first\n- [x] @remind 1999-01-01 09:00 done",
         )
         .expect("write");
 
@@ -331,7 +344,7 @@ mod tests {
         let temp = tempfile::tempdir().expect("temp dir");
         let workspace = init_workspace(Some(temp.path().join("workspace"))).expect("workspace");
         let note = create_note(&workspace, Some("Plans".to_owned())).expect("create");
-        let content = "heading\r\n- [ ] @提醒 2000-01-01 09:00 first\r\n- [ ] ordinary\r\n";
+        let content = "heading\r\n- [ ] @remind 2000-01-01 09:00 first\r\n- [ ] ordinary\r\n";
         write_note_atomic(&workspace, &note.id, content).expect("write");
         let reminder = list_reminders(&workspace).expect("list").remove(0);
 
@@ -340,7 +353,7 @@ mod tests {
 
         assert_eq!(
             read_note(&workspace, &note.id).expect("read").content,
-            "heading\r\n- [x] @提醒 2000-01-01 09:00 first\r\n- [ ] ordinary\r\n"
+            "heading\r\n- [x] @remind 2000-01-01 09:00 first\r\n- [ ] ordinary\r\n"
         );
     }
 
@@ -373,14 +386,14 @@ mod tests {
         write_note_atomic(
             &workspace,
             &note.id,
-            "- [ ] @提醒 2000-01-01 09:00 due\n- [ ] @提醒 2999-01-01 09:00 future\n- [ ] ordinary",
+            "- [ ] @remind 2000-01-01 09:00 due\n- [ ] @remind 2999-01-01 09:00 future\n- [ ] ordinary",
         )
         .expect("write");
 
         assert_eq!(complete_due_reminders(&workspace).expect("complete due"), 1);
         let content = read_note(&workspace, &note.id).expect("read").content;
-        assert!(content.contains("- [x] @提醒 2000-01-01 09:00 due"));
-        assert!(content.contains("- [ ] @提醒 2999-01-01 09:00 future"));
+        assert!(content.contains("- [x] @remind 2000-01-01 09:00 due"));
+        assert!(content.contains("- [ ] @remind 2999-01-01 09:00 future"));
         assert!(content.contains("- [ ] ordinary"));
     }
 }

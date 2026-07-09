@@ -1,5 +1,6 @@
 use crate::commands::AppState;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 use tauri::{
     image::Image, App, AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, WindowEvent,
 };
@@ -58,8 +59,9 @@ pub fn install_close_to_hide_handler(app: &App) {
             }
         }
 
-        if let WindowEvent::Focused(true) = event {
+        if matches!(event, WindowEvent::Focused(true) | WindowEvent::Resized(_)) {
             restore_main_window_opacity(&app_handle, &window_for_event);
+            restore_main_window_opacity_soon(&app_handle);
         }
     });
 }
@@ -115,6 +117,8 @@ pub fn toggle_main_window_maximize(app: &AppHandle) -> tauri::Result<()> {
         } else {
             window.maximize()?;
         }
+        restore_main_window_opacity(app, &window);
+        restore_main_window_opacity_soon(app);
     }
     Ok(())
 }
@@ -141,6 +145,18 @@ fn restore_main_window_opacity(app: &AppHandle, window: &WebviewWindow) {
         .map(|opacity| *opacity)
         .unwrap_or(1.0);
     let _ = set_window_opacity(window, opacity);
+}
+
+fn restore_main_window_opacity_soon(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        for delay_ms in [80, 250] {
+            std::thread::sleep(Duration::from_millis(delay_ms));
+            if let Some(window) = main_window(&app) {
+                restore_main_window_opacity(&app, &window);
+            }
+        }
+    });
 }
 
 #[cfg(windows)]

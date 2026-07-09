@@ -29,33 +29,111 @@ pub struct AppConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct UiConfig {
+    #[serde(default = "default_language")]
     pub language: String,
+    #[serde(default)]
     pub vim_mode: bool,
     #[serde(default = "default_true")]
     pub vim_use_ctrl_shortcuts: bool,
+    #[serde(default = "default_vim_insert_exit_key")]
     pub vim_insert_exit_key: String,
+    #[serde(default = "default_tab_bar_orientation")]
     pub tab_bar_orientation: String,
+    #[serde(default = "default_true")]
     pub word_wrap: bool,
+    #[serde(default = "default_editor_font_family")]
     pub editor_font_family: String,
+    #[serde(default = "default_editor_background_color")]
     pub editor_background_color: String,
+    #[serde(default = "default_window_opacity")]
     pub window_opacity: f64,
+    #[serde(default)]
     pub run_at_startup: bool,
     #[serde(default)]
     pub start_hidden: bool,
+    #[serde(default = "default_true")]
     pub close_to_minimize: bool,
+    #[serde(default)]
     pub snap_to_edges: bool,
+    #[serde(default = "default_true")]
     pub transparency_enabled: bool,
+    #[serde(default = "default_title_double_click_action")]
     pub title_double_click_action: String,
+    #[serde(default = "default_shortcut_base_key")]
     pub shortcut_base_key: String,
+    #[serde(default = "default_shortcut_modifiers")]
     pub shortcut_modifiers: Vec<String>,
+    #[serde(default = "default_clipboard_shortcut_base_key")]
     pub clipboard_shortcut_base_key: String,
+    #[serde(default = "default_clipboard_shortcut_modifiers")]
     pub clipboard_shortcut_modifiers: Vec<String>,
+    #[serde(default = "default_insert_separator_template")]
     pub insert_separator_template: String,
+    #[serde(default = "default_insert_date_time_template")]
     pub insert_date_time_template: String,
+    #[serde(default = "default_insert_date_time_separator_template")]
     pub insert_date_time_separator_template: String,
+    #[serde(default)]
     pub custom_insert_texts: Vec<String>,
     #[serde(default = "default_editor_mode_shortcut")]
     pub editor_mode_shortcut: String,
+}
+
+fn default_language() -> String {
+    "en".to_owned()
+}
+
+fn default_vim_insert_exit_key() -> String {
+    "jj".to_owned()
+}
+
+fn default_tab_bar_orientation() -> String {
+    "horizontal".to_owned()
+}
+
+fn default_editor_font_family() -> String {
+    r#""Segoe UI", Arial, sans-serif"#.to_owned()
+}
+
+fn default_editor_background_color() -> String {
+    "#ffffff".to_owned()
+}
+
+fn default_window_opacity() -> f64 {
+    1.0
+}
+
+fn default_title_double_click_action() -> String {
+    "rename".to_owned()
+}
+
+fn default_shortcut_base_key() -> String {
+    "Z".to_owned()
+}
+
+fn default_shortcut_modifiers() -> Vec<String> {
+    vec!["Alt".to_owned()]
+}
+
+fn default_clipboard_shortcut_base_key() -> String {
+    "V".to_owned()
+}
+
+fn default_clipboard_shortcut_modifiers() -> Vec<String> {
+    vec!["Ctrl".to_owned(), "Shift".to_owned()]
+}
+
+fn default_insert_separator_template() -> String {
+    "crlf() + chars('-', 80) + crlf()".to_owned()
+}
+
+fn default_insert_date_time_template() -> String {
+    "date() + ' ' + time()".to_owned()
+}
+
+fn default_insert_date_time_separator_template() -> String {
+    "crlf() + chars('-', 29) + ' ' + date() + ' ' + time() + ' ' + chars('-', 29) + crlf()"
+        .to_owned()
 }
 
 fn default_editor_mode_shortcut() -> String {
@@ -69,29 +147,28 @@ fn default_true() -> bool {
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
-            language: "en".to_owned(),
+            language: default_language(),
             vim_mode: false,
             vim_use_ctrl_shortcuts: true,
-            vim_insert_exit_key: "jj".to_owned(),
-            tab_bar_orientation: "horizontal".to_owned(),
+            vim_insert_exit_key: default_vim_insert_exit_key(),
+            tab_bar_orientation: default_tab_bar_orientation(),
             word_wrap: true,
-            editor_font_family: r#""Segoe UI", Arial, sans-serif"#.to_owned(),
-            editor_background_color: "#ffffff".to_owned(),
-            window_opacity: 1.0,
+            editor_font_family: default_editor_font_family(),
+            editor_background_color: default_editor_background_color(),
+            window_opacity: default_window_opacity(),
             run_at_startup: false,
             start_hidden: false,
             close_to_minimize: true,
             snap_to_edges: false,
             transparency_enabled: true,
-            title_double_click_action: "rename".to_owned(),
-            shortcut_base_key: "Z".to_owned(),
-            shortcut_modifiers: vec!["Alt".to_owned()],
-            clipboard_shortcut_base_key: "V".to_owned(),
-            clipboard_shortcut_modifiers: vec!["Ctrl".to_owned(), "Shift".to_owned()],
-            insert_separator_template: "crlf() + chars('-', 80) + crlf()".to_owned(),
-            insert_date_time_template: "date() + ' ' + time()".to_owned(),
-            insert_date_time_separator_template:
-                "crlf() + chars('-', 29) + ' ' + date() + ' ' + time() + ' ' + chars('-', 29) + crlf()".to_owned(),
+            title_double_click_action: default_title_double_click_action(),
+            shortcut_base_key: default_shortcut_base_key(),
+            shortcut_modifiers: default_shortcut_modifiers(),
+            clipboard_shortcut_base_key: default_clipboard_shortcut_base_key(),
+            clipboard_shortcut_modifiers: default_clipboard_shortcut_modifiers(),
+            insert_separator_template: default_insert_separator_template(),
+            insert_date_time_template: default_insert_date_time_template(),
+            insert_date_time_separator_template: default_insert_date_time_separator_template(),
             custom_insert_texts: Vec::new(),
             editor_mode_shortcut: default_editor_mode_shortcut(),
         }
@@ -101,8 +178,22 @@ impl Default for UiConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct McpConfig {
+    #[serde(default)]
     pub enabled: bool,
-    pub default_read_only: bool,
+    #[serde(default = "default_mcp_host")]
+    pub host: String,
+    #[serde(default = "default_mcp_port")]
+    pub port: u16,
+    #[serde(default)]
+    pub token: String,
+}
+
+fn default_mcp_host() -> String {
+    "127.0.0.1".to_owned()
+}
+
+fn default_mcp_port() -> u16 {
+    8765
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -139,8 +230,10 @@ impl AppConfig {
             clipboard_target: "clipboard".to_owned(),
             max_search_results: 100,
             mcp: McpConfig {
-                enabled: true,
-                default_read_only: true,
+                enabled: false,
+                host: default_mcp_host(),
+                port: default_mcp_port(),
+                token: String::new(),
             },
             ui: UiConfig::default(),
         }
@@ -197,6 +290,10 @@ mod tests {
         }"#;
         let config: AppConfig = serde_json::from_str(json).expect("legacy config");
         assert_eq!(config.version, 1);
+        assert!(config.mcp.enabled);
+        assert_eq!(config.mcp.host, "127.0.0.1");
+        assert_eq!(config.mcp.port, 8765);
+        assert_eq!(config.mcp.token, "");
         assert!(!config.ui.run_at_startup);
         assert!(!config.ui.start_hidden);
         assert_eq!(config.ui.shortcut_base_key, "Z");
@@ -239,14 +336,37 @@ mod tests {
     }
 
     #[test]
-    fn vim_mode_is_required_in_ui_config() {
+    fn old_ui_config_without_vim_fields_uses_defaults() {
         let mut value = serde_json::to_value(UiConfig::default()).expect("serialize UI config");
         value
             .as_object_mut()
             .expect("UI config object")
             .remove("vimMode");
+        value
+            .as_object_mut()
+            .expect("UI config object")
+            .remove("vimInsertExitKey");
 
-        assert!(serde_json::from_value::<UiConfig>(value).is_err());
+        let config: UiConfig = serde_json::from_value(value).expect("legacy UI config");
+        assert!(!config.vim_mode);
+        assert_eq!(config.vim_insert_exit_key, "jj");
+    }
+
+    #[test]
+    fn sparse_ui_config_uses_defaults_for_missing_fields() {
+        let json = r#"{
+          "language": "zh",
+          "vimMode": true,
+          "runAtStartup": true
+        }"#;
+        let config: UiConfig = serde_json::from_str(json).expect("sparse UI config");
+        assert_eq!(config.language, "zh");
+        assert!(config.vim_mode);
+        assert!(config.run_at_startup);
+        assert_eq!(config.vim_insert_exit_key, "jj");
+        assert_eq!(config.shortcut_base_key, "Z");
+        assert_eq!(config.clipboard_shortcut_modifiers, ["Ctrl", "Shift"]);
+        assert_eq!(config.editor_mode_shortcut, "F4");
     }
 
     #[test]

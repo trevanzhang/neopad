@@ -25,9 +25,10 @@ The repository currently contains a working Windows-focused MVP:
   including reliable restore from the minimized state, plus `Alt+Enter`
   maximize/restore.
 - Clipboard captures use readable local timestamps in compact separator lines.
-- Edit, hybrid, and preview editor modes selectable from the View menu, status
-  bar, `F4` shortcut, and persisted default setting, including while using
-  immersive fullscreen.
+- Edit, split, and preview editor modes selectable from the View menu, status
+  bar, fixed `F4` shortcut, and persisted default setting. NeoPad now opens in
+  edit mode by default even when another default view is configured for later
+  mode switches.
 - Optional Vim key bindings for the CodeMirror editor, with persisted settings
   in the Advanced tab, configurable Insert exit sequence, and a visible Normal,
   Insert, or Visual mode indicator. NeoPad Ctrl shortcuts can optionally take
@@ -35,7 +36,7 @@ The repository currently contains a working Windows-focused MVP:
 - Persistent light and dark themes available from the Format menu and status
   bar.
 - Lightweight Markdown reminders using
-  `- [ ] @提醒 YYYY-MM-DD HH:mm content`, with a compact `Ctrl+E` editor,
+  `- [ ] @remind YYYY-MM-DD HH:mm content`, with a compact `Ctrl+E` editor,
   sortable and filterable reminder list, source-line navigation, and native
   notifications while NeoPad is running in the tray.
 - `F1` opens shortcut help, `F2` renames the current page, and `F5` opens or
@@ -43,12 +44,17 @@ The repository currently contains a working Windows-focused MVP:
   and "Clear Due" update reminder checkboxes directly without deleting note
   content.
 - Tab context menu with rename, trash, and persistent color choices.
-- Native Save As dialogs for exporting the active note as Markdown or all notes
-  as a ZIP archive containing one Markdown file per tab.
-- Standalone `neopad-mcp` stdio server with read-only tools by default and
-  opt-in write tools via `--allow-write`.
+- `Ctrl+O` imports an external Markdown file into the NeoPad workspace, rather
+  than editing the original file in place. Native Save As dialogs export the
+  active note as Markdown or all notes as a ZIP archive containing one Markdown
+  file per tab.
+- Standalone local HTTP `neopad-mcp` service managed from Settings, with bearer
+  token access for local agents. The dedicated MCP settings page can start or
+  stop the service, show the local URL and token, regenerate the token, and copy
+  an agent configuration snippet.
 - Windows MSI packaging with app icon, branded WiX installer images, and desktop
-  and start-menu shortcut icons.
+  and start-menu shortcut icons. The MSI includes `neopad-mcp.exe` as a bundled
+  sidecar binary.
 
 ## Workspace Layout
 
@@ -134,10 +140,13 @@ Build the Windows MSI:
 pnpm tauri:build
 ```
 
+This command builds the release MCP server first, prepares the Tauri sidecar
+name, and then builds the MSI.
+
 The MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.4.1_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.4.2_x64_en-US.msi
 ```
 
 ## MCP Server
@@ -148,33 +157,58 @@ Build the MCP server:
 cargo build -p neopad-mcp --release
 ```
 
-Read-only configuration example:
+Run the HTTP server directly:
+
+```powershell
+target\release\neopad-mcp.exe --workspace ~/.neopad serve --host 127.0.0.1 --port 8765 --token <local-token>
+```
+
+NeoPad can also start and stop this process from Settings. The copied agent
+configuration uses the local URL and bearer token:
 
 ```json
 {
   "mcpServers": {
     "neopad": {
-      "command": "D:\\TrevanCode\\neopad\\target\\release\\neopad-mcp.exe",
-      "args": ["--workspace", "~/.neopad"]
+      "url": "http://127.0.0.1:8765/mcp",
+      "headers": {
+        "Authorization": "Bearer <local-token>"
+      }
     }
   }
 }
 ```
 
-Write-enabled configuration example:
+The service is off by default. When enabled, local agents with the token can
+read and write NeoPad notes.
 
-```json
-{
-  "mcpServers": {
-    "neopad": {
-      "command": "D:\\TrevanCode\\neopad\\target\\release\\neopad-mcp.exe",
-      "args": ["--workspace", "~/.neopad", "--allow-write"]
-    }
-  }
-}
+## Keyboard Shortcuts
+
+Common local shortcuts:
+
+```text
+F1              Shortcut help
+F2              Rename current page
+F4              Cycle edit, split, and preview modes
+F5              Open or close the reminder list
+F8              Open settings
+F9              Toggle light or dark theme
+F10             Toggle tab bar orientation
+F11             Toggle immersive fullscreen
+Alt+Enter       Maximize or restore the main window
+Esc             Close overlays, exit fullscreen, or hide the window
+Ctrl+O          Import a Markdown file into NeoPad
+Ctrl+E          Insert a Markdown reminder
+Ctrl+Tab        Next tab
+Ctrl+Shift+Tab  Previous tab
 ```
 
-Write tools are intentionally hidden unless `--allow-write` is provided.
+Configurable global shortcuts:
+
+```text
+Alt+Z           Show or hide NeoPad
+Ctrl+Shift+V    Append current clipboard text to clipboard.md
+```
 
 ## More Documentation
 

@@ -790,6 +790,11 @@ body {
   border-radius: 0;
 }
 
+.settings-actions button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
 .search-results {
   min-height: 0;
   overflow: auto;
@@ -1199,9 +1204,12 @@ body {
   gap: 0;
   padding: 8px 10px 0;
   background: #f2f2f2;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .settings-tabs button {
+  flex: 0 0 auto;
   height: 30px;
   padding: 0 10px;
   color: #111111;
@@ -1277,6 +1285,60 @@ body {
   line-height: 1.45;
 }
 
+.settings-error {
+  margin: 6px 0 10px;
+  color: #a10000;
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.mcp-service-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 10px 0 14px;
+}
+
+.mcp-primary-button {
+  min-width: 132px;
+  height: 34px;
+  padding: 0 14px;
+  font-weight: 700;
+}
+
+.mcp-status {
+  color: var(--np-muted);
+  font-size: 14px;
+}
+
+.mcp-status[data-running="true"] {
+  color: #14753a;
+}
+
+.settings-secret {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.settings-code-block {
+  max-width: 100%;
+  max-height: 210px;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 10px;
+  color: #111111;
+  background: #f6f6f6;
+  border: 1px solid #d0d0d0;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .theme-dark .settings-header,
 .theme-dark .settings-tabs {
   color: var(--np-text);
@@ -1341,6 +1403,20 @@ body {
   border-color: var(--np-border);
 }
 
+.theme-dark .settings-error {
+  color: #ff9b9b;
+}
+
+.theme-dark .mcp-status[data-running="true"] {
+  color: #7edc9d;
+}
+
+.theme-dark .settings-code-block {
+  color: var(--np-text);
+  background: var(--np-code);
+  border-color: var(--np-border);
+}
+
 .theme-dark .settings-footer {
   color: var(--np-text);
   background: var(--np-chrome);
@@ -1348,11 +1424,19 @@ body {
 }
 
 .theme-dark .settings-custom-actions button,
+.theme-dark .settings-actions button,
 .theme-dark .settings-footer button,
 .theme-dark .settings-close {
   color: var(--np-text);
   background: var(--np-control);
   border-color: var(--np-border);
+}
+
+.theme-dark .settings-actions button:disabled {
+  color: var(--np-muted);
+  background: var(--np-code);
+  border-color: var(--np-border);
+  opacity: 0.75;
 }
 
 .theme-dark .settings-panel input,

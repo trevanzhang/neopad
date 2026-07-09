@@ -31,6 +31,17 @@ export interface UiConfig {
 
 export type AppTheme = 'light' | 'dark'
 
+export interface McpStatus {
+  enabled: boolean
+  running: boolean
+  status: string
+  url: string
+  host: string
+  port: number
+  token: string
+  lastError: string | null
+}
+
 export function getAppVersion(): Promise<string> {
   return invoke('app_version')
 }
@@ -185,4 +196,16 @@ export function getShortcutWarnings(): Promise<string[]> {
 
 export function setTrayLanguage(language: 'en' | 'zh'): Promise<void> {
   return invoke('set_tray_language_command', { language })
+}
+
+export function getMcpStatus(): Promise<McpStatus> {
+  return invoke('get_mcp_status_command')
+}
+
+export function setMcpEnabled(enabled: boolean): Promise<McpStatus> {
+  return invoke('set_mcp_enabled_command', { enabled })
+}
+
+export function regenerateMcpToken(): Promise<McpStatus> {
+  return invoke('regenerate_mcp_token_command')
 }

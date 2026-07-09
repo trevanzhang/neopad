@@ -31,8 +31,9 @@ Implemented MVP capabilities:
 - Plain Markdown persistence under `~/.neopad/notes/*.md`.
 - Multiple tabs backed by local metadata.
 - Autosave.
-- Edit, hybrid, and preview editor modes with a persisted default and shortcut;
-  all three modes remain available in immersive fullscreen.
+- Edit, split, and preview editor modes with a persisted default and fixed
+  `F4` cycling shortcut; all three modes remain available in immersive
+  fullscreen. NeoPad launches into edit mode by default.
 - Page creation, rename, and trash actions with protected default pages.
 - Persistent optional tab colors managed from the tab context menu.
 - English and Chinese display names for system-managed page titles.
@@ -49,6 +50,7 @@ Implemented MVP capabilities:
   Markdown lines.
 - Native Save As for exporting the active note to Markdown or all notes to a
   ZIP archive with one Markdown file per tab.
+- `Ctrl+O` imports external Markdown files into the local NeoPad workspace.
 - Manual clipboard capture into `clipboard.md` with readable local timestamp
   separator lines.
 - Tray menu.
@@ -59,7 +61,8 @@ Implemented MVP capabilities:
 - Configurable global window and clipboard shortcuts, plus local `Alt+Enter`
   maximize/restore.
 - Close-to-hide behavior.
-- Standalone MCP server.
+- Standalone Streamable HTTP MCP server managed from a dedicated MCP settings
+  page.
 - Windows MSI packaging with branded installer assets.
 
 ## Data Rules
@@ -76,13 +79,15 @@ Implemented MVP capabilities:
 
 ## MCP Rules
 
-- `neopad-mcp` communicates over stdio.
-- stdout is reserved for JSON-RPC messages.
+- `neopad-mcp` communicates over local Streamable HTTP at `/mcp`.
+- The service is off by default and binds to `127.0.0.1` by default.
+- Bearer token authentication is required for HTTP requests.
+- Browser-originated requests must pass local Origin validation.
 - stderr is used for diagnostics.
-- Read-only tools are available by default.
-- Write tools require explicit `--allow-write`.
+- When enabled, local agents with the token can read and write notes.
 - The MCP server must not read the system clipboard.
 - The MCP server must not access files outside the workspace.
+- Installed builds must include `neopad-mcp.exe` as a sidecar.
 
 ## Packaging Rules
 

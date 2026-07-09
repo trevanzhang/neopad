@@ -167,8 +167,10 @@ mod tests {
         assert_eq!(config.clipboard_hotkey, "Ctrl+Shift+V");
         assert_eq!(config.preview_mode, PreviewMode::Edit);
         assert!(config.hide_on_esc);
-        assert!(config.mcp.enabled);
-        assert!(config.mcp.default_read_only);
+        assert!(!config.mcp.enabled);
+        assert_eq!(config.mcp.host, "127.0.0.1");
+        assert_eq!(config.mcp.port, 8765);
+        assert_eq!(config.mcp.token, "");
 
         let tabs: TabsState =
             serde_json::from_str(&fs::read_to_string(&workspace.tabs_path).expect("tabs"))

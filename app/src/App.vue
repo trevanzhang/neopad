@@ -18,6 +18,7 @@ import {
   deleteNote,
   exportAllNotesZip,
   getShortcutWarnings,
+  getMcpStatus,
   getUiConfig,
   getWorkspace,
   hideWindow,
@@ -38,6 +39,7 @@ import {
   setNoteColor,
   setAutostart,
   setCloseToMinimize,
+  setMcpEnabled,
   setSnapToEdges,
   setStartHidden,
   setWindowOpacity,
@@ -47,15 +49,16 @@ import {
   updateToggleShortcut,
   updateClipboardShortcut,
   writeNote,
+  regenerateMcpToken,
 } from './lib/invoke'
-import type { AppTheme } from './lib/invoke'
+import type { AppTheme, McpStatus } from './lib/invoke'
 import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
 import { AutosaveCoordinator } from './lib/autosave'
 import { editorBackgroundForTheme } from './lib/theme'
 import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
 import type { NoteTab, Reminder, SearchResult } from './types/note'
-import { isEditorMode, nextEditorMode, type EditorMode, type EditorModeShortcut } from './types/editor'
+import { isEditorMode, nextEditorMode, type EditorMode } from './types/editor'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
@@ -98,7 +101,7 @@ const isLoadingNote = ref(false)
 const statusMessage = ref('Markdown')
 const previewMode = ref<EditorMode>('edit')
 const defaultEditorMode = ref<EditorMode>('edit')
-const editorModeShortcut = ref<EditorModeShortcut>(initialEditorModeShortcut())
+const editorModeShortcut = ref('F4' as const)
 const searchOpen = ref(false)
 const reminderDialogOpen = ref(false)
 const reminderListOpen = ref(false)
@@ -147,6 +150,8 @@ const backgroundColorInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
 const searchPanel = ref<InstanceType<typeof SearchPanel> | null>(null)
 const workspacePath = ref('~/.neopad')
+const mcpStatus = ref<McpStatus | null>(null)
+const mcpUiError = ref<string | null>(null)
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
 const t = computed(() => messages[language.value])
 const displayTabs = computed(() => tabs.value.map((tab) => ({
@@ -215,6 +220,7 @@ onMounted(async () => {
   await resetWebviewZoom()
   await loadInitialNotes()
   await loadWorkspacePath()
+  await loadMcpStatus()
   await loadShortcutWarnings()
   await loadNativeUiConfig()
   await Promise.allSettled([syncWindowOpacity(), syncToggleShortcut(), syncClipboardShortcut()])
@@ -433,10 +439,6 @@ watch(customInsertTexts, () => {
   window.localStorage.setItem('neopad.customInsertTexts', JSON.stringify(customInsertTexts.value))
 }, { deep: true })
 
-watch(editorModeShortcut, () => {
-  window.localStorage.setItem('neopad.editorModeShortcut', editorModeShortcut.value)
-})
-
 watch(vimMode, () => {
   window.localStorage.setItem('neopad.vimMode', String(vimMode.value))
 })
@@ -476,7 +478,6 @@ watch(
     insertDateTimeSeparatorTemplate,
     customInsertTexts,
     defaultEditorMode,
-    editorModeShortcut,
   ],
   () => {
     if (uiConfigLoaded && isTauriRuntime()) {
@@ -542,11 +543,6 @@ function initialJsonSetting<T>(key: string, fallback: T) {
 function initialTitleDoubleClickAction(): TitleDoubleClickAction {
   const value = initialStringSetting('neopad.titleDoubleClickAction', 'rename')
   return value === 'none' || value === 'delete' || value === 'rename' ? value : 'rename'
-}
-
-function initialEditorModeShortcut(): EditorModeShortcut {
-  const value = initialStringSetting('neopad.editorModeShortcut', 'F4')
-  return value === 'Ctrl+Shift+M' || value === 'disabled' ? value : 'F4'
 }
 
 function initialDateTimeSeparatorTemplate() {
@@ -1047,7 +1043,7 @@ function closeReminderDialog() {
 
 function confirmReminder(value: { content: string; dueText: string }) {
   reminderDialogOpen.value = false
-  if (editorPane.value?.insertLine(`- [ ] @提醒 ${value.dueText} ${value.content}`)) {
+  if (editorPane.value?.insertLine(`- [ ] @remind ${value.dueText} ${value.content}`)) {
     statusMessage.value = t.value.status.inserted
   }
 }
@@ -1099,6 +1095,7 @@ async function selectSearchResult(result: SearchResult) {
 function openSettings() {
   settingsOpen.value = true
   statusMessage.value = t.value.status.settings
+  void loadMcpStatus()
 }
 
 function closeSettings() {
@@ -1292,25 +1289,77 @@ async function transformText(action: string, text: string) {
   }
 }
 
-async function copyMcpConfig(allowWrite: boolean) {
-  const args = ['--workspace', workspacePath.value || '~/.neopad']
-  if (allowWrite) {
-    args.push('--allow-write')
+async function copyMcpConfig() {
+  if (!mcpStatus.value) {
+    await loadMcpStatus()
   }
-
+  const status = mcpStatus.value
+  if (!status) {
+    saveState.value = 'Failed'
+    return
+  }
   const config = {
     mcpServers: {
       neopad: {
-        command: 'neopad-mcp',
-        args,
+        url: status.url,
+        headers: {
+          Authorization: `Bearer ${status.token}`,
+        },
       },
     },
   }
 
   try {
     await navigator.clipboard.writeText(JSON.stringify(config, null, 2))
-    statusMessage.value = allowWrite ? t.value.status.mcpWriteCopied : t.value.status.mcpReadOnlyCopied
+    statusMessage.value = t.value.status.mcpConfigCopied
   } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function loadMcpStatus() {
+  if (!isTauriRuntime()) {
+    mcpStatus.value = {
+      enabled: false,
+      running: false,
+      status: t.value.settings.stopped,
+      url: 'http://127.0.0.1:8765/mcp',
+      host: '127.0.0.1',
+      port: 8765,
+      token: '',
+      lastError: null,
+    }
+    return
+  }
+
+  try {
+    mcpUiError.value = null
+    mcpStatus.value = await getMcpStatus()
+  } catch (error) {
+    mcpUiError.value = error instanceof Error ? error.message : String(error)
+    saveState.value = 'Failed'
+  }
+}
+
+async function updateMcpEnabled(enabled: boolean) {
+  try {
+    mcpUiError.value = null
+    mcpStatus.value = await setMcpEnabled(enabled)
+    statusMessage.value = t.value.status.mcpUpdated
+  } catch (error) {
+    mcpUiError.value = error instanceof Error ? error.message : String(error)
+    await loadMcpStatus()
+    saveState.value = 'Failed'
+  }
+}
+
+async function refreshMcpToken() {
+  try {
+    mcpUiError.value = null
+    mcpStatus.value = await regenerateMcpToken()
+    statusMessage.value = t.value.status.mcpUpdated
+  } catch (error) {
+    mcpUiError.value = error instanceof Error ? error.message : String(error)
     saveState.value = 'Failed'
   }
 }
@@ -1371,8 +1420,8 @@ async function loadNativeUiConfig() {
         ? 'light'
         : window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     const storedMode = isEditorMode(stored.previewMode) ? stored.previewMode : 'edit'
-    previewMode.value = storedMode
-    defaultEditorMode.value = storedMode
+    previewMode.value = 'edit'
+    defaultEditorMode.value = 'edit'
     language.value = ui.language === 'zh' ? 'zh' : 'en'
     vimMode.value = ui.vimMode
     vimUseCtrlShortcuts.value = ui.vimUseCtrlShortcuts
@@ -1401,10 +1450,12 @@ async function loadNativeUiConfig() {
       ? defaultDateTimeSeparatorTemplate
       : ui.insertDateTimeSeparatorTemplate
     customInsertTexts.value = ui.customInsertTexts
-    editorModeShortcut.value = ui.editorModeShortcut === 'Ctrl+Shift+M' || ui.editorModeShortcut === 'disabled'
-      ? ui.editorModeShortcut
-      : 'F4'
+    const shouldMigrateEditorShortcut = (ui.editorModeShortcut as string) !== 'F4'
+    editorModeShortcut.value = 'F4'
     uiConfigLoaded = true
+    if (storedMode !== 'edit' || shouldMigrateEditorShortcut) {
+      persistUiConfig()
+    }
   } catch {
     saveState.value = 'Failed'
   }
@@ -1644,11 +1695,7 @@ function cycleEditorMode() {
 }
 
 function matchesEditorModeShortcut(event: KeyboardEvent) {
-  if (editorModeShortcut.value === 'disabled') return false
-  if (editorModeShortcut.value === 'F4') {
-    return event.key === 'F4' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
-  }
-  return event.key.toLowerCase() === 'm' && event.ctrlKey && event.shiftKey && !event.altKey && !event.metaKey
+  return event.key === 'F4' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
 }
 
 function isEditableElement(element: EventTarget | null) {
@@ -2355,8 +2402,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         'Ctrl+E - ' + (zh ? '\u63d2\u5165\u63d0\u9192' : 'Insert reminder'),
         'F5 - ' + (zh ? '\u6253\u5f00/\u5173\u95ed\u63d0\u9192\u5217\u8868' : 'Open/close reminder list'),
         'F6 - ' + (zh ? '\u5207\u6362\u7a97\u53e3\u7f6e\u9876' : 'Toggle window on top'),
-        (editorModeShortcut.value === 'disabled' ? (zh ? '\u672a\u7ed1\u5b9a' : 'Unbound') : editorModeShortcut.value) +
-          ' - ' + (zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f' : 'Cycle editor mode'),
+        'F4 - ' + (zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f' : 'Cycle editor mode'),
         'F8 - ' + (zh ? '\u6253\u5f00\u8bbe\u7f6e' : 'Open settings'),
         'F9 - ' + (zh ? '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f' : 'Toggle light/dark theme'),
         'F11 - ' + (zh ? '\u5207\u6362\u6c89\u6d78\u5f0f\u5168\u5c4f' : 'Toggle immersive fullscreen'),
@@ -2583,7 +2629,6 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       :vim-use-ctrl-shortcuts="vimUseCtrlShortcuts"
       :vim-insert-exit-key="vimInsertExitKey"
       :preview-mode="defaultEditorMode"
-      :editor-mode-shortcut="editorModeShortcut"
       :language="language"
       :workspace-path="workspacePath"
       :run-at-startup="runAtStartup"
@@ -2601,6 +2646,8 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       :insert-date-time-template="insertDateTimeTemplate"
       :insert-date-time-separator-template="insertDateTimeSeparatorTemplate"
       :custom-insert-texts="customInsertTexts"
+      :mcp-status="mcpStatus"
+      :mcp-error="mcpUiError"
       :messages="t.settings"
       :menu-messages="t.menu"
       @close="closeSettings"
@@ -2609,7 +2656,6 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       @update:vim-use-ctrl-shortcuts="vimUseCtrlShortcuts = $event"
       @update:vim-insert-exit-key="setVimInsertExitKey"
       @update:preview-mode="setDefaultEditorMode"
-      @update:editor-mode-shortcut="editorModeShortcut = $event"
       @update:language="language = $event"
       @update:run-at-startup="runAtStartup = $event"
       @update:start-hidden="startHidden = $event"
@@ -2627,7 +2673,9 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       @update:insert-date-time-separator-template="insertDateTimeSeparatorTemplate = $event"
       @update:custom-insert-texts="customInsertTexts = $event"
       @edit-custom-text="editCustomInsertText"
+      @update-mcp-enabled="updateMcpEnabled"
       @copy-mcp-config="copyMcpConfig"
+      @regenerate-mcp-token="refreshMcpToken"
     />
 
     <InputDialog

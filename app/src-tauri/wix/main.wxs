@@ -4,9 +4,11 @@
 <?elseif $(sys.BUILDARCH)="x64"?>
     <?define Win64 = "yes" ?>
     <?define PlatformProgramFilesFolder = "ProgramFiles64Folder" ?>
+    <?define McpSidecarSource = "..\..\neopad-mcp-x86_64-pc-windows-msvc.exe" ?>
 <?elseif $(sys.BUILDARCH)="arm64"?>
     <?define Win64 = "yes" ?>
     <?define PlatformProgramFilesFolder = "ProgramFiles64Folder" ?>
+    <?define McpSidecarSource = "..\..\neopad-mcp-aarch64-pc-windows-msvc.exe" ?>
 <?else?>
     <?error Unsupported value of sys.BUILDARCH=$(sys.BUILDARCH)?>
 <?endif?>
@@ -113,6 +115,10 @@
                 <File Id="Path" Source="..\..\neopad-app.exe" KeyPath="yes" Checksum="yes"/>
             </Component>
 
+            <Component Id="McpSidecar" Guid="*" Win64="$(var.Win64)">
+                <File Id="McpSidecarFile" Source="$(var.McpSidecarSource)" Name="neopad-mcp.exe" KeyPath="yes" Checksum="yes"/>
+            </Component>
+
             <Component Id="CMP_UninstallShortcut" Guid="*">
                 <Shortcut Id="UninstallShortcut"
                     Name="Uninstall {{product_name}}"
@@ -158,6 +164,7 @@
 
             <Feature Id="ShortcutsFeature" Title="Shortcuts" Level="1">
                 <ComponentRef Id="Path"/>
+                <ComponentRef Id="McpSidecar"/>
                 <ComponentRef Id="CMP_UninstallShortcut" />
                 <ComponentRef Id="ApplicationShortcut" />
                 <ComponentRef Id="ApplicationShortcutDesktop" />

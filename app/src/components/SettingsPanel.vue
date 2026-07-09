@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { AppLanguage, AppMessages } from '../lib/i18n'
-import type { EditorMode, EditorModeShortcut } from '../types/editor'
+import type { EditorMode } from '../types/editor'
 
-type SettingsTab = 'general' | 'shortcuts' | 'insertText' | 'advanced'
+type SettingsTab = 'general' | 'shortcuts' | 'insertText' | 'advanced' | 'mcp'
 type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
+type McpStatus = {
+  enabled: boolean
+  running: boolean
+  status: string
+  url: string
+  token: string
+  lastError: string | null
+}
 
 defineProps<{
   alwaysOnTop: boolean
@@ -12,7 +20,6 @@ defineProps<{
   vimUseCtrlShortcuts: boolean
   vimInsertExitKey: string
   previewMode: EditorMode
-  editorModeShortcut: EditorModeShortcut
   language: AppLanguage
   workspacePath: string
   runAtStartup: boolean
@@ -30,6 +37,8 @@ defineProps<{
   insertDateTimeTemplate: string
   insertDateTimeSeparatorTemplate: string
   customInsertTexts: string[]
+  mcpStatus: McpStatus | null
+  mcpError: string | null
   messages: AppMessages['settings']
   menuMessages: AppMessages['menu']
 }>()
@@ -41,7 +50,6 @@ const emit = defineEmits<{
   'update:vimUseCtrlShortcuts': [enabled: boolean]
   'update:vimInsertExitKey': [key: string]
   'update:previewMode': [mode: EditorMode]
-  'update:editorModeShortcut': [shortcut: EditorModeShortcut]
   'update:language': [language: AppLanguage]
   'update:runAtStartup': [value: boolean]
   'update:startHidden': [value: boolean]
@@ -59,11 +67,30 @@ const emit = defineEmits<{
   'update:insertDateTimeSeparatorTemplate': [value: string]
   'update:customInsertTexts': [value: string[]]
   editCustomText: [index: number]
-  copyMcpConfig: [allowWrite: boolean]
+  'update-mcp-enabled': [enabled: boolean]
+  'copy-mcp-config': []
+  'regenerate-mcp-token': []
 }>()
 
 const activeTab = ref<SettingsTab>('general')
 const selectedCustomIndex = ref<number | null>(null)
+
+function mcpAgentConfig(status: McpStatus | null) {
+  return JSON.stringify(
+    {
+      mcpServers: {
+        neopad: {
+          url: status?.url || 'http://127.0.0.1:8765/mcp',
+          headers: {
+            Authorization: `Bearer ${status?.token || '<local-token>'}`,
+          },
+        },
+      },
+    },
+    null,
+    2,
+  )
+}
 
 function updateModifier(modifier: string, checked: boolean, current: string[]) {
   const next = checked ? Array.from(new Set([...current, modifier])) : current.filter((item) => item !== modifier)
@@ -119,6 +146,9 @@ function deleteCustomText(current: string[]) {
       </button>
       <button type="button" :class="{ active: activeTab === 'advanced' }" @click="activeTab = 'advanced'">
         {{ messages.advancedTab }}
+      </button>
+      <button type="button" :class="{ active: activeTab === 'mcp' }" @click="activeTab = 'mcp'">
+        {{ messages.mcp }}
       </button>
     </div>
 
@@ -265,14 +295,10 @@ function deleteCustomText(current: string[]) {
         </fieldset>
         <fieldset class="settings-fieldset settings-shortcut-fieldset">
           <legend>{{ messages.cycleEditorMode }}</legend>
-          <label class="settings-form-row">
+          <div class="settings-form-row">
             <span>{{ messages.shortcut }}:</span>
-            <select :value="editorModeShortcut" @change="$emit('update:editorModeShortcut', ($event.target as HTMLSelectElement).value as EditorModeShortcut)">
-              <option value="F4">F4</option>
-              <option value="Ctrl+Shift+M">Ctrl+Shift+M</option>
-              <option value="disabled">{{ messages.disabled }}</option>
-            </select>
-          </label>
+            <kbd>F4</kbd>
+          </div>
         </fieldset>
         <fieldset class="settings-fieldset settings-shortcut-fieldset">
           <legend>{{ messages.toggleWindow }}</legend>
@@ -371,7 +397,7 @@ function deleteCustomText(current: string[]) {
         </fieldset>
       </template>
 
-      <template v-else>
+      <template v-else-if="activeTab === 'advanced'">
         <fieldset class="settings-fieldset">
           <legend>{{ messages.vimSettings }}</legend>
           <p class="settings-description">{{ messages.vimModeDescription }}</p>
@@ -403,6 +429,49 @@ function deleteCustomText(current: string[]) {
             />
           </label>
           <small class="settings-hint vim-exit-hint">{{ messages.vimModeHint }}</small>
+        </fieldset>
+      </template>
+
+      <template v-else>
+        <fieldset class="settings-fieldset">
+          <legend>{{ messages.mcpLocalService }}</legend>
+          <p class="settings-description">{{ messages.mcpDescription }}</p>
+          <p class="settings-description">{{ messages.mcpStartupDescription }}</p>
+          <div class="mcp-service-actions">
+            <button
+              type="button"
+              class="mcp-primary-button"
+              @click="$emit('update-mcp-enabled', !mcpStatus?.enabled)"
+            >
+              {{ mcpStatus?.enabled ? messages.stopMcpService : messages.startMcpService }}
+            </button>
+            <strong class="mcp-status" :data-running="mcpStatus?.running ? 'true' : 'false'">
+              {{ mcpStatus?.status || messages.stopped }}
+            </strong>
+          </div>
+          <div class="settings-form-row">
+            <span>{{ messages.address }}:</span>
+            <code>{{ mcpStatus?.url || 'http://127.0.0.1:8765/mcp' }}</code>
+          </div>
+          <div class="settings-form-row">
+            <span>{{ messages.accessToken }}:</span>
+            <code class="settings-secret">{{ mcpStatus?.token || messages.tokenPending }}</code>
+          </div>
+          <p v-if="mcpError || mcpStatus?.lastError" class="settings-error">{{ mcpError || mcpStatus?.lastError }}</p>
+          <div class="settings-actions">
+            <button type="button" :disabled="!mcpStatus?.token" @click="$emit('copy-mcp-config')">
+              {{ messages.copyAgentConfig }}
+            </button>
+            <button type="button" @click="$emit('regenerate-mcp-token')">
+              {{ messages.regenerateToken }}
+            </button>
+          </div>
+        </fieldset>
+
+        <fieldset class="settings-fieldset">
+          <legend>{{ messages.installMethod }}</legend>
+          <p class="settings-description">{{ messages.installMethodDescription }}</p>
+          <pre class="settings-code-block">{{ mcpAgentConfig(mcpStatus) }}</pre>
         </fieldset>
       </template>
     </div>

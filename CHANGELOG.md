@@ -6,6 +6,36 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.4.2 - 2026-07-09
+
+### Added
+
+- Added a dedicated MCP settings page with service start/stop, status, endpoint,
+  token display, token regeneration, and copyable client configuration.
+- Added desktop-managed Streamable HTTP MCP support at `/mcp`, protected by a
+  bearer token and local browser-origin validation.
+- Added MSI packaging for `neopad-mcp.exe` as the app's sidecar binary.
+
+### Changed
+
+- Settings now shows the editor-mode cycling shortcut as fixed `F4` instead of
+  asking users to choose or disable it.
+- New Markdown reminders now use the language-neutral `@remind` marker while
+  keeping compatibility with existing `@提醒` reminder lines.
+- NeoPad now launches into edit mode by default while keeping edit, split, and
+  preview available through `F4`, the View menu, and the status bar.
+- Documentation has been refreshed for the MCP HTTP service, bundled sidecar,
+  edit-mode startup behavior, Markdown import behavior, and current packaging
+  flow.
+
+### Fixed
+
+- MCP service startup no longer opens a console window on Windows.
+- Older sparse `config.json` files now load with defaults for newly added UI
+  fields instead of failing on missing settings.
+- Native window opacity is reapplied after maximize, restore, focus, and resize
+  events.
+
 ## 0.4.1 - 2026-07-08
 
 ### Changed

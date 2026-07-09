@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "NeoPad",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "identifier": "com.neopad.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -32,6 +32,9 @@
     "active": true,
     "targets": [
       "msi"
+    ],
+    "externalBin": [
+      "../../target/release/neopad-mcp"
     ],
     "icon": [
       "icons/icon.ico"

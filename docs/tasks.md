@@ -17,8 +17,9 @@ This file tracks the implemented MVP relative to the original task plan.
 - Cross-process write locking for desktop and write-enabled MCP operations.
 - Tauri command bridge.
 - Vue app shell with tabs, editor, preview, search, settings, and status bar.
-- Edit, hybrid, and preview modes with a compact View menu, status indicator,
-  configurable cycling shortcut, and persisted default.
+- Edit, split, and preview modes with a compact View menu, status indicator,
+  fixed `F4` cycling shortcut, edit-mode startup, and persisted default for
+  later mode changes.
 - Page rename and trash actions with UI and core protection for default pages.
 - Tab context menu with rename, trash, and persistent color selection.
 - Localized system page labels that preserve stable storage IDs and user titles.
@@ -37,12 +38,15 @@ This file tracks the implemented MVP relative to the original task plan.
   navigation, status filtering, completion reopening, delivery deduplication,
   and native due notifications.
 - ZIP export for all tabs, preserving each tab as its own Markdown file.
+- Markdown import from external files into the local NeoPad workspace.
 - Manual clipboard capture to `clipboard.md`.
-- Standalone `neopad-mcp` read and write tools.
-- MCP stdio child-process integration tests.
+- Standalone Streamable HTTP `neopad-mcp` read and write tools.
+- Dedicated MCP settings page with service start/stop, status, token display,
+  token regeneration, and copyable client configuration.
+- MCP HTTP child-process integration tests.
 - Windows Tauri WebDriver smoke tests for the critical note workflow.
-- Windows icon, tray/taskbar icon, MSI branding, desktop shortcut icon, and
-  hidden release console window.
+- Windows icon, tray/taskbar icon, MSI branding, desktop shortcut icon, bundled
+  MCP sidecar, and hidden release console windows.
 - Synchronized application versions with a CI consistency check and
   release changelog.
 
@@ -59,9 +63,7 @@ This file tracks the implemented MVP relative to the original task plan.
    install/uninstall behavior.
 3. Review the custom WiX template for portability before moving the repository
    path or building on CI.
-4. Decide whether `neopad-mcp` should be bundled as a sidecar or distributed as
-   a separate binary.
-5. Add a signed release workflow before publishing installers.
+4. Add a signed release workflow before publishing installers.
 
 ## Non-Goals for the MVP
 
