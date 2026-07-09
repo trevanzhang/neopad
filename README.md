@@ -35,6 +35,11 @@ The repository currently contains a working Windows-focused MVP:
   priority over conflicting Vim mappings.
 - Persistent light and dark themes available from the Format menu and status
   bar.
+- Markdown preview appearance settings with well-known theme presets, including
+  One Dark, Nord, Solarized, Monokai, GitHub Light, and Dracula, plus preview
+  typography controls.
+- A compact editor font dialog with preset font choices, font-size control, and
+  live preview.
 - Lightweight Markdown reminders using
   `- [ ] @remind YYYY-MM-DD HH:mm content`, with a compact `Ctrl+E` editor,
   sortable and filterable reminder list, source-line navigation, and native
@@ -146,7 +151,7 @@ name, and then builds the MSI.
 The MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.4.2_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.4.4_x64_en-US.msi
 ```
 
 ## MCP Server
@@ -191,8 +196,9 @@ F1              Shortcut help
 F2              Rename current page
 F4              Cycle edit, split, and preview modes
 F5              Open or close the reminder list
+F7              Cycle preview theme
 F8              Open settings
-F9              Toggle light or dark theme
+F9              Toggle day/night mode
 F10             Toggle tab bar orientation
 F11             Toggle immersive fullscreen
 Alt+Enter       Maximize or restore the main window
@@ -212,6 +218,7 @@ Ctrl+Shift+V    Append current clipboard text to clipboard.md
 
 ## More Documentation
 
+- [中文说明](README_CN.md)
 - [Architecture](docs/architecture.md)
 - [Development](docs/development.md)
 - [MCP](docs/mcp.md)
