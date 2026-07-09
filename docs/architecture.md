@@ -99,8 +99,15 @@ the configured workspace.
 - Compact reminder creation and list surfaces. Reminder lines use
   `- [ ] @提醒 YYYY-MM-DD HH:mm content`; checking the Markdown task completes
   the reminder.
-- `F5` toggles the reminder list. Single and bulk overdue completion operations
-  atomically change `[ ]` to `[x]` while preserving the reminder lines.
+- Local keyboard shortcuts:
+  - `F1`: open shortcut help.
+  - `F2`: rename the current page.
+  - `F4`: cycle edit, hybrid, and preview editor modes.
+  - `F5`: toggle the reminder list.
+  - `F9`: toggle the light or dark theme.
+  - `F11`: toggle immersive fullscreen.
+- Single and bulk overdue completion operations atomically change `[ ]` to
+  `[x]` while preserving the reminder lines.
 - Native reminder notifications while the desktop process remains running.
 - Tray menu: show, hide, new note, save clipboard, settings, quit.
 - Global shortcuts:

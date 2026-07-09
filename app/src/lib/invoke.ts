@@ -59,8 +59,8 @@ export function createNote(title?: string): Promise<NoteContent> {
   return invoke('create_note_command', { title })
 }
 
-export function writeNote(noteId: string, content: string): Promise<NoteContent> {
-  return invoke('write_note_command', { noteId, content })
+export function writeNote(noteId: string, content: string, expectedUpdatedAt: number): Promise<NoteContent> {
+  return invoke('write_note_command', { noteId, content, expectedUpdatedAt })
 }
 
 export function renameNote(noteId: string, title: string): Promise<NoteTab> {

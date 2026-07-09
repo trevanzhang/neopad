@@ -308,7 +308,10 @@ function handleMenuKeydown(event: KeyboardEvent) {
           <span>{{ messages.newPage }}</span>
           <span class="menu-shortcut">{{ messages.ctrlN }}</span>
         </button>
-        <button type="button" :disabled="!pageActionsEnabled" @click="$emit('renamePage')">{{ messages.renamePage }}</button>
+        <button type="button" class="menu-command" :disabled="!pageActionsEnabled" @click="$emit('renamePage')">
+          <span>{{ messages.renamePage }}</span>
+          <span class="menu-shortcut">{{ messages.f2 }}</span>
+        </button>
         <button type="button" class="menu-command" :disabled="!pageActionsEnabled" @click="$emit('deletePage')">
           <span>{{ messages.deletePage }}</span>
           <span class="menu-shortcut">{{ messages.ctrlW }}</span>
@@ -412,7 +415,10 @@ function handleMenuKeydown(event: KeyboardEvent) {
       <button type="button" class="menu-title">{{ messages.help }}</button>
       <div class="menu-popover">
         <button type="button" @click="$emit('helpTopic', 'software')">{{ messages.softwareHelp }}</button>
-        <button type="button" @click="$emit('helpTopic', 'shortcuts')">{{ messages.shortcutList }}</button>
+        <button type="button" class="menu-command" @click="$emit('helpTopic', 'shortcuts')">
+          <span>{{ messages.shortcutList }}</span>
+          <span class="menu-shortcut">{{ messages.f1 }}</span>
+        </button>
         <button type="button" @click="$emit('helpTopic', 'expression')">{{ messages.expressionGuide }}</button>
         <button type="button" @click="$emit('helpTopic', 'markdown')">{{ messages.markdownGuide }}</button>
         <div class="menu-separator" role="separator" />

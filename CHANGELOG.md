@@ -6,6 +6,23 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.4.1 - 2026-07-08
+
+### Changed
+
+- Active tabs now use a yellow bottom highlight for stronger visual contrast.
+- Editor mode cycling now defaults to `F4` instead of `F7`.
+
+### Added
+
+- `F1` opens shortcut help.
+- `F2` renames the current page from the keyboard.
+
+### Fixed
+
+- Rename and other input dialogs now confirm reliably with Enter.
+- Shortcut help opens from the editor when `F1` is pressed.
+
 ## 0.3.6 - 2026-07-08
 
 ### Added

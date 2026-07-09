@@ -183,13 +183,19 @@ let reminderPollTimer: number | null = null
 let unlistenNewNoteRequested: UnlistenFn | null = null
 let unlistenSaveClipboardRequested: UnlistenFn | null = null
 let unlistenOpenSettings: UnlistenFn | null = null
+let unlistenCloseRequested: UnlistenFn | null = null
+let unlistenHideRequested: UnlistenFn | null = null
+let unlistenQuitRequested: UnlistenFn | null = null
 let suppressedLoadedContent: string | null = null
 let uiConfigLoaded = false
 let notificationPermissionDenied = false
+let noteLoadGeneration = 0
+let loadingNoteGeneration: number | null = null
 const deletingTabIds = new Set<string>()
 const autosave = new AutosaveCoordinator({
   delayMs: 500,
-  save: ({ noteId, content: nextContent }: { noteId: string; content: string }) => writeNote(noteId, nextContent),
+  save: ({ noteId, content: nextContent, expectedUpdatedAt }: { noteId: string; content: string; expectedUpdatedAt: number }) =>
+    writeNote(noteId, nextContent, expectedUpdatedAt),
   onSaved: ({ noteId }, saved) => {
     const tab = tabs.value.find((item) => item.id === noteId)
     if (tab) tab.updatedAt = saved.updatedAt
@@ -215,6 +221,7 @@ onMounted(async () => {
   window.addEventListener('keydown', handleKeydown, { capture: true })
   window.addEventListener('beforeunload', forceSaveOnExit)
   document.addEventListener('visibilitychange', forceSaveOnHide)
+  await registerNativeEventListeners()
   appReady.value = true
   await nextTick()
   await completeStartup().catch(() => {
@@ -224,14 +231,20 @@ onMounted(async () => {
     nativeSettingsTimer = null
     void syncNativeSettings()
   }, 5000)
-  void registerNativeEventListeners()
   await checkDueReminders()
   reminderPollTimer = window.setInterval(() => void checkDueReminders(), 30_000)
 })
 
 async function registerNativeEventListeners() {
   try {
-    const [newNote, saveClipboardRequest, openSettingsRequest] = await Promise.all([
+    const [
+      newNote,
+      saveClipboardRequest,
+      openSettingsRequest,
+      closeRequest,
+      hideRequest,
+      quitRequest,
+    ] = await Promise.all([
       listen('neopad://new-note-requested', () => {
         void createLocalTab()
       }),
@@ -241,10 +254,22 @@ async function registerNativeEventListeners() {
       listen('neopad://open-settings', () => {
         openSettings()
       }),
+      listen('neopad://close-requested', () => {
+        void handleCloseRequested()
+      }),
+      listen('neopad://hide-requested', () => {
+        void handleHideRequested()
+      }),
+      listen('neopad://quit-requested', () => {
+        void handleQuitRequested()
+      }),
     ])
     unlistenNewNoteRequested = newNote
     unlistenSaveClipboardRequested = saveClipboardRequest
     unlistenOpenSettings = openSettingsRequest
+    unlistenCloseRequested = closeRequest
+    unlistenHideRequested = hideRequest
+    unlistenQuitRequested = quitRequest
   } catch {
     saveState.value = 'Failed'
   }
@@ -267,6 +292,9 @@ onBeforeUnmount(() => {
   void unlistenNewNoteRequested?.()
   void unlistenSaveClipboardRequested?.()
   void unlistenOpenSettings?.()
+  void unlistenCloseRequested?.()
+  void unlistenHideRequested?.()
+  void unlistenQuitRequested?.()
   window.removeEventListener('keydown', handleKeydown, { capture: true })
   window.removeEventListener('beforeunload', forceSaveOnExit)
   document.removeEventListener('visibilitychange', forceSaveOnHide)
@@ -283,7 +311,7 @@ watch(content, (nextContent) => {
 
   const tab = activeTab.value
   if (tab) {
-    autosave.markChanged({ noteId: tab.id, content: content.value })
+    autosave.markChanged({ noteId: tab.id, content: content.value, expectedUpdatedAt: tab.updatedAt })
   }
 })
 
@@ -517,8 +545,8 @@ function initialTitleDoubleClickAction(): TitleDoubleClickAction {
 }
 
 function initialEditorModeShortcut(): EditorModeShortcut {
-  const value = initialStringSetting('neopad.editorModeShortcut', 'F7')
-  return value === 'Ctrl+Shift+M' || value === 'disabled' ? value : 'F7'
+  const value = initialStringSetting('neopad.editorModeShortcut', 'F4')
+  return value === 'Ctrl+Shift+M' || value === 'disabled' ? value : 'F4'
 }
 
 function initialDateTimeSeparatorTemplate() {
@@ -531,9 +559,11 @@ async function selectTab(tabId: string) {
     return
   }
 
+  const generation = nextNoteLoadGeneration()
   await forceSave()
+  if (!isCurrentNoteLoad(generation)) return
   activeTabId.value = tabId
-  await loadActiveNote()
+  await loadActiveNote(generation)
 }
 
 function cycleTab(offset: -1 | 1) {
@@ -658,10 +688,13 @@ async function deleteTab(tab: NoteTab) {
 }
 
 async function createLocalTab() {
+  const generation = nextNoteLoadGeneration()
   if (isTauriRuntime()) {
     await forceSave()
+    if (!isCurrentNoteLoad(generation)) return
     try {
       const note = await createNote()
+      if (!isCurrentNoteLoad(generation)) return
       upsertTab({
         id: note.id,
         title: note.title,
@@ -705,9 +738,12 @@ async function saveCurrentClipboard() {
     return
   }
 
+  const generation = nextNoteLoadGeneration()
   try {
     await forceSave()
+    if (!isCurrentNoteLoad(generation)) return
     const note = await saveClipboard()
+    if (!isCurrentNoteLoad(generation)) return
     upsertTab({
       id: note.id,
       title: note.title,
@@ -739,14 +775,19 @@ async function loadFileFromInput(event: Event) {
     return
   }
 
+  const generation = nextNoteLoadGeneration()
   try {
     await forceSave()
+    if (!isCurrentNoteLoad(generation)) return
     const fileContent = await file.text()
+    if (!isCurrentNoteLoad(generation)) return
     const title = titleFromFileName(file.name)
 
     if (isTauriRuntime()) {
       const created = await createNote(title)
-      const saved = await writeNote(created.id, fileContent)
+      if (!isCurrentNoteLoad(generation)) return
+      const saved = await writeNote(created.id, fileContent, created.updatedAt)
+      if (!isCurrentNoteLoad(generation)) return
       upsertTab({
         id: saved.id,
         title: saved.title,
@@ -828,12 +869,33 @@ async function hideMainWindow() {
     return
   }
 
-  await forceSave()
+  if (!(await saveBeforeWindowAction())) return
   await hideWindow()
 }
 
 async function exitApp() {
-  await forceSave()
+  if (!(await saveBeforeWindowAction())) return
+  if (isTauriRuntime()) {
+    await quitApp()
+  }
+}
+
+async function handleCloseRequested() {
+  if (closeToMinimize.value) {
+    await handleHideRequested()
+  } else {
+    await handleQuitRequested()
+  }
+}
+
+async function handleHideRequested() {
+  if (!isTauriRuntime()) return
+  if (!(await saveBeforeWindowAction())) return
+  await hideWindow()
+}
+
+async function handleQuitRequested() {
+  if (!(await saveBeforeWindowAction())) return
   if (isTauriRuntime()) {
     await quitApp()
   }
@@ -1026,9 +1088,11 @@ function closeSearch() {
 }
 
 async function selectSearchResult(result: SearchResult) {
+  const generation = nextNoteLoadGeneration()
   await forceSave()
+  if (!isCurrentNoteLoad(generation)) return
   activeTabId.value = result.noteId
-  await loadActiveNote()
+  await loadActiveNote(generation)
   closeSearch()
 }
 
@@ -1091,9 +1155,11 @@ async function refreshReminders() {
 }
 
 async function selectReminder(reminder: Reminder) {
+  const generation = nextNoteLoadGeneration()
   await forceSave()
+  if (!isCurrentNoteLoad(generation)) return
   activeTabId.value = reminder.noteId
-  await loadActiveNote()
+  await loadActiveNote(generation)
   closeReminderList()
   if (previewMode.value === 'preview') previewMode.value = 'edit'
   await nextTick()
@@ -1337,7 +1403,7 @@ async function loadNativeUiConfig() {
     customInsertTexts.value = ui.customInsertTexts
     editorModeShortcut.value = ui.editorModeShortcut === 'Ctrl+Shift+M' || ui.editorModeShortcut === 'disabled'
       ? ui.editorModeShortcut
-      : 'F7'
+      : 'F4'
     uiConfigLoaded = true
   } catch {
     saveState.value = 'Failed'
@@ -1484,21 +1550,46 @@ async function syncClipboardShortcut() {
   }
 }
 
-async function loadActiveNote() {
+function nextNoteLoadGeneration() {
+  noteLoadGeneration += 1
+  return noteLoadGeneration
+}
+
+function isCurrentNoteLoad(generation: number) {
+  return generation === noteLoadGeneration
+}
+
+async function loadActiveNote(generation = nextNoteLoadGeneration()) {
   const tab = activeTab.value
   if (!tab) {
-    return
+    return false
   }
+  const tabId = tab.id
 
   isLoadingNote.value = true
+  loadingNoteGeneration = generation
   try {
-    const note = await readNote(tab.id)
+    const note = await readNote(tabId)
+    if (!isCurrentNoteLoad(generation) || activeTabId.value !== tabId) {
+      return false
+    }
+    const loadedTab = tabs.value.find((item) => item.id === note.id)
+    if (loadedTab) {
+      loadedTab.updatedAt = note.updatedAt
+    }
     setContentFromLoad(note.content)
     saveState.value = 'Saved'
+    return true
   } catch {
-    saveState.value = 'Failed'
+    if (isCurrentNoteLoad(generation)) {
+      saveState.value = 'Failed'
+    }
+    return false
   } finally {
-    isLoadingNote.value = false
+    if (loadingNoteGeneration === generation) {
+      isLoadingNote.value = false
+      loadingNoteGeneration = null
+    }
   }
 }
 
@@ -1516,6 +1607,14 @@ async function forceSave() {
     return true
   }
   return autosave.flush()
+}
+
+async function saveBeforeWindowAction() {
+  const saved = await forceSave()
+  if (!saved) {
+    saveState.value = 'Failed'
+  }
+  return saved
 }
 
 function forceSaveOnExit() {
@@ -1546,10 +1645,20 @@ function cycleEditorMode() {
 
 function matchesEditorModeShortcut(event: KeyboardEvent) {
   if (editorModeShortcut.value === 'disabled') return false
-  if (editorModeShortcut.value === 'F7') {
-    return event.key === 'F7' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
+  if (editorModeShortcut.value === 'F4') {
+    return event.key === 'F4' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
   }
   return event.key.toLowerCase() === 'm' && event.ctrlKey && event.shiftKey && !event.altKey && !event.metaKey
+}
+
+function isEditableElement(element: EventTarget | null) {
+  if (!(element instanceof HTMLElement)) return false
+  return (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement ||
+    element.isContentEditable
+  )
 }
 
 function handleKeydown(event: KeyboardEvent) {
@@ -1563,12 +1672,27 @@ function handleKeydown(event: KeyboardEvent) {
       !event.altKey &&
       !event.shiftKey &&
       !event.metaKey &&
-      (event.key === 'F5' || event.key === 'F7' || event.key === 'F9' || event.key === 'F11')
+      (event.key === 'F4' || event.key === 'F5' || event.key === 'F9' || event.key === 'F11')
     const isEditorModeShortcut = matchesEditorModeShortcut(event)
     if (isCtrlShortcut || isFunctionShortcut || isEditorModeShortcut) {
       event.preventDefault()
       event.stopPropagation()
     }
+    return
+  }
+
+  if (
+    event.key === 'F1' &&
+    !event.ctrlKey &&
+    !event.altKey &&
+    !event.shiftKey &&
+    !event.metaKey &&
+    (!isEditableElement(event.target) || Boolean(editorPane.value?.isEditorFocused())) &&
+    !document.querySelector('.menu-root:focus-within, .tab-context-menu')
+  ) {
+    event.preventDefault()
+    event.stopPropagation()
+    openHelpTopic('shortcuts')
     return
   }
 
@@ -1667,6 +1791,24 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
     event.stopPropagation()
     cycleEditorMode()
+    return
+  }
+
+  if (
+    event.key === 'F2' &&
+    !event.ctrlKey &&
+    !event.altKey &&
+    !event.shiftKey &&
+    !event.metaKey &&
+    !reminderListOpen.value &&
+    !settingsOpen.value &&
+    !helpTopic.value &&
+    !searchOpen.value &&
+    !document.querySelector('.menu-root:focus-within, .tab-context-menu')
+  ) {
+    event.preventDefault()
+    event.stopPropagation()
+    void renameActivePage()
     return
   }
 
@@ -1862,6 +2004,7 @@ function upsertTab(tab: NoteTab) {
 }
 
 function createLocalTabFromContent(title: string, nextContent: string) {
+  nextNoteLoadGeneration()
   const createdAt = Date.now()
   const tab: NoteTab = {
     id: `draft-${createdAt}`,
@@ -2197,8 +2340,10 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       lines: [
         `${formatShortcutLabel(shortcutBaseKey.value, shortcutModifiers.value)} - ` + (zh ? '\u663e\u793a/\u9690\u85cf\u7a97\u53e3' : 'Show/hide window'),
         `${formatShortcutLabel(clipboardShortcutBaseKey.value, clipboardShortcutModifiers.value)} - ` + (zh ? '\u4fdd\u5b58\u526a\u8d34\u677f' : 'Save clipboard'),
+        'F1 - ' + (zh ? '\u6253\u5f00\u5feb\u6377\u952e\u5e2e\u52a9' : 'Open shortcut help'),
         'Alt+Enter - ' + (zh ? '\u6700\u5927\u5316/\u8fd8\u539f\u7a97\u53e3' : 'Maximize/restore window'),
         'Ctrl+N - ' + (zh ? '\u65b0\u5efa\u6807\u7b7e\u9875' : 'New tab'),
+        'F2 - ' + (zh ? '\u91cd\u547d\u540d\u6807\u7b7e\u9875' : 'Rename tab'),
         'Ctrl+W - ' + (zh ? '\u5173\u95ed\u6807\u7b7e\u9875' : 'Close tab'),
         'Ctrl+O - ' + (zh ? '\u4ece\u6587\u4ef6\u8f7d\u5165' : 'Load from file'),
         'Ctrl+Tab / Ctrl+Shift+Tab - ' + (zh ? '\u5207\u6362\u4e0b\u4e00\u4e2a/\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875' : 'Switch next/previous tab'),

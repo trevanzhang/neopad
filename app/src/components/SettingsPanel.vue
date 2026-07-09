@@ -268,7 +268,7 @@ function deleteCustomText(current: string[]) {
           <label class="settings-form-row">
             <span>{{ messages.shortcut }}:</span>
             <select :value="editorModeShortcut" @change="$emit('update:editorModeShortcut', ($event.target as HTMLSelectElement).value as EditorModeShortcut)">
-              <option value="F7">F7</option>
+              <option value="F4">F4</option>
               <option value="Ctrl+Shift+M">Ctrl+Shift+M</option>
               <option value="disabled">{{ messages.disabled }}</option>
             </select>

@@ -2,8 +2,8 @@ use neopad_core::{
     append_to_clipboard_note, claim_due_reminders, complete_due_reminders, complete_reminder,
     create_note, delete_note_to_trash, export_note_file, list_notes, list_reminders, load_config,
     lock_workspace_for_write, read_note, rename_note, reopen_reminder, save_config, search_notes,
-    write_note_atomic, NoteContent, NoteTab, PreviewMode, Reminder, SearchResult, Theme, UiConfig,
-    Workspace,
+    write_note_atomic_checked, NoteContent, NoteTab, PreviewMode, Reminder, SearchResult, Theme,
+    UiConfig, Workspace,
 };
 use serde::Serialize;
 use std::fs::File;
@@ -132,9 +132,11 @@ pub fn write_note_command(
     state: State<'_, AppState>,
     note_id: String,
     content: String,
+    expected_updated_at: i64,
 ) -> Result<NoteContent, String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
-    write_note_atomic(&state.workspace, &note_id, &content).map_err(display_error)
+    write_note_atomic_checked(&state.workspace, &note_id, &content, expected_updated_at)
+        .map_err(display_error)
 }
 
 #[tauri::command]

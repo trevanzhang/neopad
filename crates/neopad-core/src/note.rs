@@ -101,6 +101,11 @@ pub fn write_note_atomic(
     Ok(note)
 }
 
+/// Writes a note only if its current `updated_at` matches `expected_updated_at`.
+///
+/// Callers must hold `lock_workspace_for_write` for the full check-and-write
+/// operation; this function deliberately does not acquire the process lock
+/// itself so callers can compose multiple workspace writes under one lock.
 pub fn write_note_atomic_checked(
     workspace: &Workspace,
     note_id: &str,

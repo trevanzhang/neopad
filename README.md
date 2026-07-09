@@ -26,8 +26,8 @@ The repository currently contains a working Windows-focused MVP:
   maximize/restore.
 - Clipboard captures use readable local timestamps in compact separator lines.
 - Edit, hybrid, and preview editor modes selectable from the View menu, status
-  bar, configurable shortcut, and persisted default setting, including while
-  using immersive fullscreen.
+  bar, `F4` shortcut, and persisted default setting, including while using
+  immersive fullscreen.
 - Optional Vim key bindings for the CodeMirror editor, with persisted settings
   in the Advanced tab, configurable Insert exit sequence, and a visible Normal,
   Insert, or Visual mode indicator. NeoPad Ctrl shortcuts can optionally take
@@ -38,7 +38,8 @@ The repository currently contains a working Windows-focused MVP:
   `- [ ] @提醒 YYYY-MM-DD HH:mm content`, with a compact `Ctrl+E` editor,
   sortable and filterable reminder list, source-line navigation, and native
   notifications while NeoPad is running in the tray.
-- `F5` opens or closes the reminder list. "Mark Completed", "Mark Unfinished",
+- `F1` opens shortcut help, `F2` renames the current page, and `F5` opens or
+  closes the reminder list. "Mark Completed", "Mark Unfinished",
   and "Clear Due" update reminder checkboxes directly without deleting note
   content.
 - Tab context menu with rename, trash, and persistent color choices.
@@ -136,7 +137,7 @@ pnpm tauri:build
 The MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.3.6_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.4.1_x64_en-US.msi
 ```
 
 ## MCP Server
