@@ -43,8 +43,20 @@ pub struct UiConfig {
     pub word_wrap: bool,
     #[serde(default = "default_editor_font_family")]
     pub editor_font_family: String,
+    #[serde(default = "default_editor_font_size")]
+    pub editor_font_size: u8,
     #[serde(default = "default_editor_background_color")]
     pub editor_background_color: String,
+    #[serde(default = "default_preview_theme")]
+    pub preview_theme: String,
+    #[serde(default = "default_preview_font_family")]
+    pub preview_font_family: String,
+    #[serde(default = "default_preview_font_size")]
+    pub preview_font_size: u8,
+    #[serde(default = "default_preview_line_height")]
+    pub preview_line_height: String,
+    #[serde(default = "default_preview_content_width")]
+    pub preview_content_width: String,
     #[serde(default = "default_window_opacity")]
     pub window_opacity: f64,
     #[serde(default)]
@@ -95,8 +107,32 @@ fn default_editor_font_family() -> String {
     r#""Segoe UI", Arial, sans-serif"#.to_owned()
 }
 
+fn default_editor_font_size() -> u8 {
+    14
+}
+
 fn default_editor_background_color() -> String {
     "#ffffff".to_owned()
+}
+
+fn default_preview_theme() -> String {
+    "light".to_owned()
+}
+
+fn default_preview_font_family() -> String {
+    "editor".to_owned()
+}
+
+fn default_preview_font_size() -> u8 {
+    14
+}
+
+fn default_preview_line_height() -> String {
+    "standard".to_owned()
+}
+
+fn default_preview_content_width() -> String {
+    "standard".to_owned()
 }
 
 fn default_window_opacity() -> f64 {
@@ -154,7 +190,13 @@ impl Default for UiConfig {
             tab_bar_orientation: default_tab_bar_orientation(),
             word_wrap: true,
             editor_font_family: default_editor_font_family(),
+            editor_font_size: default_editor_font_size(),
             editor_background_color: default_editor_background_color(),
+            preview_theme: default_preview_theme(),
+            preview_font_family: default_preview_font_family(),
+            preview_font_size: default_preview_font_size(),
+            preview_line_height: default_preview_line_height(),
+            preview_content_width: default_preview_content_width(),
             window_opacity: default_window_opacity(),
             run_at_startup: false,
             start_hidden: false,

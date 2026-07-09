@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { AppLanguage, AppMessages } from '../lib/i18n'
-import type { EditorMode } from '../types/editor'
+import type { EditorMode, PreviewContentWidth, PreviewFontFamily, PreviewLineHeight, PreviewTheme } from '../types/editor'
 
-type SettingsTab = 'general' | 'shortcuts' | 'insertText' | 'advanced' | 'mcp'
+type SettingsTab = 'general' | 'preview' | 'shortcuts' | 'insertText' | 'advanced' | 'mcp'
 type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
 type McpStatus = {
   enabled: boolean
@@ -37,6 +37,11 @@ defineProps<{
   insertDateTimeTemplate: string
   insertDateTimeSeparatorTemplate: string
   customInsertTexts: string[]
+  previewTheme: PreviewTheme
+  previewFontFamily: PreviewFontFamily
+  previewFontSize: number
+  previewLineHeight: PreviewLineHeight
+  previewContentWidth: PreviewContentWidth
   mcpStatus: McpStatus | null
   mcpError: string | null
   messages: AppMessages['settings']
@@ -66,6 +71,11 @@ const emit = defineEmits<{
   'update:insertDateTimeTemplate': [value: string]
   'update:insertDateTimeSeparatorTemplate': [value: string]
   'update:customInsertTexts': [value: string[]]
+  'update:previewTheme': [value: PreviewTheme]
+  'update:previewFontFamily': [value: PreviewFontFamily]
+  'update:previewFontSize': [value: number]
+  'update:previewLineHeight': [value: PreviewLineHeight]
+  'update:previewContentWidth': [value: PreviewContentWidth]
   editCustomText: [index: number]
   'update-mcp-enabled': [enabled: boolean]
   'copy-mcp-config': []
@@ -140,6 +150,9 @@ function deleteCustomText(current: string[]) {
       </button>
       <button type="button" :class="{ active: activeTab === 'shortcuts' }" @click="activeTab = 'shortcuts'">
         {{ messages.shortcutsTab }}
+      </button>
+      <button type="button" :class="{ active: activeTab === 'preview' }" @click="activeTab = 'preview'">
+        {{ messages.previewTab }}
       </button>
       <button type="button" :class="{ active: activeTab === 'insertText' }" @click="activeTab = 'insertText'">
         {{ messages.insertTextTab }}
@@ -280,6 +293,13 @@ function deleteCustomText(current: string[]) {
           </div>
         </fieldset>
         <fieldset class="settings-fieldset settings-shortcut-fieldset">
+          <legend>{{ messages.togglePreviewThemeShortcut }}</legend>
+          <div class="settings-form-row">
+            <span>{{ messages.shortcut }}:</span>
+            <kbd>F7</kbd>
+          </div>
+        </fieldset>
+        <fieldset class="settings-fieldset settings-shortcut-fieldset">
           <legend>{{ messages.toggleThemeShortcut }}</legend>
           <div class="settings-form-row">
             <span>{{ messages.shortcut }}:</span>
@@ -349,6 +369,61 @@ function deleteCustomText(current: string[]) {
               </label>
             </div>
           </div>
+        </fieldset>
+      </template>
+
+      <template v-else-if="activeTab === 'preview'">
+        <fieldset class="settings-fieldset">
+          <legend>{{ messages.previewAppearance }}</legend>
+          <label class="settings-row">
+            <span>{{ messages.previewTheme }}</span>
+            <select :value="previewTheme" @change="$emit('update:previewTheme', ($event.target as HTMLSelectElement).value as PreviewTheme)">
+              <option value="light">{{ messages.previewThemeLight }}</option>
+              <option value="oneDark">{{ messages.previewThemeOneDark }}</option>
+              <option value="nord">{{ messages.previewThemeNord }}</option>
+              <option value="solarizedLight">{{ messages.previewThemeSolarizedLight }}</option>
+              <option value="solarizedDark">{{ messages.previewThemeSolarizedDark }}</option>
+              <option value="monokai">{{ messages.previewThemeMonokai }}</option>
+              <option value="githubLight">{{ messages.previewThemeGitHubLight }}</option>
+              <option value="dracula">{{ messages.previewThemeDracula }}</option>
+            </select>
+          </label>
+          <label class="settings-row">
+            <span>{{ messages.previewFont }}</span>
+            <select :value="previewFontFamily" @change="$emit('update:previewFontFamily', ($event.target as HTMLSelectElement).value as PreviewFontFamily)">
+              <option value="editor">{{ messages.previewFontEditor }}</option>
+              <option value="system">{{ messages.previewFontSystem }}</option>
+              <option value="serif">{{ messages.previewFontSerif }}</option>
+              <option value="mono">{{ messages.previewFontMono }}</option>
+            </select>
+          </label>
+          <div class="settings-slider-row">
+            <input
+              type="range"
+              min="12"
+              max="22"
+              :aria-label="messages.previewFontSize"
+              :value="previewFontSize"
+              @input="$emit('update:previewFontSize', Number(($event.target as HTMLInputElement).value))"
+            />
+            <strong>{{ previewFontSize }}px</strong>
+          </div>
+          <label class="settings-row">
+            <span>{{ messages.previewLineHeight }}</span>
+            <select :value="previewLineHeight" @change="$emit('update:previewLineHeight', ($event.target as HTMLSelectElement).value as PreviewLineHeight)">
+              <option value="compact">{{ messages.previewLineCompact }}</option>
+              <option value="standard">{{ messages.previewLineStandard }}</option>
+              <option value="relaxed">{{ messages.previewLineRelaxed }}</option>
+            </select>
+          </label>
+          <label class="settings-row">
+            <span>{{ messages.previewContentWidth }}</span>
+            <select :value="previewContentWidth" @change="$emit('update:previewContentWidth', ($event.target as HTMLSelectElement).value as PreviewContentWidth)">
+              <option value="compact">{{ messages.previewWidthCompact }}</option>
+              <option value="standard">{{ messages.previewWidthStandard }}</option>
+              <option value="wide">{{ messages.previewWidthWide }}</option>
+            </select>
+          </label>
         </fieldset>
       </template>
 

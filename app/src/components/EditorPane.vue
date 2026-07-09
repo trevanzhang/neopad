@@ -31,6 +31,7 @@ const props = defineProps<{
   title: string
   wordWrap: boolean
   fontFamily: string
+  fontSize: number
   backgroundColor: string
   vimMode: boolean
   vimInsertExitKey: string
@@ -506,6 +507,7 @@ function editorAppearance() {
     },
     '.cm-scroller': {
       fontFamily: props.fontFamily,
+      fontSize: `${props.fontSize}px`,
     },
   })
 }
@@ -617,7 +619,7 @@ watch(
 )
 
 watch(
-  () => [props.fontFamily, props.backgroundColor],
+  () => [props.fontFamily, props.fontSize, props.backgroundColor],
   () => {
     editorView?.dispatch({
       effects: appearance.reconfigure(editorAppearance()),

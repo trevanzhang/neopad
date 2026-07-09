@@ -1,6 +1,13 @@
 import { invoke } from '@tauri-apps/api/core'
 import type { NoteContent, NoteTab, Reminder, SearchResult, WorkspaceInfo } from '../types/note'
-import type { EditorMode, EditorModeShortcut } from '../types/editor'
+import type {
+  EditorMode,
+  EditorModeShortcut,
+  PreviewContentWidth,
+  PreviewFontFamily,
+  PreviewLineHeight,
+  PreviewTheme,
+} from '../types/editor'
 
 export interface UiConfig {
   language: string
@@ -10,7 +17,13 @@ export interface UiConfig {
   tabBarOrientation: string
   wordWrap: boolean
   editorFontFamily: string
+  editorFontSize: number
   editorBackgroundColor: string
+  previewTheme: PreviewTheme
+  previewFontFamily: PreviewFontFamily
+  previewFontSize: number
+  previewLineHeight: PreviewLineHeight
+  previewContentWidth: PreviewContentWidth
   windowOpacity: number
   runAtStartup: boolean
   startHidden: boolean

@@ -59,6 +59,7 @@ export type AppMessages = {
     vertical: string
     font: string
     backgroundColor: string
+    togglePreviewTheme: string
     toggleTheme: string
     wordWrap: string
     ctrlW: string
@@ -85,6 +86,8 @@ export type AppMessages = {
     ctrlE: string
     keepOnTop: string
     f6: string
+    f7: string
+    f9: string
     windowOpacity: string
     textProcessing: string
     uppercase: string
@@ -125,6 +128,7 @@ export type AppMessages = {
     title: string
     close: string
     general: string
+    previewTab: string
     shortcutsTab: string
     insertTextTab: string
     advancedTab: string
@@ -170,7 +174,35 @@ export type AppMessages = {
     hideWindow: string
     editor: string
     previewMode: string
+    previewAppearance: string
+    editorFont: string
+    editorFontSize: string
+    fontSample: string
+    previewTheme: string
+    previewThemeLight: string
+    previewThemeOneDark: string
+    previewThemeNord: string
+    previewThemeSolarizedLight: string
+    previewThemeSolarizedDark: string
+    previewThemeMonokai: string
+    previewThemeGitHubLight: string
+    previewThemeDracula: string
+    previewFont: string
+    previewFontEditor: string
+    previewFontSystem: string
+    previewFontSerif: string
+    previewFontMono: string
+    previewFontSize: string
+    previewLineHeight: string
+    previewLineCompact: string
+    previewLineStandard: string
+    previewLineRelaxed: string
+    previewContentWidth: string
+    previewWidthCompact: string
+    previewWidthStandard: string
+    previewWidthWide: string
     cycleEditorMode: string
+    togglePreviewThemeShortcut: string
     toggleThemeShortcut: string
     immersiveFullscreen: string
     switchTabs: string
@@ -330,7 +362,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       vertical: 'Left(V)',
       font: 'Font(F)...',
       backgroundColor: 'Background Color(B)...',
-      toggleTheme: 'Toggle Theme(T)',
+      togglePreviewTheme: 'Toggle Preview Theme',
+      toggleTheme: 'Toggle Day/Night Mode',
       wordWrap: 'Word Wrap(W)',
       ctrlW: 'Ctrl+W',
       editorMode: 'Editor Mode(F4)',
@@ -356,6 +389,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlE: 'Ctrl+E',
       keepOnTop: 'Keep Window on Top(T)',
       f6: 'F6',
+      f7: 'F7',
+      f9: 'F9',
       windowOpacity: 'Window Opacity(W)...',
       textProcessing: 'Text Processing(P)',
       uppercase: 'To Uppercase(U)',
@@ -396,6 +431,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       title: 'Settings',
       close: 'Close',
       general: 'General',
+      previewTab: 'Preview',
       shortcutsTab: 'Shortcuts',
       insertTextTab: 'Insert Text',
       advancedTab: 'Advanced',
@@ -441,8 +477,36 @@ export const messages: Record<AppLanguage, AppMessages> = {
       hideWindow: 'Hide window',
       editor: 'Editor',
       previewMode: 'Preview mode',
+      previewAppearance: 'Preview Appearance',
+      editorFont: 'Font Family',
+      editorFontSize: 'Size',
+      fontSample: 'NeoPad Markdown 123',
+      previewTheme: 'Preview theme',
+      previewThemeLight: 'Light (Default)',
+      previewThemeOneDark: 'Dark (One Dark)',
+      previewThemeNord: 'Nord',
+      previewThemeSolarizedLight: 'Solarized Light',
+      previewThemeSolarizedDark: 'Solarized Dark',
+      previewThemeMonokai: 'Monokai',
+      previewThemeGitHubLight: 'GitHub Light',
+      previewThemeDracula: 'Dracula',
+      previewFont: 'Preview font',
+      previewFontEditor: 'Follow editor',
+      previewFontSystem: 'System sans',
+      previewFontSerif: 'Serif',
+      previewFontMono: 'Monospace',
+      previewFontSize: 'Font size',
+      previewLineHeight: 'Line height',
+      previewLineCompact: 'Compact',
+      previewLineStandard: 'Standard',
+      previewLineRelaxed: 'Relaxed',
+      previewContentWidth: 'Content width',
+      previewWidthCompact: 'Compact',
+      previewWidthStandard: 'Standard',
+      previewWidthWide: 'Wide',
       cycleEditorMode: 'Cycle editor mode',
-      toggleThemeShortcut: 'Toggle light/dark theme',
+      togglePreviewThemeShortcut: 'Toggle preview theme',
+      toggleThemeShortcut: 'Toggle day/night mode',
       immersiveFullscreen: 'Immersive fullscreen',
       switchTabs: 'Switch tabs',
       shortcut: 'Shortcut',
@@ -599,7 +663,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       vertical: '\u5de6\u4fa7(V)',
       font: '\u5b57\u4f53(F)...',
       backgroundColor: '\u80cc\u666f\u8272(B)...',
-      toggleTheme: '\u5207\u6362\u4e3b\u9898(T)',
+      togglePreviewTheme: '\u5207\u6362\u9884\u89c8\u4e3b\u9898',
+      toggleTheme: '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f',
       wordWrap: '\u81ea\u52a8\u6362\u884c(W)',
       ctrlW: 'Ctrl+W',
       editorMode: '\u7f16\u8f91\u5668\u6a21\u5f0f(F4)',
@@ -625,6 +690,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlE: 'Ctrl+E',
       keepOnTop: '\u7a97\u53e3\u7f6e\u9876(T)',
       f6: 'F6',
+      f7: 'F7',
+      f9: 'F9',
       windowOpacity: '\u7a97\u53e3\u900f\u660e\u5ea6(W)...',
       textProcessing: '\u6587\u672c\u5904\u7406(P)',
       uppercase: '\u8f6c\u5927\u5199(U)',
@@ -665,6 +732,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       title: '\u8bbe\u7f6e',
       close: '\u5173\u95ed',
       general: '\u5e38\u89c4',
+      previewTab: '\u9884\u89c8',
       shortcutsTab: '\u5feb\u6377\u952e',
       insertTextTab: '\u63d2\u5165\u6587\u672c',
       advancedTab: '\u9ad8\u7ea7',
@@ -710,7 +778,35 @@ export const messages: Record<AppLanguage, AppMessages> = {
       hideWindow: '\u9690\u85cf\u7a97\u53e3',
       editor: '\u7f16\u8f91\u5668',
       previewMode: '\u9884\u89c8\u6a21\u5f0f',
+      previewAppearance: '\u9884\u89c8\u5916\u89c2',
+      editorFont: '\u5b57\u4f53',
+      editorFontSize: '\u5b57\u53f7',
+      fontSample: 'NeoPad Markdown 123 \u4f60\u597d',
+      previewTheme: '\u9884\u89c8\u4e3b\u9898',
+      previewThemeLight: 'Light (\u9ed8\u8ba4)',
+      previewThemeOneDark: 'Dark (One Dark)',
+      previewThemeNord: 'Nord',
+      previewThemeSolarizedLight: 'Solarized Light',
+      previewThemeSolarizedDark: 'Solarized Dark',
+      previewThemeMonokai: 'Monokai',
+      previewThemeGitHubLight: 'GitHub Light',
+      previewThemeDracula: 'Dracula',
+      previewFont: '\u9884\u89c8\u5b57\u4f53',
+      previewFontEditor: '\u8ddf\u968f\u7f16\u8f91\u5668',
+      previewFontSystem: '\u7cfb\u7edf\u65e0\u886c\u7ebf',
+      previewFontSerif: '\u886c\u7ebf',
+      previewFontMono: '\u7b49\u5bbd',
+      previewFontSize: '\u5b57\u53f7',
+      previewLineHeight: '\u884c\u9ad8',
+      previewLineCompact: '\u7d27\u51d1',
+      previewLineStandard: '\u6807\u51c6',
+      previewLineRelaxed: '\u5bbd\u677e',
+      previewContentWidth: '\u5185\u5bb9\u5bbd\u5ea6',
+      previewWidthCompact: '\u7d27\u51d1',
+      previewWidthStandard: '\u6807\u51c6',
+      previewWidthWide: '\u5bbd\u5c4f',
       cycleEditorMode: '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f',
+      togglePreviewThemeShortcut: '\u5207\u6362\u9884\u89c8\u4e3b\u9898',
       toggleThemeShortcut: '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f',
       immersiveFullscreen: '\u6c89\u6d78\u5f0f\u5168\u5c4f',
       switchTabs: '\u5207\u6362\u6807\u7b7e\u9875',
