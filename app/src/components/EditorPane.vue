@@ -2,7 +2,19 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { bracketMatching } from '@codemirror/language'
-import { findNext, openSearchPanel } from '@codemirror/search'
+import {
+  closeSearchPanel,
+  findNext,
+  findPrevious,
+  getSearchQuery,
+  openSearchPanel,
+  replaceAll,
+  replaceNext,
+  search,
+  SearchQuery,
+  selectMatches,
+  setSearchQuery,
+} from '@codemirror/search'
 import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
 import { getCM, Vim, vim } from '@replit/codemirror-vim'
 import {
@@ -12,6 +24,7 @@ import {
   highlightActiveLine,
   keymap,
 } from '@codemirror/view'
+import type { Panel } from '@codemirror/view'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -61,6 +74,7 @@ const extensions = [
   bracketMatching(),
   highlightActiveLine(),
   markdown(),
+  search({ top: true, createPanel: createNeopadSearchPanel }),
   keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
   editable.of(EditorView.editable.of(true)),
   wrap.of(props.wordWrap ? EditorView.lineWrapping : []),
@@ -84,6 +98,7 @@ function baseEditorTheme() {
       height: '100%',
       color: 'var(--np-text)',
       fontSize: '14px',
+      position: 'relative',
     },
     '.cm-scroller': {
       lineHeight: '1.45',
@@ -125,53 +140,363 @@ function baseEditorTheme() {
       backgroundColor: 'var(--np-chrome)',
       borderTop: '1px solid var(--np-border)',
     },
-    '.cm-panel.cm-search': {
-      display: 'flex',
-      flexWrap: 'wrap',
+    '.cm-panels.cm-panels-top': {
+      position: 'absolute',
+      top: '8px',
+      right: '10px',
+      left: 'auto',
+      zIndex: '8',
+      border: '0',
+      backgroundColor: 'transparent',
+    },
+    '.cm-panel.cm-search.np-find-panel': {
+      display: 'grid',
+      gap: '5px',
+      boxSizing: 'content-box',
+      width: 'max-content',
+      maxWidth: 'calc(100% - 20px)',
+      padding: '6px 8px',
+      color: 'var(--np-text)',
+      backgroundColor: 'var(--np-chrome)',
+      border: '1px solid var(--np-border)',
+      borderRadius: '6px',
+      boxShadow: 'var(--np-shadow)',
+    },
+    '.np-find-row': {
+      display: 'grid',
+      gridTemplateColumns: '210px auto auto auto auto',
+      columnGap: '8px',
+      rowGap: '5px',
+      alignItems: 'center',
+      minWidth: '0',
+      width: 'max-content',
+    },
+    '.np-replace-row': {
+      display: 'none',
+      gridTemplateColumns: 'minmax(150px, 1fr) auto auto',
       gap: '5px',
       alignItems: 'center',
-      padding: '6px 8px',
+      minWidth: '0',
     },
-    '.cm-panel.cm-search br': {
-      display: 'none',
+    '.np-find-panel.is-replace-open .np-replace-row': {
+      display: 'grid',
     },
-    '.cm-panel.cm-search input': {
-      width: '140px',
-      height: '26px',
+    '.cm-panel.cm-search.np-find-panel input[type="search"], .cm-panel.cm-search.np-find-panel input[type="text"]': {
+      width: '100%',
+      minWidth: '0',
+      height: '28px',
       padding: '0 7px',
       color: 'var(--np-text)',
       backgroundColor: 'var(--np-surface)',
       border: '1px solid var(--np-border)',
-      borderRadius: '2px',
+      borderRadius: '3px',
       fontSize: '13px',
     },
-    '.cm-panel.cm-search button': {
-      height: '26px',
-      padding: '0 8px',
+    '.cm-panel.cm-search.np-find-panel input[name="search"]': {
+      width: '210px',
+      maxWidth: '210px',
+    },
+    '.cm-panel.cm-search.np-find-panel button': {
+      height: '28px',
+      minWidth: '28px',
+      margin: '0',
+      padding: '0 7px',
       color: 'var(--np-text)',
       backgroundColor: 'var(--np-control)',
       backgroundImage: 'none',
       border: '1px solid var(--np-border)',
-      borderRadius: '2px',
+      borderRadius: '3px',
       fontSize: '12px',
       cursor: 'pointer',
     },
-    '.cm-panel.cm-search label': {
-      display: 'inline-flex',
-      gap: '3px',
-      alignItems: 'center',
+    '.cm-panel.cm-search.np-find-panel button:hover, .cm-panel.cm-search.np-find-panel button:focus-visible': {
+      backgroundColor: 'var(--np-control-active)',
+      borderColor: 'var(--np-accent)',
+    },
+    '.np-find-toggle[aria-pressed="true"]': {
+      color: '#ffffff',
+      backgroundColor: 'var(--np-accent) !important',
+      borderColor: 'var(--np-accent) !important',
+    },
+    '.np-find-count': {
+      minWidth: '34px',
+      color: 'var(--np-muted)',
+      textAlign: 'center',
       fontSize: '12px',
+      whiteSpace: 'nowrap',
     },
-    '.cm-panel.cm-search input[type="checkbox"]': {
-      width: '14px',
-      height: '14px',
+    '.np-find-count.is-empty': {
+      display: 'none',
+    },
+    '.np-find-nav, .np-find-options, .np-find-actions': {
+      display: 'flex',
+      flex: '0 0 auto',
+      gap: '4px',
+      minWidth: '0',
+    },
+    '.np-find-options': {
+      paddingLeft: '1px',
+      borderLeft: '1px solid var(--np-border)',
+    },
+    '.np-find-replace-toggle': {
+      minWidth: '48px !important',
+    },
+    '.np-find-action': {
+      minWidth: '48px !important',
+    },
+    '.np-find-close': {
       padding: '0',
+      fontSize: '16px',
     },
-    '.cm-panel.cm-search button[name="close"]': {
-      position: 'static',
-      marginLeft: 'auto',
+    '@media (max-width: 680px)': {
+      '.cm-panels.cm-panels-top': {
+        right: '8px',
+        left: '8px',
+      },
+      '.cm-panel.cm-search.np-find-panel': {
+        width: 'auto',
+      },
+      '.np-find-row': {
+        gridTemplateColumns: 'minmax(150px, 1fr) auto auto',
+      },
+      '.cm-panel.cm-search.np-find-panel input[name="search"]': {
+        width: '100%',
+        maxWidth: 'none',
+      },
+      '.np-find-nav, .np-find-options, .np-find-actions': {
+        gridColumn: 'auto',
+      },
+      '.np-find-options': {
+        gridColumn: '1 / -1',
+        paddingLeft: '0',
+        borderLeft: '0',
+        justifyContent: 'flex-start',
+      },
+      '.np-find-actions': {
+        gridColumn: '1 / -1',
+        justifyContent: 'flex-end',
+      },
+      '.np-replace-row': {
+        gridTemplateColumns: 'minmax(120px, 1fr) auto',
+      },
+      '.np-replace-row .np-find-action:last-child': {
+        gridColumn: '1 / -1',
+      },
     },
   })
+}
+
+function createNeopadSearchPanel(view: EditorView): Panel {
+  const dom = document.createElement('div')
+  dom.className = 'cm-search np-find-panel'
+
+  const findRow = document.createElement('div')
+  findRow.className = 'np-find-row'
+
+  const searchField = document.createElement('input')
+  searchField.type = 'search'
+  searchField.name = 'search'
+  searchField.placeholder = '查找当前笔记'
+  searchField.setAttribute('aria-label', '查找当前笔记')
+  searchField.setAttribute('main-field', 'true')
+
+  const countLabel = document.createElement('span')
+  countLabel.className = 'np-find-count'
+  countLabel.setAttribute('aria-live', 'polite')
+
+  const nav = document.createElement('div')
+  nav.className = 'np-find-nav'
+  const previousButton = findButton('上一个', '↑', () => findPrevious(view))
+  const nextButton = findButton('下一个', '↓', () => findNext(view))
+  const allButton = findButton('选择全部匹配', '全部', () => selectMatches(view))
+  allButton.classList.add('np-find-action')
+  nav.append(previousButton, nextButton, allButton)
+
+  const options = document.createElement('div')
+  options.className = 'np-find-options'
+  const caseButton = toggleButton('区分大小写', 'Aa')
+  const regexpButton = toggleButton('使用正则表达式', '.*')
+  const wordButton = toggleButton('全词匹配', '词')
+  options.append(caseButton.button, regexpButton.button, wordButton.button)
+
+  const replaceToggle = findButton('显示替换', '替换', () => {
+    const nextOpen = !dom.classList.contains('is-replace-open')
+    setReplaceOpen(nextOpen)
+    if (nextOpen) {
+      replaceField.focus()
+      replaceField.select()
+    }
+    return true
+  })
+  replaceToggle.classList.add('np-find-replace-toggle')
+  replaceToggle.setAttribute('aria-pressed', 'false')
+
+  const closeButton = findButton('关闭查找', '×', () => closeSearchPanel(view))
+  closeButton.classList.add('np-find-close')
+
+  const actions = document.createElement('div')
+  actions.className = 'np-find-actions'
+  actions.append(replaceToggle, closeButton)
+
+  findRow.append(searchField, countLabel, nav, options, actions)
+
+  const replaceRow = document.createElement('div')
+  replaceRow.className = 'np-replace-row'
+
+  const replaceField = document.createElement('input')
+  replaceField.type = 'text'
+  replaceField.name = 'replace'
+  replaceField.placeholder = '替换为'
+  replaceField.setAttribute('aria-label', '替换为')
+
+  const replaceOneButton = findButton('替换当前匹配', '替换', () => replaceNext(view))
+  replaceOneButton.classList.add('np-find-action')
+  const replaceAllButton = findButton('替换全部匹配', '全部替换', () => replaceAll(view))
+  replaceAllButton.classList.add('np-find-action')
+
+  replaceRow.append(replaceField, replaceOneButton, replaceAllButton)
+  dom.append(findRow, replaceRow)
+
+  const commit = () => {
+    const query = new SearchQuery({
+      search: searchField.value,
+      replace: replaceField.value,
+      caseSensitive: caseButton.isPressed(),
+      regexp: regexpButton.isPressed(),
+      wholeWord: wordButton.isPressed(),
+    })
+    if (!query.eq(getSearchQuery(view.state))) {
+      view.dispatch({ effects: setSearchQuery.of(query) })
+    }
+    updateCount()
+  }
+
+  const syncFromState = () => {
+    const query = getSearchQuery(view.state)
+    searchField.value = query.search
+    replaceField.value = query.replace
+    caseButton.setPressed(query.caseSensitive)
+    regexpButton.setPressed(query.regexp)
+    wordButton.setPressed(query.wholeWord)
+    updateCount()
+  }
+
+  const updateCount = () => {
+    const { active, total } = getFindMatchSummary(view)
+    if (!searchField.value.trim()) {
+      countLabel.textContent = ''
+      countLabel.classList.add('is-empty')
+    } else if (total === 0) {
+      countLabel.textContent = '无结果'
+      countLabel.classList.remove('is-empty')
+    } else {
+      countLabel.textContent = `${active}/${total}`
+      countLabel.classList.remove('is-empty')
+    }
+  }
+
+  const setReplaceOpen = (open: boolean) => {
+    dom.classList.toggle('is-replace-open', open)
+    replaceToggle.setAttribute('aria-pressed', String(open))
+    replaceToggle.title = open ? '隐藏替换' : '显示替换'
+  }
+
+  searchField.addEventListener('input', commit)
+  replaceField.addEventListener('input', commit)
+  for (const toggle of [caseButton, regexpButton, wordButton]) {
+    toggle.button.addEventListener('click', commit)
+  }
+  dom.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeSearchPanel(view)
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+      event.preventDefault()
+      event.stopPropagation()
+      searchField.focus()
+      searchField.select()
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'r') {
+      event.preventDefault()
+      event.stopPropagation()
+      setReplaceOpen(true)
+      replaceField.focus()
+      replaceField.select()
+    } else if (event.key === 'Enter' && event.target === searchField) {
+      event.preventDefault()
+      ;(event.shiftKey ? findPrevious : findNext)(view)
+    } else if (event.key === 'Enter' && event.target === replaceField) {
+      event.preventDefault()
+      replaceNext(view)
+    }
+  })
+
+  syncFromState()
+
+  return {
+    dom,
+    top: true,
+    update(update) {
+      if (update.docChanged || update.selectionSet || update.transactions.some((transaction) => transaction.effects.some((effect) => effect.is(setSearchQuery)))) {
+        syncFromState()
+      }
+    },
+  }
+}
+
+function findButton(label: string, text: string, run: () => boolean) {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.title = label
+  button.setAttribute('aria-label', label)
+  button.textContent = text
+  button.addEventListener('click', () => {
+    run()
+  })
+  return button
+}
+
+function toggleButton(label: string, text: string) {
+  const button = findButton(label, text, () => true)
+  button.classList.add('np-find-toggle')
+  button.setAttribute('aria-pressed', 'false')
+  button.addEventListener('click', () => {
+    button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true'))
+  })
+  return {
+    button,
+    isPressed: () => button.getAttribute('aria-pressed') === 'true',
+    setPressed: (pressed: boolean) => {
+      button.setAttribute('aria-pressed', String(pressed))
+    },
+  }
+}
+
+function getFindMatchSummary(view: EditorView) {
+  const query = getSearchQuery(view.state)
+  if (!query.valid) {
+    return { active: 0, total: 0 }
+  }
+
+  const selection = view.state.selection.main
+  const cursor = query.getCursor(view.state, 0, view.state.doc.length)
+  let total = 0
+  let active = 0
+  let firstAfterSelection = 0
+
+  for (let next = cursor.next(); !next.done; next = cursor.next()) {
+    const match = next.value
+    total += 1
+    if (match.from === selection.from && match.to === selection.to) {
+      active = total
+    } else if (!firstAfterSelection && match.from >= selection.from) {
+      firstAfterSelection = total
+    }
+  }
+
+  return {
+    active: total === 0 ? 0 : active || firstAfterSelection || 1,
+    total,
+  }
 }
 
 function editorAppearance() {
@@ -391,7 +716,18 @@ function openEditorFind() {
 function openEditorReplace() {
   if (!editorView) return false
   const opened = runEditorCommand(openSearchPanel)
-  requestAnimationFrame(() => editorRoot.value?.querySelector<HTMLInputElement>('.cm-search input[name="replace"]')?.focus())
+  requestAnimationFrame(() => {
+    const panel = editorRoot.value?.querySelector<HTMLElement>('.np-find-panel')
+    panel?.classList.add('is-replace-open')
+    const toggle = panel?.querySelector<HTMLButtonElement>('.np-find-replace-toggle')
+    toggle?.setAttribute('aria-pressed', 'true')
+    if (toggle) {
+      toggle.title = '隐藏替换'
+    }
+    const replaceField = editorRoot.value?.querySelector<HTMLInputElement>('.cm-search input[name="replace"]')
+    replaceField?.focus()
+    replaceField?.select()
+  })
   return opened
 }
 
