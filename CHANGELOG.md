@@ -8,12 +8,31 @@ patch versions are reserved for compatible fixes.
 
 ## 0.4.6 - 2026-07-10
 
+### Added
+
+- Added a dedicated archive browser (File > View Archive) that lists
+  archived notes and restores them back into the active workspace.
+- Added tab-context keyboard shortcuts: `F2` renames, `Del` moves to
+  trash, `F12` archives, and `Ctrl+W` closes the focused tab directly
+  from the tab bar or its context menu.
+- Added a visible version string to the About status so the running build
+  version is shown in-app.
+
 ### Changed
 
 - Global search now groups matching lines by note, shows a per-note match
   count, and collapses repeated matches with on-demand expansion. Results
   are sorted with title-match notes first, and a "Load more results" pager
   grows the backend limit in batches.
+- Page-action menus and context menus now display their keyboard shortcut
+  hints inline.
+- Removed tabs whose note files were deleted outside NeoPad are detected
+  on the next refresh instead of recreating the missing file.
+
+### Fixed
+
+- Fixed missing-note detection so a stale tab and its recent-document
+  record are cleaned up when the underlying file no longer exists.
 
 ## 0.4.5 - 2026-07-10
 
