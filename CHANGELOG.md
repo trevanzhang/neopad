@@ -6,6 +6,15 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.4.6 - 2026-07-10
+
+### Changed
+
+- Global search now groups matching lines by note, shows a per-note match
+  count, and collapses repeated matches with on-demand expansion. Results
+  are sorted with title-match notes first, and a "Load more results" pager
+  grows the backend limit in batches.
+
 ## 0.4.5 - 2026-07-10
 
 ### Added

@@ -1,6 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppShell from './components/AppShell.vue'
+import ArchiveList from './components/ArchiveList.vue'
 import ConfirmationDialog from './components/ConfirmationDialog.vue'
 import EditorPane from './components/EditorPane.vue'
 import FontDialog from './components/FontDialog.vue'
@@ -20,6 +21,7 @@ import {
   completeStartup,
   deleteNote,
   exportAllNotesZip,
+  getAppVersion,
   getShortcutWarnings,
   getMcpStatus,
   getUiConfig,
@@ -29,6 +31,7 @@ import {
   completeDueReminders,
   completeReminder,
   listNotes,
+  listArchivedNotes,
   listRecentNotes,
   listReminders,
   openTrash,
@@ -135,8 +138,12 @@ const reminderDialogOpen = ref(false)
 const reminderListOpen = ref(false)
 const reminders = ref<Reminder[]>([])
 const remindersLoading = ref(false)
+const archiveListOpen = ref(false)
+const archivedNotes = ref<NoteTab[]>([])
+const archiveLoading = ref(false)
 const settingsOpen = ref(false)
 const helpTopic = ref<HelpTopic | null>(null)
+const appVersion = ref('')
 const fontDialogOpen = ref(false)
 const inputDialog = ref<InputDialogState | null>(null)
 let resolveInputDialog: ((value: string | null) => void) | null = null
@@ -146,6 +153,8 @@ const immersiveMode = ref(false)
 const searchQuery = ref('')
 const searchResults = ref<SearchResult[]>([])
 const searching = ref(false)
+const searchResultLimit = ref(100)
+const searchHasMore = ref(false)
 const alwaysOnTop = ref(false)
 const theme = ref<AppTheme>(initialTheme())
 const language = ref<AppLanguage>(initialLanguage())
@@ -254,6 +263,7 @@ onMounted(async () => {
 
   await resetWebviewZoom()
   await loadInitialNotes()
+  await loadAppVersion()
   await loadWorkspacePath()
   await loadMcpStatus()
   await loadShortcutWarnings()
@@ -357,6 +367,8 @@ watch(content, (nextContent) => {
 })
 
 watch(searchQuery, () => {
+  searchResultLimit.value = 100
+  searchHasMore.value = false
   if (!searchOpen.value || !isTauriRuntime()) {
     searchResults.value = []
     return
@@ -650,6 +662,11 @@ function initialDateTimeSeparatorTemplate() {
   return value === legacyDateTimeSeparatorTemplate ? defaultDateTimeSeparatorTemplate : value
 }
 
+function focusEditorAfterPageAction() {
+  if (previewMode.value === 'preview') return
+  void nextTick(() => editorPane.value?.focusEditor())
+}
+
 async function selectTab(tabId: string) {
   if (tabId === activeTabId.value) {
     return
@@ -659,7 +676,9 @@ async function selectTab(tabId: string) {
   await forceSave()
   if (!isCurrentNoteLoad(generation)) return
   activeTabId.value = tabId
-  await loadActiveNote(generation)
+  if (await loadActiveNote(generation)) {
+    focusEditorAfterPageAction()
+  }
 }
 
 function cycleTab(offset: -1 | 1) {
@@ -749,20 +768,44 @@ async function updateTabColor(tabId: string, color: string | null) {
 async function renameTab(tab: NoteTab) {
   if (tab.id === 'inbox' || tab.id === 'clipboard' || tab.external) return
   const nextTitle = (await requestInput(t.value.settings.renameTitle, tab.title))?.trim()
-  if (!nextTitle) return
+  if (!nextTitle) {
+    if (tab.id === activeTabId.value) focusEditorAfterPageAction()
+    return
+  }
+  const previousTitle = tab.title
 
   if (isTauriRuntime()) {
     try {
+      if (tab.id === activeTabId.value && !(await forceSave())) return
       const renamed = await renameNote(tab.id, nextTitle)
       tab.title = renamed.title
       tab.updatedAt = renamed.updatedAt
+      tab.systemTitle = renamed.systemTitle
+      if (tab.id === activeTabId.value && await loadActiveNote()) {
+        focusEditorAfterPageAction()
+      }
     } catch {
       saveState.value = 'Failed'
     }
   } else {
     tab.title = nextTitle
+    const shouldUpdateDefaultHeading = tab.systemTitle && tab.id === activeTabId.value
+    tab.systemTitle = false
     tab.updatedAt = Date.now()
+    if (shouldUpdateDefaultHeading) {
+      const defaultHeading = `# ${previousTitle}`
+      if (content.value === defaultHeading || content.value.startsWith(`${defaultHeading}\n`)) {
+        setContentFromLoad(`# ${nextTitle}${content.value.slice(defaultHeading.length)}`)
+      }
+    }
+    if (tab.id === activeTabId.value) focusEditorAfterPageAction()
   }
+}
+
+function adjacentTabIdAfterRemoval(tabId: string) {
+  const index = tabs.value.findIndex((item) => item.id === tabId)
+  if (index < 0) return tabs.value[0]?.id ?? 'inbox'
+  return tabs.value[index - 1]?.id ?? tabs.value[index + 1]?.id ?? 'inbox'
 }
 
 async function deleteTab(tab: NoteTab) {
@@ -770,7 +813,7 @@ async function deleteTab(tab: NoteTab) {
   if (deletingTabIds.has(tab.id)) return
   const wasActiveTab = activeTabId.value === tab.id
   const nextActiveTabId = wasActiveTab
-    ? tabs.value.find((item) => item.id !== tab.id)?.id
+    ? adjacentTabIdAfterRemoval(tab.id)
     : activeTabId.value
   const confirmed = await requestConfirmation(
     t.value.tabs.confirmDeleteTitle,
@@ -778,7 +821,10 @@ async function deleteTab(tab: NoteTab) {
     t.value.tabs.delete,
     true,
   )
-  if (!confirmed) return
+  if (!confirmed) {
+    if (wasActiveTab) focusEditorAfterPageAction()
+    return
+  }
 
   deletingTabIds.add(tab.id)
   if (isTauriRuntime()) {
@@ -804,13 +850,14 @@ async function deleteTab(tab: NoteTab) {
     activeTabId.value = nextActiveTabId ?? tabs.value[0]?.id ?? 'inbox'
     await loadActiveNote()
   }
+  if (wasActiveTab) focusEditorAfterPageAction()
   deletingTabIds.delete(tab.id)
 }
 
 async function closeTab(tab: NoteTab) {
   if (tab.id === 'inbox' || tab.id === 'clipboard') return
   const wasActive = activeTabId.value === tab.id
-  const nextTabId = wasActive ? tabs.value.find((item) => item.id !== tab.id)?.id ?? 'inbox' : activeTabId.value
+  const nextTabId = wasActive ? adjacentTabIdAfterRemoval(tab.id) : activeTabId.value
   try {
     if (isTauriRuntime() && !tab.external) {
       if (!(await forceSave())) return
@@ -820,6 +867,7 @@ async function closeTab(tab: NoteTab) {
     if (wasActive) {
       activeTabId.value = nextTabId
       await loadActiveNote()
+      focusEditorAfterPageAction()
     }
     await refreshRecentNotes()
   } catch {
@@ -837,7 +885,10 @@ async function archiveTab(tab: NoteTab) {
         : `Copy "${tab.title}" into the NeoPad archive? The original file will not be moved or deleted.`,
       t.value.tabs.archive,
     )
-    if (!confirmed) return
+    if (!confirmed) {
+      if (activeTabId.value === tab.id) focusEditorAfterPageAction()
+      return
+    }
     try {
       if (!(await forceSave())) return
       const created = await createNote(tab.title)
@@ -853,13 +904,17 @@ async function archiveTab(tab: NoteTab) {
     await unarchiveTab(tab)
     return
   }
+  const wasActive = activeTabId.value === tab.id
+  const nextTabId = wasActive ? adjacentTabIdAfterRemoval(tab.id) : activeTabId.value
   const confirmed = await requestConfirmation(
     t.value.tabs.archive,
     t.value.tabs.confirmArchiveMessage.replace('{title}', tab.title),
     t.value.tabs.archive,
   )
-  if (!confirmed) return
-  const wasActive = activeTabId.value === tab.id
+  if (!confirmed) {
+    if (wasActive) focusEditorAfterPageAction()
+    return
+  }
   try {
     if (isTauriRuntime()) {
       if (!(await forceSave())) return
@@ -867,8 +922,9 @@ async function archiveTab(tab: NoteTab) {
     }
     tabs.value = tabs.value.filter((item) => item.id !== tab.id)
     if (wasActive) {
-      activeTabId.value = tabs.value[0]?.id ?? 'inbox'
+      activeTabId.value = nextTabId
       await loadActiveNote()
+      focusEditorAfterPageAction()
     }
     await refreshRecentNotes()
   } catch {
@@ -883,6 +939,8 @@ async function unarchiveTab(tab: NoteTab) {
     activeTabId.value = restored.id
     await loadActiveNote()
     await refreshRecentNotes()
+    if (archiveListOpen.value) await refreshArchivedNotes()
+    else focusEditorAfterPageAction()
   } catch {
     saveState.value = 'Failed'
   }
@@ -911,6 +969,7 @@ async function createLocalTab() {
       activeTabId.value = note.id
       setContentFromLoad(note.content)
       saveState.value = 'Saved'
+      focusEditorAfterPageAction()
       return
     } catch {
       saveState.value = 'Failed'
@@ -918,10 +977,9 @@ async function createLocalTab() {
   }
 
   const createdAt = Date.now()
-  const index = tabs.value.length + 1
   const tab: NoteTab = {
     id: `draft-${createdAt}`,
-    title: `Page ${index}`,
+    title: 'Untitled',
     fileName: `page-${createdAt}.md`,
     createdAt,
     updatedAt: createdAt,
@@ -935,6 +993,7 @@ async function createLocalTab() {
   tabs.value.push(tab)
   activeTabId.value = tab.id
   content.value = `# ${tab.title}\n\n`
+  focusEditorAfterPageAction()
 }
 
 async function saveCurrentClipboard() {
@@ -964,6 +1023,7 @@ async function saveCurrentClipboard() {
     activeTabId.value = note.id
     setContentFromLoad(note.content)
     statusMessage.value = t.value.status.clipboardSaved
+    focusEditorAfterPageAction()
   } catch {
     saveState.value = 'Failed'
   }
@@ -1013,6 +1073,7 @@ async function openExternalDocumentPath(path: string, loaded?: import('./types/n
     rememberExternalDocument(tab)
     saveState.value = 'Saved'
     statusMessage.value = t.value.status.loadedFromFile
+    focusEditorAfterPageAction()
   } catch {
     saveState.value = 'Failed'
   }
@@ -1060,6 +1121,7 @@ async function loadFileFromInput(event: Event) {
 
     saveState.value = 'Saved'
     statusMessage.value = t.value.status.loadedFromFile
+    focusEditorAfterPageAction()
   } catch {
     saveState.value = 'Failed'
   }
@@ -1200,10 +1262,12 @@ function confirmEditorFont(nextFont: { fontFamily: string; fontSize: number }) {
   editorFontFamily.value = nextFont.fontFamily
   editorFontSize.value = Math.min(22, Math.max(12, Number(nextFont.fontSize) || 14))
   statusMessage.value = t.value.status.fontUpdated
+  focusEditorAfterPageAction()
 }
 
 function closeFontDialog() {
   fontDialogOpen.value = false
+  focusEditorAfterPageAction()
 }
 
 function requestInput(title: string, initialValue: string) {
@@ -1270,9 +1334,9 @@ function togglePreviewTheme() {
 
 async function setImmersiveMode(enabled: boolean) {
   if (enabled) {
-    closeSettings()
-    closeSearch()
-    closeHelp()
+    closeSettings(false)
+    closeSearch(false)
+    closeHelp(false)
   }
 
   if (isTauriRuntime()) {
@@ -1307,6 +1371,7 @@ function insertReminder() {
 
 function closeReminderDialog() {
   reminderDialogOpen.value = false
+  focusEditorAfterPageAction()
 }
 
 function confirmReminder(value: { content: string; dueText: string }) {
@@ -1345,10 +1410,12 @@ function showSettingsPlaceholder() {
   openSettings()
 }
 
-function closeSearch() {
+function closeSearch(returnFocusToEditor = true) {
   searchOpen.value = false
   searchResults.value = []
+  searchHasMore.value = false
   clearSearchTimer()
+  if (returnFocusToEditor) focusEditorAfterPageAction()
 }
 
 async function selectSearchResult(result: SearchResult) {
@@ -1366,7 +1433,8 @@ async function selectSearchResult(result: SearchResult) {
     return
   }
   await loadActiveNote(generation)
-  closeSearch()
+  closeSearch(false)
+  focusEditorAfterPageAction()
 }
 
 function openSettings() {
@@ -1375,16 +1443,26 @@ function openSettings() {
   void loadMcpStatus()
 }
 
-function closeSettings() {
+function closeSettings(returnFocusToEditor = true) {
   settingsOpen.value = false
+  if (returnFocusToEditor) focusEditorAfterPageAction()
 }
 
 function openHelpTopic(topic: HelpTopic) {
   helpTopic.value = topic
 }
 
-function closeHelp() {
+function closeHelp(returnFocusToEditor = true) {
   helpTopic.value = null
+  if (returnFocusToEditor) focusEditorAfterPageAction()
+}
+
+async function loadAppVersion() {
+  try {
+    appVersion.value = await getAppVersion()
+  } catch {
+    appVersion.value = ''
+  }
 }
 
 async function togglePin() {
@@ -1404,15 +1482,47 @@ async function togglePin() {
 }
 
 async function openReminderList() {
-  closeSearch()
-  closeSettings()
-  closeHelp()
+  closeSearch(false)
+  closeSettings(false)
+  closeHelp(false)
   reminderListOpen.value = true
   await refreshReminders()
 }
 
-function closeReminderList() {
+async function openArchiveList() {
+  closeSearch(false)
+  closeSettings(false)
+  closeHelp(false)
+  closeReminderList(false)
+  archiveListOpen.value = true
+  await refreshArchivedNotes()
+}
+
+function closeArchiveList(returnFocusToEditor = true) {
+  archiveListOpen.value = false
+  if (returnFocusToEditor) focusEditorAfterPageAction()
+}
+
+async function refreshArchivedNotes() {
+  if (!isTauriRuntime()) return
+  archiveLoading.value = true
+  try {
+    if (!(await forceSave())) return
+    archivedNotes.value = await listArchivedNotes()
+  } catch {
+    saveState.value = 'Failed'
+  } finally {
+    archiveLoading.value = false
+  }
+}
+
+async function restoreArchivedNote(tab: NoteTab) {
+  await unarchiveTab(tab)
+}
+
+function closeReminderList(returnFocusToEditor = true) {
   reminderListOpen.value = false
+  if (returnFocusToEditor) focusEditorAfterPageAction()
 }
 
 async function refreshReminders() {
@@ -1434,7 +1544,7 @@ async function selectReminder(reminder: Reminder) {
   if (!isCurrentNoteLoad(generation)) return
   activeTabId.value = reminder.noteId
   await loadActiveNote(generation)
-  closeReminderList()
+  closeReminderList(false)
   if (previewMode.value === 'preview') previewMode.value = 'edit'
   await nextTick()
   editorPane.value?.goToLine(reminder.lineNumber)
@@ -1678,7 +1788,13 @@ async function openRecentNote(noteId: string) {
     activeTabId.value = opened.id
     await loadActiveNote(generation)
     await refreshRecentNotes()
-  } catch {
+    focusEditorAfterPageAction()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (message.includes('note file does not exist')) {
+      statusMessage.value = t.value.status.noteFileMissing
+      await refreshRecentNotes()
+    }
     saveState.value = 'Failed'
   }
 }
@@ -2042,6 +2158,10 @@ function matchesEditorModeShortcut(event: KeyboardEvent) {
   return event.key === 'F4' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
 }
 
+function matchesDeletePageShortcut(event: KeyboardEvent) {
+  return event.key === 'Delete' && event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey
+}
+
 function isEditableElement(element: EventTarget | null) {
   if (!(element instanceof HTMLElement)) return false
   return (
@@ -2063,9 +2183,10 @@ function handleKeydown(event: KeyboardEvent) {
       !event.altKey &&
       !event.shiftKey &&
       !event.metaKey &&
-      (event.key === 'F4' || event.key === 'F5' || event.key === 'F7' || event.key === 'F9' || event.key === 'F11')
+      (event.key === 'F4' || event.key === 'F5' || event.key === 'F7' || event.key === 'F9' || event.key === 'F11' || event.key === 'F12')
+    const isDeletePageShortcut = matchesDeletePageShortcut(event)
     const isEditorModeShortcut = matchesEditorModeShortcut(event)
-    if (isCtrlShortcut || isFunctionShortcut || isEditorModeShortcut) {
+    if (isCtrlShortcut || isFunctionShortcut || isDeletePageShortcut || isEditorModeShortcut) {
       event.preventDefault()
       event.stopPropagation()
     }
@@ -2123,6 +2244,40 @@ function handleKeydown(event: KeyboardEvent) {
     return
   }
 
+  if (
+    event.key === 'F12' &&
+    !event.ctrlKey &&
+    !event.altKey &&
+    !event.shiftKey &&
+    !event.metaKey &&
+    !reminderListOpen.value &&
+    !archiveListOpen.value &&
+    !settingsOpen.value &&
+    !helpTopic.value &&
+    !searchOpen.value &&
+    !document.querySelector('.menu-root:focus-within, .tab-context-menu')
+  ) {
+    event.preventDefault()
+    event.stopPropagation()
+    void archiveActivePage()
+    return
+  }
+
+  if (
+    matchesDeletePageShortcut(event) &&
+    !reminderListOpen.value &&
+    !archiveListOpen.value &&
+    !settingsOpen.value &&
+    !helpTopic.value &&
+    !searchOpen.value &&
+    !document.querySelector('.tab-context-menu')
+  ) {
+    event.preventDefault()
+    event.stopPropagation()
+    void deleteActivePage()
+    return
+  }
+
   if (event.key === 'Escape') {
     if (reminderDialogOpen.value) {
       event.preventDefault()
@@ -2135,6 +2290,13 @@ function handleKeydown(event: KeyboardEvent) {
       event.preventDefault()
       event.stopPropagation()
       closeReminderList()
+      return
+    }
+
+    if (archiveListOpen.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeArchiveList()
       return
     }
 
@@ -2213,6 +2375,7 @@ function handleKeydown(event: KeyboardEvent) {
     !event.shiftKey &&
     !event.metaKey &&
     !reminderListOpen.value &&
+    !archiveListOpen.value &&
     !settingsOpen.value &&
     !helpTopic.value &&
     !searchOpen.value &&
@@ -2242,6 +2405,7 @@ function handleKeydown(event: KeyboardEvent) {
       return
     }
     if (key === 'w') {
+      if (document.querySelector('.tab-context-menu')) return
       event.preventDefault()
       event.stopPropagation()
       void closeActivePage()
@@ -2386,17 +2550,26 @@ async function runSearch() {
   const query = searchQuery.value.trim()
   if (!query) {
     searchResults.value = []
+    searchHasMore.value = false
     searching.value = false
     return
   }
 
   try {
-    searchResults.value = await searchNotes(query, 100)
+    const results = await searchNotes(query, searchResultLimit.value)
+    searchResults.value = results
+    searchHasMore.value = results.length === searchResultLimit.value
   } catch {
     saveState.value = 'Failed'
   } finally {
     searching.value = false
   }
+}
+
+function loadMoreSearchResults() {
+  if (searching.value || !searchQuery.value.trim()) return
+  searchResultLimit.value += 100
+  void runSearch()
 }
 
 function clearSearchTimer() {
@@ -2434,6 +2607,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
   tabs.value.push(tab)
   activeTabId.value = tab.id
   content.value = nextContent
+  focusEditorAfterPageAction()
 }
 
 function titleFromFileName(fileName: string) {
@@ -2758,6 +2932,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         'Alt+Enter - ' + (zh ? '\u6700\u5927\u5316/\u8fd8\u539f\u7a97\u53e3' : 'Maximize/restore window'),
         'Ctrl+N - ' + (zh ? '\u65b0\u5efa\u6807\u7b7e\u9875' : 'New tab'),
         'F2 - ' + (zh ? '\u91cd\u547d\u540d\u6807\u7b7e\u9875' : 'Rename tab'),
+        'Alt+Del - ' + (zh ? '\u5c06\u5f53\u524d\u6807\u7b7e\u9875\u79fb\u81f3\u56de\u6536\u7ad9' : 'Move current tab to Trash'),
         'Ctrl+W - ' + (zh ? '\u5173\u95ed\u6807\u7b7e\u9875' : 'Close tab'),
         'Ctrl+O - ' + (zh ? '\u4ece\u6587\u4ef6\u8f7d\u5165' : 'Load from file'),
         'Ctrl+Tab / Ctrl+Shift+Tab - ' + (zh ? '\u5207\u6362\u4e0b\u4e00\u4e2a/\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875' : 'Switch next/previous tab'),
@@ -2774,6 +2949,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         'F8 - ' + (zh ? '\u6253\u5f00\u8bbe\u7f6e' : 'Open settings'),
         'F9 - ' + (zh ? '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f' : 'Toggle day/night mode'),
         'F11 - ' + (zh ? '\u5207\u6362\u6c89\u6d78\u5f0f\u5168\u5c4f' : 'Toggle immersive fullscreen'),
+        'F12 - ' + (zh ? '\u5f52\u6863\u5f53\u524d\u6807\u7b7e\u9875' : 'Archive current tab'),
         'F10 - ' + (zh ? '\u5207\u6362\u6807\u7b7e\u680f\u65b9\u5411' : 'Toggle tab bar orientation'),
         'Esc - ' + (zh ? '\u9690\u85cf\u7a97\u53e3' : 'Hide window'),
       ],
@@ -2828,6 +3004,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       lines: zh
         ? [
             'NeoPad - \u8f7b\u91cf\u3001\u672c\u5730\u4f18\u5148\u7684 Markdown \u684c\u9762\u4fbf\u7b7e\u3002',
+            ...(appVersion.value ? [`\u7248\u672c\uff1a${appVersion.value}`] : []),
             '\u4f5c\u8005\uff1aTrevanZhang',
             '\u5f00\u6e90\u9879\u76ee\uff1ahttps://github.com/trevanzhang/neopad',
             '\u5f00\u6e90\u534f\u8bae\uff1aMIT License',
@@ -2835,6 +3012,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
           ]
         : [
             'NeoPad - a lightweight, local-first Markdown desktop note pad.',
+            ...(appVersion.value ? [`Version: ${appVersion.value}`] : []),
             'Author: TrevanZhang',
             'Open source: https://github.com/trevanzhang/neopad',
             'License: MIT License',
@@ -2891,6 +3069,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         @load-file="triggerLoadFile"
         @save-as-file="saveAsFile"
         @export-all="exportAllNotes"
+        @view-archive="openArchiveList"
         @open-trash="openTrashFolder"
         @hide-window="hideMainWindow"
         @exit-app="exitApp"
@@ -2992,9 +3171,11 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       v-model:query="searchQuery"
       :results="searchResults"
       :searching="searching"
+      :has-more="searchHasMore"
       :messages="t.search"
       @close="closeSearch"
       @select="selectSearchResult"
+      @load-more="loadMoreSearchResults"
     />
 
     <ReminderList
@@ -3008,6 +3189,16 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       @complete="completeReminderItem"
       @reopen="reopenReminderItem"
       @complete-due="completeAllDueReminders"
+    />
+
+    <ArchiveList
+      v-if="archiveListOpen"
+      :notes="archivedNotes"
+      :loading="archiveLoading"
+      :messages="t.archive"
+      @close="closeArchiveList"
+      @refresh="refreshArchivedNotes"
+      @restore="restoreArchivedNote"
     />
 
     <SettingsPanel
@@ -3126,7 +3317,7 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
     <section v-if="helpTopic" class="help-panel" role="dialog" aria-modal="true" :aria-label="helpContent.title">
       <header class="help-header">
         <strong>{{ helpContent.title }}</strong>
-        <button type="button" @click="closeHelp">{{ t.settings.close }}</button>
+        <button type="button" @click="closeHelp()">{{ t.settings.close }}</button>
       </header>
       <div class="help-body">
         <p v-for="line in helpContent.lines" :key="line">{{ line }}</p>
