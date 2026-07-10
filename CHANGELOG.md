@@ -6,6 +6,12 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+### Fixed
+
+- Fixed Windows startup registration so the Run key stores a valid quoted
+  executable command, allowing "Run automatically at system startup" to launch
+  NeoPad after sign-in.
+
 ## 0.4.4 - 2026-07-09
 
 ### Added
