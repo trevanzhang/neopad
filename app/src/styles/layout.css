@@ -584,7 +584,10 @@ body {
 }
 
 .theme-dark .search-header button,
-.theme-dark .search-result {
+.theme-dark .search-result,
+.theme-dark .search-note-header,
+.theme-dark .search-expand,
+.theme-dark .search-load-more {
   color: var(--np-text);
   background: var(--np-surface);
   border-color: var(--np-border);
@@ -594,9 +597,16 @@ body {
   background: var(--np-control-active);
 }
 
+.theme-dark .search-note-header:hover,
+.theme-dark .search-expand:hover,
+.theme-dark .search-load-more:hover {
+  background: var(--np-control-active);
+}
+
 .theme-dark .search-empty,
 .theme-dark .search-result-meta,
-.theme-dark .search-context {
+.theme-dark .search-context,
+.theme-dark .search-summary {
   color: var(--np-muted);
 }
 
@@ -953,16 +963,54 @@ body {
   color: #666666;
 }
 
+.search-summary {
+  margin: 4px 4px 10px;
+  color: #666666;
+  font-size: 12px;
+}
+
+.search-note-group {
+  margin-bottom: 10px;
+  border: 1px solid #b5b5b5;
+}
+
+.search-note-header {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px;
+  text-align: left;
+  color: #111111;
+  background: #f3f3f3;
+  border: 0;
+  border-bottom: 1px solid #b5b5b5;
+}
+
+.search-note-header strong,
+.search-note-header span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-note-header span {
+  color: #666666;
+  font-size: 12px;
+}
+
 .search-result {
   display: grid;
   gap: 3px;
   width: 100%;
   padding: 8px;
-  margin-bottom: 6px;
+  border: 0;
+  border-bottom: 1px solid #d3d3d3;
   text-align: left;
   color: #111111;
   background: #ffffff;
-  border: 1px solid #b5b5b5;
   border-radius: 0;
 }
 
@@ -977,6 +1025,34 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
+}
+
+.search-result mark {
+  padding: 0;
+  color: inherit;
+  background: #ffe28a;
+}
+
+.search-expand,
+.search-load-more {
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 8px;
+  text-align: left;
+  color: #1b4f9c;
+  background: #ffffff;
+  border: 0;
+}
+
+.search-load-more {
+  margin-top: 2px;
+  text-align: center;
+  border: 1px solid #8f8f8f;
+}
+
+.search-expand:hover,
+.search-load-more:hover {
+  background: #e8f0ff;
 }
 
 .reminder-dialog {

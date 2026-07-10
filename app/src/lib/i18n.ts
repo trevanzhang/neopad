@@ -249,6 +249,11 @@ export type AppMessages = {
     searching: string
     noResults: string
     line: string
+    summary: string
+    matchCount: string
+    showMoreInNote: string
+    collapse: string
+    loadMore: string
   }
   reminders: {
     title: string
@@ -574,6 +579,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       searching: 'Searching...',
       noResults: 'No results',
       line: 'line',
+      summary: '{notes} notes, {matches} matching lines',
+      matchCount: '{count} matches',
+      showMoreInNote: 'Show {count} more matches',
+      collapse: 'Show fewer matches',
+      loadMore: 'Load more results',
     },
     reminders: {
       title: 'Reminder List',
@@ -897,6 +907,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       searching: '\u641c\u7d22\u4e2d...',
       noResults: '\u6ca1\u6709\u7ed3\u679c',
       line: '\u884c',
+      summary: '\u5171 {notes} \u7bc7\u7b14\u8bb0\uff0c{matches} \u4e2a\u5339\u914d\u884c',
+      matchCount: '{count} \u4e2a\u5339\u914d',
+      showMoreInNote: '\u5c55\u5f00\u5176\u4f59 {count} \u4e2a\u5339\u914d',
+      collapse: '\u6536\u8d77\u5339\u914d',
+      loadMore: '\u52a0\u8f7d\u66f4\u591a\u7ed3\u679c',
     },
     reminders: {
       title: '\u63d0\u9192\u5217\u8868',

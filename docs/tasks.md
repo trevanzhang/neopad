@@ -34,7 +34,8 @@ This file tracks the implemented MVP relative to the original task plan.
   edits, with deterministic frontend tests.
 - Tray menu and close-to-hide behavior.
 - Global shortcuts for toggle window and clipboard capture.
-- Full-text search.
+- Full-text search with grouped, collapsible results sorted by title match and
+  per-note match count.
 - Markdown-native reminder creation, reminder aggregation, source-line
   navigation, status filtering, completion reopening, delivery deduplication,
   and native due notifications.

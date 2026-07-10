@@ -43,7 +43,8 @@ Implemented MVP capabilities:
 - Persistent day and night themes across the complete desktop interface.
 - Native whole-window opacity controlled from an in-app slider.
 - Compact settings that remain usable at the minimum supported window size.
-- Full-text search.
+- Full-text search with grouped, collapsible results, per-note match counts,
+  and a paginated load-more pager.
 - Lightweight reminders stored as readable Markdown task lines. `Ctrl+E`
   opens a compact reminder editor, the reminder list derives its rows from
   note content, and due reminders use native notifications while NeoPad is

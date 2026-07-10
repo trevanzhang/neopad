@@ -13,6 +13,7 @@ Markdown 文件，用户数据不需要账号，也不依赖云服务。
 - 基于 Tauri 2、Vue 3、TypeScript、Rust 和 CodeMirror 6 的桌面应用。
 - 所有笔记内容保存为 `~/.neopad/notes/*.md`。
 - 多标签页、自动保存、全文搜索、剪贴板捕获、Markdown 预览。
+- 全局搜索按笔记分组显示匹配行，展示每篇笔记的匹配数，重复匹配可按需展开。
 - 编辑、混合和预览三种编辑器模式，可通过菜单、状态栏和 `F4` 切换。
 - 预览模式支持多套主题预设：Light、One Dark、Nord、Solarized、
   Monokai、GitHub Light、Dracula。

@@ -59,6 +59,8 @@ The repository currently contains a working Windows-focused MVP:
   missing file.
 - Help > About NeoPad displays the version embedded in the running application
   build.
+- Global search groups matching lines by note, shows a per-note match count,
+  and lets you expand repeated matches only when needed.
 - `Ctrl+O` opens an external Markdown file in place through the native file
   picker. Changes autosave back to the original path with a modification-time
   check. External files can be copied into the NeoPad archive without moving or
