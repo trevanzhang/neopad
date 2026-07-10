@@ -1,11 +1,12 @@
 use neopad_core::{
-    append_to_clipboard_note, claim_due_reminders, complete_due_reminders, complete_reminder,
-    create_note, delete_note_to_trash, export_note_file, list_notes, list_reminders, load_config,
+    append_to_clipboard_note, archive_note, claim_due_reminders, close_note, complete_due_reminders, complete_reminder,
+    create_note, delete_note_to_trash, export_note_file, list_open_notes, list_recent_notes, list_reminders, list_searchable_notes, load_config,
     lock_workspace_for_write, read_note, rename_note, reopen_reminder, save_config, search_notes,
     write_note_atomic_checked, NoteContent, NoteTab, PreviewMode, Reminder, SearchResult, Theme,
     UiConfig, Workspace,
 };
 use serde::Serialize;
+use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::process::Command;
@@ -110,7 +111,22 @@ fn shortcut_label(base_key: &str, modifiers: &[String]) -> String {
 
 #[tauri::command]
 pub fn list_notes_command(state: State<'_, AppState>) -> Result<Vec<NoteTab>, String> {
-    list_notes(&state.workspace).map_err(display_error)
+    list_open_notes(&state.workspace).map_err(display_error)
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalDocument {
+    pub path: String,
+    pub title: String,
+    pub file_name: String,
+    pub content: String,
+    pub updated_at: i64,
+}
+
+#[tauri::command]
+pub fn list_recent_notes_command(state: State<'_, AppState>) -> Result<Vec<NoteTab>, String> {
+    list_recent_notes(&state.workspace, 20).map_err(display_error)
 }
 
 #[tauri::command]
@@ -156,6 +172,30 @@ pub fn rename_note_command(
 pub fn delete_note_command(state: State<'_, AppState>, note_id: String) -> Result<NoteTab, String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     delete_note_to_trash(&state.workspace, &note_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn close_note_command(state: State<'_, AppState>, note_id: String) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    close_note(&state.workspace, &note_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn open_note_command(state: State<'_, AppState>, note_id: String) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::open_note(&state.workspace, &note_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn archive_note_command(state: State<'_, AppState>, note_id: String) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    archive_note(&state.workspace, &note_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn unarchive_note_command(state: State<'_, AppState>, note_id: String) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::unarchive_note(&state.workspace, &note_id).map_err(display_error)
 }
 
 #[tauri::command]
@@ -241,6 +281,39 @@ pub async fn save_markdown_file_command(
 }
 
 #[tauri::command]
+pub async fn open_external_markdown_command(window: tauri::WebviewWindow) -> Result<Option<ExternalDocument>, String> {
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let path = rfd::FileDialog::new()
+            .set_parent(&window)
+            .set_title("Open Markdown file")
+            .add_filter("Markdown", &["md", "markdown"])
+            .pick_file();
+        path.map(|path| read_external_document(&path)).transpose()
+    }).await.map_err(|error| error.to_string())?;
+    result.map_err(display_error)
+}
+
+#[tauri::command]
+pub fn read_external_markdown_command(path: String) -> Result<ExternalDocument, String> {
+    read_external_document(std::path::Path::new(&path)).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn write_external_markdown_command(
+    path: String,
+    content: String,
+    expected_updated_at: i64,
+) -> Result<ExternalDocument, String> {
+    let path = validate_external_markdown_path(std::path::Path::new(&path)).map_err(display_error)?;
+    let current_updated_at = external_updated_at(&path).map_err(display_error)?;
+    if current_updated_at != expected_updated_at {
+        return Err(format!("external file was modified: expected updated_at {expected_updated_at}, current updated_at {current_updated_at}"));
+    }
+    export_note_file(&path, &content).map_err(display_error)?;
+    read_external_document(&path).map_err(display_error)
+}
+
+#[tauri::command]
 pub async fn export_all_notes_zip_command(
     window: tauri::WebviewWindow,
     state: State<'_, AppState>,
@@ -263,7 +336,7 @@ pub async fn export_all_notes_zip_command(
         let options = zip::write::SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Deflated);
 
-        for tab in list_notes(&workspace).map_err(display_error)? {
+        for tab in list_searchable_notes(&workspace).map_err(display_error)? {
             let note = read_note(&workspace, &tab.id).map_err(display_error)?;
             archive
                 .start_file(&tab.file_name, options)
@@ -441,6 +514,27 @@ fn path_to_string(path: &std::path::Path) -> String {
     path.to_string_lossy().to_string()
 }
 
+fn read_external_document(path: &std::path::Path) -> anyhow::Result<ExternalDocument> {
+    let path = validate_external_markdown_path(path)?;
+    let content = fs::read_to_string(&path)?;
+    let file_name = path.file_name().and_then(|name| name.to_str()).ok_or_else(|| anyhow::anyhow!("external path must include a UTF-8 file name"))?.to_owned();
+    let title = path.file_stem().and_then(|name| name.to_str()).unwrap_or("Untitled").to_owned();
+    Ok(ExternalDocument { path: path.to_string_lossy().to_string(), title, file_name, content, updated_at: external_updated_at(&path)? })
+}
+
+fn validate_external_markdown_path(path: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
+    if !path.is_absolute() { anyhow::bail!("external path must be absolute"); }
+    let path = path.canonicalize()?;
+    let extension = path.extension().and_then(|extension| extension.to_str()).unwrap_or_default().to_ascii_lowercase();
+    if !matches!(extension.as_str(), "md" | "markdown") { anyhow::bail!("external file must be Markdown"); }
+    if !path.is_file() { anyhow::bail!("external path must be a file"); }
+    Ok(path)
+}
+
+fn external_updated_at(path: &std::path::Path) -> anyhow::Result<i64> {
+    Ok(fs::metadata(path)?.modified()?.duration_since(std::time::UNIX_EPOCH)?.as_millis() as i64)
+}
+
 fn open_path(path: &std::path::Path) -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]
     let mut command = {
@@ -471,12 +565,7 @@ fn set_autostart(_app: &AppHandle, enabled: bool, start_hidden: bool) -> anyhow:
     #[cfg(target_os = "windows")]
     {
         let exe_path = std::env::current_exe()?;
-        let exe = exe_path.to_string_lossy();
-        let command = if start_hidden {
-            format!(r#"\"{}\" --hidden"#, exe)
-        } else {
-            format!(r#"\"{}\""#, exe)
-        };
+        let command = autostart_command_value(&exe_path, start_hidden);
         let key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
         let status = if enabled {
             Command::new("reg")
@@ -502,10 +591,46 @@ fn set_autostart(_app: &AppHandle, enabled: bool, start_hidden: bool) -> anyhow:
     Ok(())
 }
 
+#[cfg(target_os = "windows")]
+fn autostart_command_value(exe_path: &std::path::Path, start_hidden: bool) -> String {
+    let exe = exe_path.to_string_lossy();
+    if start_hidden {
+        format!(r#""{}" --hidden"#, exe)
+    } else {
+        format!(r#""{}""#, exe)
+    }
+}
+
 pub(crate) fn display_error(error: anyhow::Error) -> String {
     error
         .chain()
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join(": ")
+}
+
+#[cfg(test)]
+#[cfg(target_os = "windows")]
+mod tests {
+    use super::autostart_command_value;
+    use std::path::Path;
+
+    #[test]
+    fn autostart_command_quotes_exe_without_escape_slashes() {
+        let command =
+            autostart_command_value(Path::new(r"C:\Program Files\neopad\neopad-app.exe"), false);
+
+        assert_eq!(command, r#""C:\Program Files\neopad\neopad-app.exe""#);
+    }
+
+    #[test]
+    fn autostart_command_appends_hidden_argument() {
+        let command =
+            autostart_command_value(Path::new(r"C:\Program Files\neopad\neopad-app.exe"), true);
+
+        assert_eq!(
+            command,
+            r#""C:\Program Files\neopad\neopad-app.exe" --hidden"#
+        );
+    }
 }

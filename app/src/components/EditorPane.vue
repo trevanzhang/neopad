@@ -431,6 +431,14 @@ function createNeopadSearchPanel(view: EditorView): Panel {
     }
   })
 
+  dom.addEventListener('focusout', () => {
+    window.setTimeout(() => {
+      if (!dom.contains(document.activeElement)) {
+        closeSearchPanel(view)
+      }
+    }, 0)
+  })
+
   syncFromState()
 
   return {
@@ -638,6 +646,13 @@ function runEditorCommand(command: (view: EditorView) => boolean) {
 
 function focusEditor() {
   editorView?.focus()
+}
+
+function closeEditorFind() {
+  if (!editorView) return false
+  const closed = closeSearchPanel(editorView)
+  if (closed) editorView.focus()
+  return closed
 }
 
 function isEditorFocused() {
@@ -1010,6 +1025,7 @@ defineExpose({
   pasteClipboard,
   selectAllText,
   openEditorFind,
+  closeEditorFind,
   openEditorReplace,
   findNextMatch,
   insertText,

@@ -69,10 +69,11 @@ from previous versions do not block startup.
 
 - Workspace path resolution and first-run initialization.
 - Safe note path construction.
-- Note list, read, create, write, rename, append, and trash operations.
+- Note list, read, create, write, rename, append, close, archive, restore, and
+  trash operations.
 - Atomic writes through temporary files and replace/rename behavior.
 - mtime-checked writes for MCP update conflict protection.
-- Full-text search over Markdown note files.
+- Full-text search over active and archived Markdown note files.
 - Reminder parsing, ordering, and notification delivery-state persistence.
 - Config and tab metadata defaults.
 
@@ -112,8 +113,9 @@ the configured workspace.
 - Native reminder notifications while the desktop process remains running.
 - The app starts in edit mode by default. `F4` is the fixed local shortcut for
   cycling edit, split, and preview modes.
-- `Ctrl+O` imports an external Markdown file into the NeoPad workspace. NeoPad
-  does not edit arbitrary external Markdown files in place.
+- `Ctrl+O` opens an explicitly selected external Markdown file in place. Its
+  writes use atomic replacement and a modification-time conflict check; the
+  file remains outside NeoPad lifecycle operations unless copied into archive.
 - Tray menu: show, hide, new note, save clipboard, settings, quit.
 - Global shortcuts:
   - `Alt+Z`: toggle window.

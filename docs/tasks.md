@@ -12,7 +12,7 @@ This file tracks the implemented MVP relative to the original task plan.
   - `notes/clipboard.md`
   - `meta/tabs.json`
   - `config.json`
-- Note CRUD and trash move behavior.
+- Note CRUD, close-without-delete, archive, and trash move behavior.
 - Atomic writes and mtime-checked writes.
 - Cross-process write locking for desktop and write-enabled MCP operations.
 - Tauri command bridge.
@@ -21,7 +21,8 @@ This file tracks the implemented MVP relative to the original task plan.
   fixed `F4` cycling shortcut, edit-mode startup, and persisted default for
   later mode changes.
 - Page rename and trash actions with UI and core protection for default pages.
-- Tab context menu with rename, trash, and persistent color selection.
+- Tab context menu with rename, archive, trash, persistent color selection,
+  and an external-file marker.
 - Localized system page labels that preserve stable storage IDs and user titles.
 - CodeMirror 6 Markdown editor.
 - Optional persisted Vim key bindings with Normal, Insert, and Visual status,
@@ -37,8 +38,10 @@ This file tracks the implemented MVP relative to the original task plan.
 - Markdown-native reminder creation, reminder aggregation, source-line
   navigation, status filtering, completion reopening, delivery deduplication,
   and native due notifications.
-- ZIP export for all tabs, preserving each tab as its own Markdown file.
-- Markdown import from external files into the local NeoPad workspace.
+- ZIP export for active and archived NeoPad notes, preserving each note as its
+  own Markdown file.
+- Native opening and in-place autosave for external Markdown files, with a
+  persistent recent-document list and copy-to-archive behavior.
 - Manual clipboard capture to `clipboard.md`.
 - Standalone Streamable HTTP `neopad-mcp` read and write tools.
 - Dedicated MCP settings page with service start/stop, status, token display,

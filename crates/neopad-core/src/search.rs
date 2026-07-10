@@ -1,4 +1,4 @@
-use crate::{list_notes, note::read_note, Workspace};
+use crate::{list_searchable_notes, note::read_note, Workspace};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
@@ -23,7 +23,7 @@ pub fn search_notes(workspace: &Workspace, query: &str, limit: usize) -> Result<
     let query_lower = query.to_lowercase();
     let mut results = Vec::new();
 
-    for tab in list_notes(workspace)? {
+    for tab in list_searchable_notes(workspace)? {
         let note = read_note(workspace, &tab.id)?;
         let lines = note
             .content

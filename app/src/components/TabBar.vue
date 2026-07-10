@@ -14,6 +14,9 @@ const emit = defineEmits<{
   titleDoubleClick: [tabId: string]
   renameTab: [tabId: string]
   deleteTab: [tabId: string]
+  closeTab: [tabId: string]
+  archiveTab: [tabId: string]
+  unarchiveTab: [tabId: string]
   updateTabColor: [tabId: string, color: string | null]
   newTab: []
   toggleOrientation: []
@@ -57,12 +60,15 @@ function closeContextMenuOnEscape(event: KeyboardEvent) {
   contextMenu.value = null
 }
 
-function runContextAction(action: 'rename' | 'delete') {
+function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'unarchive') {
   const tabId = contextMenu.value?.tabId
   if (!tabId) return
   contextMenu.value = null
   if (action === 'rename') emit('renameTab', tabId)
-  else emit('deleteTab', tabId)
+  else if (action === 'delete') emit('deleteTab', tabId)
+  else if (action === 'close') emit('closeTab', tabId)
+  else if (action === 'archive') emit('archiveTab', tabId)
+  else emit('unarchiveTab', tabId)
 }
 
 function updateColor(color: string | null) {
@@ -90,12 +96,14 @@ function updateColor(color: string | null) {
       class="tab-item"
       :class="{ active: tab.id === activeTabId }"
       type="button"
+      :title="tab.externalPath ?? tab.title"
       :style="tab.color ? { backgroundColor: tab.color } : undefined"
       @click="$emit('selectTab', tab.id)"
       @dblclick="$emit('titleDoubleClick', tab.id)"
       @contextmenu="openContextMenu($event, tab)"
     >
-      {{ tab.title }}
+      <span v-if="tab.external" class="tab-external-icon" aria-hidden="true" />
+      <span class="tab-label">{{ tab.title }}</span>
     </button>
     <button class="tab-add" type="button" title="New note" aria-label="New note" @click="$emit('newTab')">
       +
@@ -131,6 +139,12 @@ function updateColor(color: string | null) {
         @click="runContextAction('delete')"
       >
         {{ messages.delete }}
+      </button>
+      <button type="button" role="menuitem" :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'" @click="runContextAction('archive')">
+        {{ messages.archive }}
+      </button>
+      <button type="button" role="menuitem" :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'" @click="runContextAction('close')">
+        {{ messages.close }}
       </button>
       <div class="menu-separator" role="separator" />
       <span class="tab-context-label">{{ messages.color }}</span>

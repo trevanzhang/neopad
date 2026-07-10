@@ -7,12 +7,15 @@ export type AppMessages = {
     untitled: string
     rename: string
     delete: string
+    archive: string
+    close: string
     color: string
     defaultColor: string
     previous: string
     next: string
     confirmDeleteTitle: string
     confirmDeleteMessage: string
+    confirmArchiveMessage: string
   }
   menu: {
     file: string
@@ -24,6 +27,7 @@ export type AppMessages = {
     tools: string
     help: string
     loadFromFile: string
+    recentDocuments: string
     saveAsFile: string
     exportAll: string
     trash: string
@@ -71,6 +75,9 @@ export type AppMessages = {
     alwaysOnTop: string
     renamePage: string
     deletePage: string
+    archivePage: string
+    unarchivePage: string
+    closePage: string
     plainText: string
     markdown: string
     date: string
@@ -310,12 +317,15 @@ export const messages: Record<AppLanguage, AppMessages> = {
       untitled: 'Untitled',
       rename: 'Rename',
       delete: 'Delete',
+      archive: 'Archive',
+      close: 'Close',
       color: 'Tab color',
       defaultColor: 'Default',
       previous: 'Previous tab',
       next: 'Next tab',
       confirmDeleteTitle: 'Delete tab?',
       confirmDeleteMessage: 'Delete "{title}"? The note will be moved to Trash.',
+      confirmArchiveMessage: 'Archive "{title}"? The note will be moved to Archive.',
     },
     menu: {
       file: 'File(F)',
@@ -327,6 +337,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       tools: 'Tools(T)',
       help: 'Help(H)',
       loadFromFile: 'Load from File(L)',
+      recentDocuments: 'Recent Documents',
       saveAsFile: 'Save As File(S)',
       exportAll: 'Export All(E)...',
       trash: 'Trash(R)...',
@@ -374,6 +385,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       alwaysOnTop: 'Always on Top',
       renamePage: 'Rename Page',
       deletePage: 'Delete Page',
+      archivePage: 'Archive Page',
+      unarchivePage: 'Restore from Archive',
+      closePage: 'Close Tab',
       plainText: 'Plain Text',
       markdown: 'Markdown',
       date: 'Date',
@@ -611,12 +625,15 @@ export const messages: Record<AppLanguage, AppMessages> = {
       untitled: '\u672a\u547d\u540d',
       rename: '\u91cd\u547d\u540d',
       delete: '\u5220\u9664',
+      archive: '\u5f52\u6863',
+      close: '\u5173\u95ed',
       color: '\u4fee\u6539\u6807\u7b7e\u9875\u989c\u8272',
       defaultColor: '\u9ed8\u8ba4\u989c\u8272',
       previous: '\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875',
       next: '\u4e0b\u4e00\u4e2a\u6807\u7b7e\u9875',
       confirmDeleteTitle: '\u5220\u9664\u6807\u7b7e\u9875\uff1f',
       confirmDeleteMessage: '\u786e\u5b9a\u5220\u9664\u201c{title}\u201d\u5417\uff1f\u7b14\u8bb0\u5c06\u79fb\u81f3\u56de\u6536\u7ad9\u3002',
+      confirmArchiveMessage: '\u786e\u5b9a\u5f52\u6863\u201c{title}\u201d\u5417\uff1f\u7b14\u8bb0\u5c06\u79fb\u81f3\u5b58\u6863\u3002',
     },
     menu: {
       file: '\u6587\u4ef6(F)',
@@ -628,6 +645,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       tools: '\u5de5\u5177(T)',
       help: '\u5e2e\u52a9(H)',
       loadFromFile: '\u4ece\u6587\u4ef6\u8f7d\u5165(L)',
+      recentDocuments: '\u6700\u8fd1\u6253\u5f00\u7684\u6587\u6863',
       saveAsFile: '\u53e6\u5b58\u5230\u6587\u4ef6(S)',
       exportAll: '\u5168\u90e8\u5bfc\u51fa(E)...',
       trash: '\u56de\u6536\u7ad9(R)...',
@@ -675,6 +693,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       alwaysOnTop: '\u7a97\u53e3\u7f6e\u9876',
       renamePage: '\u91cd\u547d\u540d\u9875\u9762',
       deletePage: '\u5220\u9664\u9875\u9762',
+      archivePage: '\u5f52\u6863\u9875\u9762',
+      unarchivePage: '\u4ece\u5f52\u6863\u4e2d\u6062\u590d',
+      closePage: '\u5173\u95ed\u6807\u7b7e\u9875',
       plainText: '\u7eaf\u6587\u672c',
       markdown: 'Markdown',
       date: '\u65e5\u671f',

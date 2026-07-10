@@ -6,8 +6,21 @@ export type NoteTab = {
   updatedAt: number
   pinned: boolean
   deleted: boolean
+  archived: boolean
+  open: boolean
+  lastOpenedAt?: number
+  external?: boolean
+  externalPath?: string
   systemTitle: boolean
   color?: string
+}
+
+export type ExternalDocument = {
+  path: string
+  title: string
+  fileName: string
+  content: string
+  updatedAt: number
 }
 
 export type NoteContent = {

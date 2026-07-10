@@ -14,6 +14,8 @@ import SettingsPanel from './components/SettingsPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import TabBar from './components/TabBar.vue'
 import {
+  archiveNote,
+  closeNote,
   createNote,
   completeStartup,
   deleteNote,
@@ -27,8 +29,11 @@ import {
   completeDueReminders,
   completeReminder,
   listNotes,
+  listRecentNotes,
   listReminders,
   openTrash,
+  openNote,
+  openExternalMarkdown,
   quitApp,
   readNote,
   renameNote,
@@ -38,6 +43,8 @@ import {
   saveUiConfig,
   searchNotes,
   setNoteColor,
+  unarchiveNote,
+  readExternalMarkdown,
   setAutostart,
   setCloseToMinimize,
   setMcpEnabled,
@@ -50,6 +57,7 @@ import {
   updateToggleShortcut,
   updateClipboardShortcut,
   writeNote,
+  writeExternalMarkdown,
   regenerateMcpToken,
 } from './lib/invoke'
 import type { AppTheme, McpStatus } from './lib/invoke'
@@ -82,7 +90,7 @@ type TabBarOrientation = 'horizontal' | 'vertical'
 type HelpTopic = 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about'
 type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
 type InputDialogState = { title: string; initialValue: string }
-type ConfirmationDialogState = { title: string; message: string }
+type ConfirmationDialogState = { title: string; message: string; confirmLabel: string; danger: boolean }
 
 const now = Date.now()
 const tabs = ref<NoteTab[]>([
@@ -94,6 +102,8 @@ const tabs = ref<NoteTab[]>([
     updatedAt: now,
     pinned: true,
     deleted: false,
+    archived: false,
+    open: true,
     systemTitle: false,
   },
   {
@@ -104,10 +114,14 @@ const tabs = ref<NoteTab[]>([
     updatedAt: now,
     pinned: true,
     deleted: false,
+    archived: false,
+    open: true,
     systemTitle: false,
   },
 ])
 const activeTabId = ref('inbox')
+const recentNotes = ref<NoteTab[]>([])
+const externalRecentNotes = ref<NoteTab[]>(initialJsonSetting<NoteTab[]>('neopad.externalRecentNotes', []))
 const content = ref('# Inbox\n\nStart typing...')
 const saveState = ref<'Saved' | 'Saving' | 'Failed'>('Saved')
 const appReady = ref(false)
@@ -181,9 +195,9 @@ const displayTabs = computed(() => tabs.value.map((tab) => ({
       ? t.value.tabs.inbox
     : tab.id === 'clipboard'
       ? t.value.tabs.clipboard
-      : tab.systemTitle && tab.title === 'Untitled'
-        ? t.value.tabs.untitled
-      : tab.title,
+      : tab.systemTitle && /^Untitled(?: (\d+))?$/.test(tab.title)
+        ? `${t.value.tabs.untitled}${tab.title.slice('Untitled'.length)}`
+        : tab.title,
 })))
 const localizedSaveState = computed(() => {
   if (saveState.value === 'Saving') {
@@ -221,7 +235,7 @@ const deletingTabIds = new Set<string>()
 const autosave = new AutosaveCoordinator({
   delayMs: 500,
   save: ({ noteId, content: nextContent, expectedUpdatedAt }: { noteId: string; content: string; expectedUpdatedAt: number }) =>
-    writeNote(noteId, nextContent, expectedUpdatedAt),
+    saveDocument(noteId, nextContent, expectedUpdatedAt),
   onSaved: ({ noteId }, saved) => {
     const tab = tabs.value.find((item) => item.id === noteId)
     if (tab) tab.updatedAt = saved.updatedAt
@@ -684,6 +698,18 @@ async function deleteActivePage() {
   if (activeTab.value) await deleteTab(activeTab.value)
 }
 
+async function closeActivePage() {
+  if (activeTab.value) await closeTab(activeTab.value)
+}
+
+async function archiveActivePage() {
+  if (activeTab.value) await archiveTab(activeTab.value)
+}
+
+async function unarchiveActivePage() {
+  if (activeTab.value) await unarchiveTab(activeTab.value)
+}
+
 async function renamePageById(tabId: string) {
   const tab = tabs.value.find((item) => item.id === tabId)
   if (tab) await renameTab(tab)
@@ -692,6 +718,16 @@ async function renamePageById(tabId: string) {
 async function deletePageById(tabId: string) {
   const tab = tabs.value.find((item) => item.id === tabId)
   if (tab) await deleteTab(tab)
+}
+
+async function closePageById(tabId: string) {
+  const tab = tabs.value.find((item) => item.id === tabId)
+  if (tab) await closeTab(tab)
+}
+
+async function archivePageById(tabId: string) {
+  const tab = tabs.value.find((item) => item.id === tabId)
+  if (tab) await archiveTab(tab)
 }
 
 async function updateTabColor(tabId: string, color: string | null) {
@@ -711,7 +747,7 @@ async function updateTabColor(tabId: string, color: string | null) {
 }
 
 async function renameTab(tab: NoteTab) {
-  if (tab.id === 'inbox' || tab.id === 'clipboard') return
+  if (tab.id === 'inbox' || tab.id === 'clipboard' || tab.external) return
   const nextTitle = (await requestInput(t.value.settings.renameTitle, tab.title))?.trim()
   if (!nextTitle) return
 
@@ -730,7 +766,7 @@ async function renameTab(tab: NoteTab) {
 }
 
 async function deleteTab(tab: NoteTab) {
-  if (tab.id === 'inbox' || tab.id === 'clipboard') return
+  if (tab.id === 'inbox' || tab.id === 'clipboard' || tab.external) return
   if (deletingTabIds.has(tab.id)) return
   const wasActiveTab = activeTabId.value === tab.id
   const nextActiveTabId = wasActiveTab
@@ -739,6 +775,8 @@ async function deleteTab(tab: NoteTab) {
   const confirmed = await requestConfirmation(
     t.value.tabs.confirmDeleteTitle,
     t.value.tabs.confirmDeleteMessage.replace('{title}', tab.title),
+    t.value.tabs.delete,
+    true,
   )
   if (!confirmed) return
 
@@ -769,6 +807,87 @@ async function deleteTab(tab: NoteTab) {
   deletingTabIds.delete(tab.id)
 }
 
+async function closeTab(tab: NoteTab) {
+  if (tab.id === 'inbox' || tab.id === 'clipboard') return
+  const wasActive = activeTabId.value === tab.id
+  const nextTabId = wasActive ? tabs.value.find((item) => item.id !== tab.id)?.id ?? 'inbox' : activeTabId.value
+  try {
+    if (isTauriRuntime() && !tab.external) {
+      if (!(await forceSave())) return
+      await closeNote(tab.id)
+    }
+    tabs.value = tabs.value.filter((item) => item.id !== tab.id)
+    if (wasActive) {
+      activeTabId.value = nextTabId
+      await loadActiveNote()
+    }
+    await refreshRecentNotes()
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function archiveTab(tab: NoteTab) {
+  if (tab.id === 'inbox' || tab.id === 'clipboard') return
+  if (tab.external) {
+    const confirmed = await requestConfirmation(
+      t.value.tabs.archive,
+      language.value === 'zh'
+        ? `将“${tab.title}”复制到 NeoPad 存档。原始文件不会移动或删除。`
+        : `Copy "${tab.title}" into the NeoPad archive? The original file will not be moved or deleted.`,
+      t.value.tabs.archive,
+    )
+    if (!confirmed) return
+    try {
+      if (!(await forceSave())) return
+      const created = await createNote(tab.title)
+      const saved = await writeNote(created.id, content.value, created.updatedAt)
+      await archiveNote(saved.id)
+      await closeTab(tab)
+    } catch {
+      saveState.value = 'Failed'
+    }
+    return
+  }
+  if (tab.archived) {
+    await unarchiveTab(tab)
+    return
+  }
+  const confirmed = await requestConfirmation(
+    t.value.tabs.archive,
+    t.value.tabs.confirmArchiveMessage.replace('{title}', tab.title),
+    t.value.tabs.archive,
+  )
+  if (!confirmed) return
+  const wasActive = activeTabId.value === tab.id
+  try {
+    if (isTauriRuntime()) {
+      if (!(await forceSave())) return
+      await archiveNote(tab.id)
+    }
+    tabs.value = tabs.value.filter((item) => item.id !== tab.id)
+    if (wasActive) {
+      activeTabId.value = tabs.value[0]?.id ?? 'inbox'
+      await loadActiveNote()
+    }
+    await refreshRecentNotes()
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function unarchiveTab(tab: NoteTab) {
+  try {
+    const restored = isTauriRuntime() ? await unarchiveNote(tab.id) : { ...tab, archived: false, open: true }
+    upsertTab(restored)
+    activeTabId.value = restored.id
+    await loadActiveNote()
+    await refreshRecentNotes()
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
 async function createLocalTab() {
   const generation = nextNoteLoadGeneration()
   if (isTauriRuntime()) {
@@ -785,6 +904,8 @@ async function createLocalTab() {
         updatedAt: note.updatedAt,
         pinned: false,
         deleted: false,
+        archived: false,
+        open: true,
         systemTitle: true,
       })
       activeTabId.value = note.id
@@ -806,6 +927,8 @@ async function createLocalTab() {
     updatedAt: createdAt,
     pinned: false,
     deleted: false,
+    archived: false,
+    open: true,
     systemTitle: true,
   }
 
@@ -834,6 +957,8 @@ async function saveCurrentClipboard() {
       updatedAt: note.updatedAt,
       pinned: true,
       deleted: false,
+      archived: false,
+      open: true,
       systemTitle: false,
     })
     activeTabId.value = note.id
@@ -845,7 +970,52 @@ async function saveCurrentClipboard() {
 }
 
 function triggerLoadFile() {
+  if (isTauriRuntime()) {
+    void openExternalDocument()
+    return
+  }
   fileInput.value?.click()
+}
+
+async function openExternalDocument() {
+  try {
+    const document = await openExternalMarkdown()
+    if (!document) return
+    await openExternalDocumentPath(document.path, document)
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function openExternalDocumentPath(path: string, loaded?: import('./types/note').ExternalDocument) {
+  const generation = nextNoteLoadGeneration()
+  if (!(await forceSave()) || !isCurrentNoteLoad(generation)) return
+  try {
+    const document = loaded ?? await readExternalMarkdown(path)
+    if (!isCurrentNoteLoad(generation)) return
+    const tab: NoteTab = {
+      id: `external:${document.path}`,
+      title: document.title,
+      fileName: document.fileName,
+      createdAt: document.updatedAt,
+      updatedAt: document.updatedAt,
+      pinned: false,
+      deleted: false,
+      archived: false,
+      open: true,
+      systemTitle: false,
+      external: true,
+      externalPath: document.path,
+    }
+    upsertTab(tab)
+    activeTabId.value = tab.id
+    setContentFromLoad(document.content)
+    rememberExternalDocument(tab)
+    saveState.value = 'Saved'
+    statusMessage.value = t.value.status.loadedFromFile
+  } catch {
+    saveState.value = 'Failed'
+  }
 }
 
 async function loadFileFromInput(event: Event) {
@@ -878,6 +1048,8 @@ async function loadFileFromInput(event: Event) {
         updatedAt: saved.updatedAt,
         pinned: false,
         deleted: false,
+        archived: false,
+        open: true,
         systemTitle: false,
       })
       activeTabId.value = saved.id
@@ -1049,9 +1221,9 @@ function finishInputDialog(value: string | null) {
   resolve?.(value)
 }
 
-function requestConfirmation(title: string, message: string) {
+function requestConfirmation(title: string, message: string, confirmLabel: string, danger = false) {
   resolveConfirmationDialog?.(false)
-  confirmationDialog.value = { title, message }
+  confirmationDialog.value = { title, message, confirmLabel, danger }
   return new Promise<boolean>((resolve) => {
     resolveConfirmationDialog = resolve
   })
@@ -1183,7 +1355,16 @@ async function selectSearchResult(result: SearchResult) {
   const generation = nextNoteLoadGeneration()
   await forceSave()
   if (!isCurrentNoteLoad(generation)) return
-  activeTabId.value = result.noteId
+  try {
+    const opened = isTauriRuntime() ? await openNote(result.noteId) : tabs.value.find((tab) => tab.id === result.noteId)
+    if (!opened) return
+    upsertTab(opened)
+    activeTabId.value = result.noteId
+    await refreshRecentNotes()
+  } catch {
+    saveState.value = 'Failed'
+    return
+  }
   await loadActiveNote(generation)
   closeSearch()
 }
@@ -1467,10 +1648,46 @@ async function loadInitialNotes() {
       tabs.value = loadedTabs
       activeTabId.value = loadedTabs[0].id
     }
+    await refreshRecentNotes()
     await loadActiveNote()
   } catch {
     saveState.value = 'Failed'
   }
+}
+
+async function refreshRecentNotes() {
+  if (!isTauriRuntime()) return
+  const internal = await listRecentNotes()
+  recentNotes.value = [...externalRecentNotes.value, ...internal]
+    .sort((left, right) => (right.lastOpenedAt ?? right.updatedAt) - (left.lastOpenedAt ?? left.updatedAt))
+    .slice(0, 20)
+}
+
+async function openRecentNote(noteId: string) {
+  const external = externalRecentNotes.value.find((note) => note.id === noteId)
+  if (external?.externalPath) {
+    await openExternalDocumentPath(external.externalPath)
+    return
+  }
+  const generation = nextNoteLoadGeneration()
+  if (!(await forceSave()) || !isCurrentNoteLoad(generation)) return
+  try {
+    const opened = isTauriRuntime() ? await openNote(noteId) : null
+    if (!opened || !isCurrentNoteLoad(generation)) return
+    upsertTab(opened)
+    activeTabId.value = opened.id
+    await loadActiveNote(generation)
+    await refreshRecentNotes()
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+function rememberExternalDocument(tab: NoteTab) {
+  const recent = { ...tab, lastOpenedAt: Date.now() }
+  externalRecentNotes.value = [recent, ...externalRecentNotes.value.filter((item) => item.id !== recent.id)].slice(0, 20)
+  window.localStorage.setItem('neopad.externalRecentNotes', JSON.stringify(externalRecentNotes.value))
+  void refreshRecentNotes()
 }
 
 async function loadShortcutWarnings() {
@@ -1728,11 +1945,13 @@ async function loadActiveNote(generation = nextNoteLoadGeneration()) {
   isLoadingNote.value = true
   loadingNoteGeneration = generation
   try {
-    const note = await readNote(tabId)
+    const note = tab.external && tab.externalPath
+      ? await readExternalMarkdown(tab.externalPath)
+      : await readNote(tabId)
     if (!isCurrentNoteLoad(generation) || activeTabId.value !== tabId) {
       return false
     }
-    const loadedTab = tabs.value.find((item) => item.id === note.id)
+    const loadedTab = tabs.value.find((item) => item.id === tabId)
     if (loadedTab) {
       loadedTab.updatedAt = note.updatedAt
     }
@@ -1766,6 +1985,23 @@ async function forceSave() {
     return true
   }
   return autosave.flush()
+}
+
+async function saveDocument(noteId: string, nextContent: string, expectedUpdatedAt: number) {
+  const tab = tabs.value.find((item) => item.id === noteId)
+  if (tab?.external && tab.externalPath) {
+    const saved = await writeExternalMarkdown(tab.externalPath, nextContent, expectedUpdatedAt)
+    tab.updatedAt = saved.updatedAt
+    rememberExternalDocument(tab)
+    return {
+      id: noteId,
+      title: tab.title,
+      fileName: tab.fileName,
+      content: saved.content,
+      updatedAt: saved.updatedAt,
+    }
+  }
+  return writeNote(noteId, nextContent, expectedUpdatedAt)
 }
 
 async function saveBeforeWindowAction() {
@@ -1951,6 +2187,13 @@ function handleKeydown(event: KeyboardEvent) {
       return
     }
 
+    if (document.querySelector('.np-find-panel')) {
+      event.preventDefault()
+      event.stopPropagation()
+      editorPane.value?.closeEditorFind()
+      return
+    }
+
     // Menus and tab context menus own Escape while they are open. Their
     // component listeners close the surface later in the same event dispatch.
     if (document.querySelector('.menu-root:focus-within, .tab-context-menu')) return
@@ -2001,7 +2244,7 @@ function handleKeydown(event: KeyboardEvent) {
     if (key === 'w') {
       event.preventDefault()
       event.stopPropagation()
-      void deleteActivePage()
+      void closeActivePage()
       return
     }
     if (key === 'o') {
@@ -2183,6 +2426,8 @@ function createLocalTabFromContent(title: string, nextContent: string) {
     updatedAt: createdAt,
     pinned: false,
     deleted: false,
+    archived: false,
+    open: true,
     systemTitle: false,
   }
 
@@ -2632,10 +2877,16 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         :word-wrap="wordWrap"
         :always-on-top="alwaysOnTop"
         :page-actions-enabled="Boolean(activeTab && activeTab.id !== 'inbox' && activeTab.id !== 'clipboard')"
+        :active-tab-archived="Boolean(activeTab?.archived)"
+        :recent-notes="recentNotes"
         :messages="t.menu"
         @new-note="createLocalTab"
         @rename-page="renameActivePage"
         @delete-page="deleteActivePage"
+        @close-page="closeActivePage"
+        @archive-page="archiveActivePage"
+        @unarchive-page="unarchiveActivePage"
+        @open-recent="openRecentNote"
         @save-clipboard="saveCurrentClipboard"
         @load-file="triggerLoadFile"
         @save-as-file="saveAsFile"
@@ -2683,6 +2934,9 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
         @title-double-click="handleTabTitleDoubleClick"
         @rename-tab="renamePageById"
         @delete-tab="deletePageById"
+        @close-tab="closePageById"
+        @archive-tab="archivePageById"
+        @unarchive-tab="unarchiveTab(tabs.find((tab) => tab.id === $event)!)"
         @update-tab-color="updateTabColor"
         @new-tab="createLocalTab"
         @toggle-orientation="toggleTabBarOrientation"
@@ -2862,8 +3116,9 @@ function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
       v-if="confirmationDialog"
       :title="confirmationDialog.title"
       :message="confirmationDialog.message"
-      :confirm-label="t.tabs.delete"
+      :confirm-label="confirmationDialog.confirmLabel"
       :cancel-label="t.settings.cancel"
+      :danger="confirmationDialog.danger"
       @confirm="finishConfirmationDialog(true)"
       @cancel="finishConfirmationDialog(false)"
     />

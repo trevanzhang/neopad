@@ -28,13 +28,16 @@ Implemented MVP capabilities:
   an editor input mode rather than a plugin or Vim runtime system; its small
   set of options lives under Advanced settings, including whether NeoPad Ctrl
   shortcuts take priority over conflicting Vim mappings.
-- Plain Markdown persistence under `~/.neopad/notes/*.md`.
-- Multiple tabs backed by local metadata.
+- Plain Markdown persistence under `~/.neopad/notes/*.md`, with archived
+  NeoPad notes stored under `~/.neopad/archive/`.
+- Multiple tabs backed by local metadata, including close-without-delete and
+  recent-document workflows.
 - Autosave.
 - Edit, split, and preview editor modes with a persisted default and fixed
   `F4` cycling shortcut; all three modes remain available in immersive
   fullscreen. NeoPad launches into edit mode by default.
-- Page creation, rename, and trash actions with protected default pages.
+- Page creation with incrementing untitled names, rename, archive, and trash
+  actions with protected default pages.
 - Persistent optional tab colors managed from the tab context menu.
 - English and Chinese display names for system-managed page titles.
 - Persistent day and night themes across the complete desktop interface.
@@ -50,7 +53,9 @@ Implemented MVP capabilities:
   Markdown lines.
 - Native Save As for exporting the active note to Markdown or all notes to a
   ZIP archive with one Markdown file per tab.
-- `Ctrl+O` imports external Markdown files into the local NeoPad workspace.
+- `Ctrl+O` opens external Markdown files in place and autosaves changes back
+  to their original paths. External files can be copied into the NeoPad archive
+  without changing the originals.
 - Manual clipboard capture into `clipboard.md` with readable local timestamp
   separator lines.
 - Tray menu.

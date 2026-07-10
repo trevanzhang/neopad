@@ -252,8 +252,37 @@ body {
   flex: 0 1 auto;
   max-width: 170px;
   overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab-label {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tab-external-icon {
+  position: relative;
+  flex: 0 0 9px;
+  width: 9px;
+  height: 12px;
+  border: 1px solid currentColor;
+  opacity: 0.62;
+}
+
+.tab-external-icon::after {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 4px;
+  height: 4px;
+  content: '';
+  background: #d6d6d4;
+  border-bottom: 1px solid currentColor;
+  border-left: 1px solid currentColor;
 }
 
 .tab-item.active {
@@ -263,6 +292,10 @@ body {
   box-shadow: inset 0 -3px #f4c542, inset 1px 1px #ffffff, 0 1px 2px rgba(0, 0, 0, 0.18);
   font-weight: 700;
   transform: translateY(-1px);
+}
+
+.tab-item.active .tab-external-icon::after {
+  background: #eeeeee;
 }
 
 .tab-add {
@@ -617,6 +650,14 @@ body {
   box-shadow: inset 0 -3px #ffd166, inset 1px 1px #454c56, 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
+.theme-dark .tab-external-icon::after {
+  background: var(--np-control);
+}
+
+.theme-dark .tab-item.active .tab-external-icon::after {
+  background: var(--np-control-active);
+}
+
 .theme-dark input,
 .theme-dark select,
 .theme-dark textarea {
@@ -643,6 +684,7 @@ body {
 
 .markdown-preview {
   max-width: var(--np-preview-width, 76ch);
+  margin-inline: auto;
   color: var(--np-preview-text);
   font-family: var(--np-preview-font, "Segoe UI", Arial, sans-serif);
   font-size: var(--np-preview-font-size, 14px);
