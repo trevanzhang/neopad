@@ -471,12 +471,7 @@ fn set_autostart(_app: &AppHandle, enabled: bool, start_hidden: bool) -> anyhow:
     #[cfg(target_os = "windows")]
     {
         let exe_path = std::env::current_exe()?;
-        let exe = exe_path.to_string_lossy();
-        let command = if start_hidden {
-            format!(r#"\"{}\" --hidden"#, exe)
-        } else {
-            format!(r#"\"{}\""#, exe)
-        };
+        let command = autostart_command_value(&exe_path, start_hidden);
         let key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
         let status = if enabled {
             Command::new("reg")
@@ -502,10 +497,46 @@ fn set_autostart(_app: &AppHandle, enabled: bool, start_hidden: bool) -> anyhow:
     Ok(())
 }
 
+#[cfg(target_os = "windows")]
+fn autostart_command_value(exe_path: &std::path::Path, start_hidden: bool) -> String {
+    let exe = exe_path.to_string_lossy();
+    if start_hidden {
+        format!(r#""{}" --hidden"#, exe)
+    } else {
+        format!(r#""{}""#, exe)
+    }
+}
+
 pub(crate) fn display_error(error: anyhow::Error) -> String {
     error
         .chain()
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join(": ")
+}
+
+#[cfg(test)]
+#[cfg(target_os = "windows")]
+mod tests {
+    use super::autostart_command_value;
+    use std::path::Path;
+
+    #[test]
+    fn autostart_command_quotes_exe_without_escape_slashes() {
+        let command =
+            autostart_command_value(Path::new(r"C:\Program Files\neopad\neopad-app.exe"), false);
+
+        assert_eq!(command, r#""C:\Program Files\neopad\neopad-app.exe""#);
+    }
+
+    #[test]
+    fn autostart_command_appends_hidden_argument() {
+        let command =
+            autostart_command_value(Path::new(r"C:\Program Files\neopad\neopad-app.exe"), true);
+
+        assert_eq!(
+            command,
+            r#""C:\Program Files\neopad\neopad-app.exe" --hidden"#
+        );
+    }
 }
