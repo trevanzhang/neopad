@@ -6,11 +6,40 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.4.5 - 2026-07-10
+
+### Added
+
+- Added a managed note lifecycle with close-without-delete, archive, restore,
+  and recent-document workflows.
+- Added `archive/` storage for NeoPad-managed notes. Archived notes remain
+  searchable and are included in all-notes ZIP exports.
+- Added native opening and in-place autosave for explicitly selected external
+  Markdown files, including modification-time conflict checks.
+- Added copy-to-archive for external Markdown files without moving or deleting
+  their originals.
+- Added a document marker and full-path tooltip for external-file tabs.
+- Generated untitled notes now receive incrementing titles for easier tab,
+  search, and recent-document identification.
+
+### Changed
+
+- `Ctrl+W` now closes the current non-pinned tab without changing the note
+  file. Deletion remains an explicit move-to-trash action.
+- Preview content is centered within its configured reading width, including in
+  immersive fullscreen mode.
+
 ### Fixed
 
 - Fixed Windows startup registration so the Run key stores a valid quoted
   executable command, allowing "Run automatically at system startup" to launch
   NeoPad after sign-in.
+- Fixed external Markdown tabs when switching with `Ctrl+Tab` or
+  `Ctrl+Shift+Tab`.
+- Fixed the current-note find panel so `Esc` and moving focus outside the panel
+  reliably close it.
+- Fixed archive confirmation copy, action label, and button styling so archive
+  is not presented as a destructive delete action.
 
 ## 0.4.4 - 2026-07-09
 
