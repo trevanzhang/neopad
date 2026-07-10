@@ -14,7 +14,7 @@
     "test:e2e": "pnpm test:e2e:setup && pnpm test:e2e:build && wdio run ./e2e/wdio.conf.ts",
     "tauri": "pnpm --filter neopad-app tauri",
     "tauri:dev": "pnpm --filter neopad-app tauri dev",
-    "tauri:build": "cargo build -p neopad-mcp --release && powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/prepare-mcp-sidecar.ps1 && pnpm --filter neopad-app tauri build"
+    "tauri:build": "cargo build -p neopad-mcp --release && node scripts/prepare-mcp-sidecar.mjs && pnpm --filter neopad-app tauri build"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
