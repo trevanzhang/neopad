@@ -9,6 +9,7 @@ pub struct Workspace {
     pub root: PathBuf,
     pub notes_dir: PathBuf,
     pub meta_dir: PathBuf,
+    pub archive_dir: PathBuf,
     pub trash_dir: PathBuf,
     pub backups_dir: PathBuf,
     pub config_path: PathBuf,
@@ -21,6 +22,7 @@ impl Workspace {
         Self {
             notes_dir: root.join("notes"),
             meta_dir: root.join("meta"),
+            archive_dir: root.join("archive"),
             trash_dir: root.join("trash"),
             backups_dir: root.join("backups"),
             config_path: root.join("config.json"),
@@ -63,6 +65,9 @@ pub fn ensure_workspace_layout(workspace: &Workspace) -> Result<()> {
             "failed to create meta directory at {}",
             workspace.meta_dir.display()
         )
+    })?;
+    fs::create_dir_all(&workspace.archive_dir).with_context(|| {
+        format!("failed to create archive directory at {}", workspace.archive_dir.display())
     })?;
     fs::create_dir_all(&workspace.trash_dir).with_context(|| {
         format!(
@@ -146,6 +151,7 @@ mod tests {
         assert_eq!(workspace.root, root);
         assert!(workspace.notes_dir.is_dir());
         assert!(workspace.meta_dir.is_dir());
+        assert!(workspace.archive_dir.is_dir());
         assert!(workspace.trash_dir.is_dir());
         assert!(workspace.backups_dir.is_dir());
         assert_eq!(

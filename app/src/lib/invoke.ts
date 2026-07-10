@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import type { NoteContent, NoteTab, Reminder, SearchResult, WorkspaceInfo } from '../types/note'
+import type { ExternalDocument, NoteContent, NoteTab, Reminder, SearchResult, WorkspaceInfo } from '../types/note'
 import type {
   EditorMode,
   EditorModeShortcut,
@@ -93,6 +93,38 @@ export function renameNote(noteId: string, title: string): Promise<NoteTab> {
 
 export function deleteNote(noteId: string): Promise<NoteTab> {
   return invoke('delete_note_command', { noteId })
+}
+
+export function closeNote(noteId: string): Promise<NoteTab> {
+  return invoke('close_note_command', { noteId })
+}
+
+export function openNote(noteId: string): Promise<NoteTab> {
+  return invoke('open_note_command', { noteId })
+}
+
+export function archiveNote(noteId: string): Promise<NoteTab> {
+  return invoke('archive_note_command', { noteId })
+}
+
+export function unarchiveNote(noteId: string): Promise<NoteTab> {
+  return invoke('unarchive_note_command', { noteId })
+}
+
+export function listRecentNotes(): Promise<NoteTab[]> {
+  return invoke('list_recent_notes_command')
+}
+
+export function openExternalMarkdown(): Promise<ExternalDocument | null> {
+  return invoke('open_external_markdown_command')
+}
+
+export function readExternalMarkdown(path: string): Promise<ExternalDocument> {
+  return invoke('read_external_markdown_command', { path })
+}
+
+export function writeExternalMarkdown(path: string, content: string, expectedUpdatedAt: number): Promise<ExternalDocument> {
+  return invoke('write_external_markdown_command', { path, content, expectedUpdatedAt })
 }
 
 export function setNoteColor(noteId: string, color: string | null): Promise<NoteTab> {

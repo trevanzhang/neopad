@@ -48,11 +48,16 @@ The repository currently contains a working Windows-focused MVP:
   closes the reminder list. "Mark Completed", "Mark Unfinished",
   and "Clear Due" update reminder checkboxes directly without deleting note
   content.
-- Tab context menu with rename, trash, and persistent color choices.
-- `Ctrl+O` imports an external Markdown file into the NeoPad workspace, rather
-  than editing the original file in place. Native Save As dialogs export the
-  active note as Markdown or all notes as a ZIP archive containing one Markdown
-  file per tab.
+- `Ctrl+W` closes the current non-pinned tab without changing its file. The tab
+  context menu also provides explicit archive and trash actions, while recent
+  documents provide a quick way to reopen closed or archived notes.
+- Archived notes move to `~/.neopad/archive/`, remain available to full-text
+  search, and can be restored without using the trash.
+- `Ctrl+O` opens an external Markdown file in place through the native file
+  picker. Changes autosave back to the original path with a modification-time
+  check. External files can be copied into the NeoPad archive without moving or
+  deleting their originals. Native Save As dialogs export the active note as
+  Markdown or all notes as a ZIP archive containing one Markdown file per tab.
 - Standalone local HTTP `neopad-mcp` service managed from Settings, with bearer
   token access for local agents. The dedicated MCP settings page can start or
   stop the service, show the local URL and token, regenerate the token, and copy
@@ -84,6 +89,7 @@ Important files and directories:
 ```text
 ~/.neopad/
   notes/              Markdown note bodies
+  archive/            Archived notes, included in full-text search
   meta/tabs.json      Tab metadata
   meta/reminders.json Notification delivery state
   config.json         App settings
@@ -151,7 +157,7 @@ name, and then builds the MSI.
 The MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.4.4_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.4.5_x64_en-US.msi
 ```
 
 ## MCP Server
@@ -203,7 +209,8 @@ F10             Toggle tab bar orientation
 F11             Toggle immersive fullscreen
 Alt+Enter       Maximize or restore the main window
 Esc             Close overlays, exit fullscreen, or hide the window
-Ctrl+O          Import a Markdown file into NeoPad
+Ctrl+O          Open an external Markdown file
+Ctrl+W          Close the current tab
 Ctrl+E          Insert a Markdown reminder
 Ctrl+Tab        Next tab
 Ctrl+Shift+Tab  Previous tab

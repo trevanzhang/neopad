@@ -16,6 +16,13 @@ pub fn trash_file_path(workspace: &Workspace, file_name: &str) -> Result<PathBuf
     Ok(target)
 }
 
+pub fn archive_file_path(workspace: &Workspace, file_name: &str) -> Result<PathBuf> {
+    validate_note_file_name(file_name)?;
+    let target = workspace.archive_dir.join(file_name);
+    ensure_inside_workspace(&workspace.root, &target)?;
+    Ok(target)
+}
+
 pub fn ensure_inside_workspace(workspace: &Path, target: &Path) -> Result<()> {
     let workspace = normalize_existing_path(workspace)
         .with_context(|| format!("failed to resolve workspace path {}", workspace.display()))?;

@@ -6,6 +6,7 @@ defineProps<{
   message: string
   confirmLabel: string
   cancelLabel: string
+  danger?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -63,7 +64,7 @@ function handleTab(event: KeyboardEvent) {
         <p class="confirmation-dialog-message">{{ message }}</p>
       </div>
       <footer class="input-dialog-actions">
-        <button ref="confirmButton" type="submit" class="danger">{{ confirmLabel }}</button>
+        <button ref="confirmButton" type="submit" :class="{ primary: !danger, danger }">{{ confirmLabel }}</button>
         <button ref="cancelButton" type="button" @click="emit('cancel')">{{ cancelLabel }}</button>
       </footer>
     </form>

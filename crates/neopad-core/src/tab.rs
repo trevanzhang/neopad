@@ -11,9 +11,19 @@ pub struct NoteTab {
     pub pinned: bool,
     pub deleted: bool,
     #[serde(default)]
+    pub archived: bool,
+    #[serde(default = "default_open")]
+    pub open: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_opened_at: Option<i64>,
+    #[serde(default)]
     pub system_title: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
+}
+
+fn default_open() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -38,6 +48,9 @@ impl TabsState {
                     updated_at: now_ms,
                     pinned: true,
                     deleted: false,
+                    archived: false,
+                    open: true,
+                    last_opened_at: Some(now_ms),
                     system_title: false,
                     color: None,
                 },
@@ -49,6 +62,9 @@ impl TabsState {
                     updated_at: now_ms,
                     pinned: true,
                     deleted: false,
+                    archived: false,
+                    open: true,
+                    last_opened_at: Some(now_ms),
                     system_title: false,
                     color: None,
                 },

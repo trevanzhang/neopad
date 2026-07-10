@@ -2,20 +2,27 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { AppMessages } from '../lib/i18n'
 import type { EditorMode } from '../types/editor'
+import type { NoteTab } from '../types/note'
 
-defineProps<{
+const props = defineProps<{
   previewMode: EditorMode
   tabBarOrientation: 'horizontal' | 'vertical'
   wordWrap: boolean
   alwaysOnTop: boolean
   pageActionsEnabled: boolean
+  activeTabArchived: boolean
+  recentNotes: NoteTab[]
   messages: AppMessages['menu']
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   newNote: []
   renamePage: []
   deletePage: []
+  closePage: []
+  archivePage: []
+  unarchivePage: []
+  openRecent: [noteId: string]
   saveClipboard: []
   loadFile: []
   saveAsFile: []
@@ -52,6 +59,11 @@ defineEmits<{
   helpTopic: [topic: 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about']
   updatePreviewMode: [mode: EditorMode]
 }>()
+
+function toggleArchive() {
+  if (props.activeTabArchived) emit('unarchivePage')
+  else emit('archivePage')
+}
 
 function handleMenuClick(event: MouseEvent) {
   const button = (event.target as Element | null)?.closest<HTMLButtonElement>('.menu-popover button')
@@ -197,6 +209,17 @@ function handleMenuKeydown(event: KeyboardEvent) {
           <span>{{ messages.loadFromFile }}</span>
           <span class="menu-shortcut">{{ messages.ctrlO }}</span>
         </button>
+        <div class="menu-subroot">
+          <button type="button" class="menu-command">
+            <span>{{ messages.recentDocuments }}</span>
+            <span class="menu-arrow">&rsaquo;</span>
+          </button>
+          <div class="menu-popover menu-subpopover">
+            <button v-for="note in recentNotes" :key="note.id" type="button" @click="$emit('openRecent', note.id)">
+              {{ note.title }}
+            </button>
+          </div>
+        </div>
         <button type="button" @click="$emit('saveAsFile')">{{ messages.saveAsFile }}</button>
         <div class="menu-separator" role="separator" />
         <button type="button" @click="$emit('exportAll')">{{ messages.exportAll }}</button>
@@ -315,6 +338,12 @@ function handleMenuKeydown(event: KeyboardEvent) {
         </button>
         <button type="button" class="menu-command" :disabled="!pageActionsEnabled" @click="$emit('deletePage')">
           <span>{{ messages.deletePage }}</span>
+        </button>
+        <button type="button" class="menu-command" :disabled="!pageActionsEnabled" @click="toggleArchive">
+          {{ activeTabArchived ? messages.unarchivePage : messages.archivePage }}
+        </button>
+        <button type="button" class="menu-command" :disabled="!pageActionsEnabled" @click="$emit('closePage')">
+          <span>{{ messages.closePage }}</span>
           <span class="menu-shortcut">{{ messages.ctrlW }}</span>
         </button>
       </div>
