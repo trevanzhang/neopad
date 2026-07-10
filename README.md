@@ -165,7 +165,7 @@ name, and then builds the MSI.
 The MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.4.5_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.4.6_x64_en-US.msi
 ```
 
 ## MCP Server

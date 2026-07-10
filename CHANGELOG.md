@@ -6,6 +6,8 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.4.6 - 2026-07-10
+
 ### Changed
 
 - Global search now groups matching lines by note, shows a per-note match

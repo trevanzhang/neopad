@@ -112,7 +112,7 @@ pnpm tauri:build
 安装包输出位置：
 
 ```text
-target/release/bundle/msi/NeoPad_0.4.4_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.4.6_x64_en-US.msi
 ```
 
 ## MCP 服务
