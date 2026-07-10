@@ -6,6 +6,12 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+### Added
+
+- Added cross-platform release builds via GitHub Actions. Pushing a `v*` tag
+  now produces Windows `.msi`, macOS `.dmg` (ARM64), and Linux `.deb` +
+  `.AppImage` installers automatically.
+
 ## 0.4.6 - 2026-07-10
 
 ### Added

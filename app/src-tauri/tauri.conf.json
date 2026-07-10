@@ -30,14 +30,15 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "msi"
-    ],
+    "targets": "all",
     "externalBin": [
       "../../target/release/neopad-mcp"
     ],
     "icon": [
-      "icons/icon.ico"
+      "icons/icon.ico",
+      "icons/icon.icns",
+      "icons/32x32.png",
+      "icons/128x128.png"
     ],
     "windows": {
       "wix": {

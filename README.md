@@ -153,20 +153,24 @@ Build all Rust crates:
 cargo build
 ```
 
-Build the Windows MSI:
+Build the desktop app and platform bundle:
 
 ```powershell
 pnpm tauri:build
 ```
 
 This command builds the release MCP server first, prepares the Tauri sidecar
-name, and then builds the MSI.
+name, and then builds the platform-native bundle (.msi on Windows, .dmg on
+macOS, .deb and .AppImage on Linux).
 
-The MSI is written to:
+The Windows MSI is written to:
 
 ```text
 target/release/bundle/msi/NeoPad_0.4.6_x64_en-US.msi
 ```
+
+Cross-platform release builds also run automatically in GitHub Actions when a
+`v*` tag is pushed, producing Windows, macOS (ARM64), and Linux installers.
 
 ## MCP Server
 
