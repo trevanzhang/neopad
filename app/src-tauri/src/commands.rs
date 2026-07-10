@@ -629,7 +629,7 @@ fn set_autostart(_app: &AppHandle, enabled: bool, start_hidden: bool) -> anyhow:
 
     #[cfg(not(target_os = "windows"))]
     {
-        let _ = (app, enabled, start_hidden);
+        let _ = (_app, enabled, start_hidden);
     }
 
     Ok(())

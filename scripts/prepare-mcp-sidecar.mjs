@@ -45,15 +45,13 @@ function getTargetTriple() {
 
 const triple = getTargetTriple()
 
-// Cross-compiled builds land under target/<triple>/release/; native builds
-// land under target/release/. Tauri resolves externalBin relative to the
-// target dir, so the sidecar must sit in the same dir as the app binary.
+// The MCP binary may be in target/<triple>/release/ (cross-compiled) or
+// target/release/ (native build). Find it wherever it was produced.
 const crossDir = join(repoRoot, 'target', triple, 'release')
 const nativeDir = join(repoRoot, 'target', 'release')
-const releaseDir = existsSync(join(crossDir, `neopad-mcp${exeSuffix}`))
-  ? crossDir
-  : nativeDir
-const source = join(releaseDir, `neopad-mcp${exeSuffix}`)
+const source = existsSync(join(crossDir, `neopad-mcp${exeSuffix}`))
+  ? join(crossDir, `neopad-mcp${exeSuffix}`)
+  : join(nativeDir, `neopad-mcp${exeSuffix}`)
 
 if (!existsSync(source)) {
   console.error(
@@ -62,7 +60,10 @@ if (!existsSync(source)) {
   process.exit(1)
 }
 
-const dest = join(releaseDir, `neopad-mcp-${triple}${exeSuffix}`)
+// Tauri's externalBin path in tauri.conf.json is `../../target/release/neopad-mcp`,
+// so the suffixed sidecar must always be placed in target/release/ — even for
+// cross-compiled builds where the binary was produced under target/<triple>/release/.
+const dest = join(nativeDir, `neopad-mcp-${triple}${exeSuffix}`)
 
 copyFileSync(source, dest)
 console.log(`Prepared MCP sidecar: ${dest}`)
