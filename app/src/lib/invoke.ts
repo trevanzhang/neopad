@@ -75,6 +75,10 @@ export function listNotes(): Promise<NoteTab[]> {
   return invoke('list_notes_command')
 }
 
+export function listArchivedNotes(): Promise<NoteTab[]> {
+  return invoke('list_archived_notes_command')
+}
+
 export function readNote(noteId: string): Promise<NoteContent> {
   return invoke('read_note_command', { noteId })
 }

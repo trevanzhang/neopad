@@ -52,7 +52,13 @@ The repository currently contains a working Windows-focused MVP:
   context menu also provides explicit archive and trash actions, while recent
   documents provide a quick way to reopen closed or archived notes.
 - Archived notes move to `~/.neopad/archive/`, remain available to full-text
-  search, and can be restored without using the trash.
+  search, and can be listed and restored from File > View Archive without using
+  the trash.
+- If a non-default note file is removed outside NeoPad, its stale tab and recent
+  document record are removed on the next refresh; NeoPad does not recreate the
+  missing file.
+- Help > About NeoPad displays the version embedded in the running application
+  build.
 - `Ctrl+O` opens an external Markdown file in place through the native file
   picker. Changes autosave back to the original path with a modification-time
   check. External files can be copied into the NeoPad archive without moving or
@@ -199,7 +205,7 @@ Common local shortcuts:
 
 ```text
 F1              Shortcut help
-F2              Rename current page
+F2              Rename current page and its untouched default heading
 F4              Cycle edit, split, and preview modes
 F5              Open or close the reminder list
 F7              Cycle preview theme
@@ -207,10 +213,12 @@ F8              Open settings
 F9              Toggle day/night mode
 F10             Toggle tab bar orientation
 F11             Toggle immersive fullscreen
+F12             Archive the current page
 Alt+Enter       Maximize or restore the main window
 Esc             Close overlays, exit fullscreen, or hide the window
 Ctrl+O          Open an external Markdown file
 Ctrl+W          Close the current tab
+Alt+Del         Move the current page to Trash
 Ctrl+E          Insert a Markdown reminder
 Ctrl+Tab        Next tab
 Ctrl+Shift+Tab  Previous tab

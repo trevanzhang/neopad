@@ -13,6 +13,10 @@ export type AppMessages = {
     defaultColor: string
     previous: string
     next: string
+    f2: string
+    altDel: string
+    f12: string
+    ctrlW: string
     confirmDeleteTitle: string
     confirmDeleteMessage: string
     confirmArchiveMessage: string
@@ -30,6 +34,7 @@ export type AppMessages = {
     recentDocuments: string
     saveAsFile: string
     exportAll: string
+    viewArchive: string
     trash: string
     hide: string
     exit: string
@@ -57,6 +62,8 @@ export type AppMessages = {
     ctrlA: string
     ctrlN: string
     f2: string
+    altDel: string
+    f12: string
     ctrlO: string
     tabBarDisplay: string
     horizontal: string
@@ -272,6 +279,13 @@ export type AppMessages = {
     filterCompleted: string
     notificationTitle: string
   }
+  archive: {
+    title: string
+    close: string
+    refresh: string
+    empty: string
+    restore: string
+  }
   status: {
     editMode: string
     hybridMode: string
@@ -286,6 +300,7 @@ export type AppMessages = {
     savedAsFile: string
     exported: string
     trashOpened: string
+    noteFileMissing: string
     fontUpdated: string
     backgroundUpdated: string
     wordWrapOn: string
@@ -323,6 +338,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       defaultColor: 'Default',
       previous: 'Previous tab',
       next: 'Next tab',
+      f2: 'F2',
+      altDel: 'Alt+Del',
+      f12: 'F12',
+      ctrlW: 'Ctrl+W',
       confirmDeleteTitle: 'Delete tab?',
       confirmDeleteMessage: 'Delete "{title}"? The note will be moved to Trash.',
       confirmArchiveMessage: 'Archive "{title}"? The note will be moved to Archive.',
@@ -340,6 +359,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       recentDocuments: 'Recent Documents',
       saveAsFile: 'Save As File(S)',
       exportAll: 'Export All(E)...',
+      viewArchive: 'View Archive(A)...',
       trash: 'Trash(R)...',
       hide: 'Hide(H)',
       exit: 'Exit(X)',
@@ -367,6 +387,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlA: 'Ctrl+A',
       ctrlN: 'Ctrl+N',
       f2: 'F2',
+      altDel: 'Alt+Del',
+      f12: 'F12',
       ctrlO: 'Ctrl+O',
       tabBarDisplay: 'Tab Bar Position(F10)',
       horizontal: 'Top(H)',
@@ -582,6 +604,13 @@ export const messages: Record<AppLanguage, AppMessages> = {
       filterCompleted: 'Completed only',
       notificationTitle: 'NeoPad Reminder',
     },
+    archive: {
+      title: 'Archive',
+      close: 'Close',
+      refresh: 'Refresh',
+      empty: 'No archived pages',
+      restore: 'Restore',
+    },
     status: {
       editMode: 'Edit mode',
       hybridMode: 'Hybrid mode',
@@ -596,6 +625,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       savedAsFile: 'Saved as file',
       exported: 'Exported',
       trashOpened: 'Trash opened',
+      noteFileMissing: 'Note file does not exist',
       fontUpdated: 'Font updated',
       backgroundUpdated: 'Background color updated',
       wordWrapOn: 'Word wrap on',
@@ -631,6 +661,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       defaultColor: '\u9ed8\u8ba4\u989c\u8272',
       previous: '\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875',
       next: '\u4e0b\u4e00\u4e2a\u6807\u7b7e\u9875',
+      f2: 'F2',
+      altDel: 'Alt+Del',
+      f12: 'F12',
+      ctrlW: 'Ctrl+W',
       confirmDeleteTitle: '\u5220\u9664\u6807\u7b7e\u9875\uff1f',
       confirmDeleteMessage: '\u786e\u5b9a\u5220\u9664\u201c{title}\u201d\u5417\uff1f\u7b14\u8bb0\u5c06\u79fb\u81f3\u56de\u6536\u7ad9\u3002',
       confirmArchiveMessage: '\u786e\u5b9a\u5f52\u6863\u201c{title}\u201d\u5417\uff1f\u7b14\u8bb0\u5c06\u79fb\u81f3\u5b58\u6863\u3002',
@@ -648,6 +682,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       recentDocuments: '\u6700\u8fd1\u6253\u5f00\u7684\u6587\u6863',
       saveAsFile: '\u53e6\u5b58\u5230\u6587\u4ef6(S)',
       exportAll: '\u5168\u90e8\u5bfc\u51fa(E)...',
+      viewArchive: '\u67e5\u770b\u5b58\u6863(A)...',
       trash: '\u56de\u6536\u7ad9(R)...',
       hide: '\u9690\u85cf(H)',
       exit: '\u9000\u51fa(X)',
@@ -675,6 +710,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlA: 'Ctrl+A',
       ctrlN: 'Ctrl+N',
       f2: 'F2',
+      altDel: 'Alt+Del',
+      f12: 'F12',
       ctrlO: 'Ctrl+O',
       tabBarDisplay: '\u6807\u7b7e\u680f\u4f4d\u7f6e(F10)',
       horizontal: '\u9876\u90e8(H)',
@@ -890,6 +927,13 @@ export const messages: Record<AppLanguage, AppMessages> = {
       filterCompleted: '\u53ea\u770b\u5df2\u5b8c\u6210',
       notificationTitle: 'NeoPad \u63d0\u9192',
     },
+    archive: {
+      title: '\u5b58\u6863',
+      close: '\u5173\u95ed',
+      refresh: '\u5237\u65b0',
+      empty: '\u6682\u65e0\u5b58\u6863\u9875\u9762',
+      restore: '\u6062\u590d',
+    },
     status: {
       editMode: '\u7f16\u8f91\u6a21\u5f0f',
       hybridMode: '\u6df7\u5408\u6a21\u5f0f',
@@ -904,6 +948,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       savedAsFile: '\u5df2\u53e6\u5b58\u5230\u6587\u4ef6',
       exported: '\u5df2\u5168\u90e8\u5bfc\u51fa',
       trashOpened: '\u5df2\u6253\u5f00\u56de\u6536\u7ad9',
+      noteFileMissing: '\u7b14\u8bb0\u6587\u4ef6\u4e0d\u5b58\u5728',
       fontUpdated: '\u5df2\u66f4\u65b0\u5b57\u4f53',
       backgroundUpdated: '\u5df2\u66f4\u65b0\u80cc\u666f\u8272',
       wordWrapOn: '\u5df2\u5f00\u542f\u81ea\u52a8\u6362\u884c',

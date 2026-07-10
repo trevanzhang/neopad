@@ -22,7 +22,23 @@ pub fn list_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
     if reconcile_trashed_tabs(workspace, &mut tabs)? {
         save_tabs(workspace, &tabs)?;
     }
-    Ok(tabs.tabs.into_iter().filter(|tab| !tab.deleted && !tab.archived).collect())
+    Ok(tabs
+        .tabs
+        .into_iter()
+        .filter(|tab| !tab.deleted && !tab.archived)
+        .collect())
+}
+
+pub fn list_archived_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
+    let mut tabs = load_tabs(workspace)?;
+    if reconcile_trashed_tabs(workspace, &mut tabs)? {
+        save_tabs(workspace, &tabs)?;
+    }
+    Ok(tabs
+        .tabs
+        .into_iter()
+        .filter(|tab| !tab.deleted && tab.archived)
+        .collect())
 }
 
 pub fn list_open_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
@@ -30,7 +46,11 @@ pub fn list_open_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
     if reconcile_trashed_tabs(workspace, &mut tabs)? {
         save_tabs(workspace, &tabs)?;
     }
-    Ok(tabs.tabs.into_iter().filter(|tab| !tab.deleted && tab.open).collect())
+    Ok(tabs
+        .tabs
+        .into_iter()
+        .filter(|tab| !tab.deleted && tab.open)
+        .collect())
 }
 
 pub fn list_searchable_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
@@ -42,7 +62,13 @@ pub fn list_searchable_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
 }
 
 pub fn list_recent_notes(workspace: &Workspace, limit: usize) -> Result<Vec<NoteTab>> {
-    let mut notes = load_tabs(workspace)?.tabs.into_iter()
+    let mut tabs = load_tabs(workspace)?;
+    if reconcile_trashed_tabs(workspace, &mut tabs)? {
+        save_tabs(workspace, &tabs)?;
+    }
+    let mut notes = tabs
+        .tabs
+        .into_iter()
         .filter(|tab| !tab.deleted)
         .collect::<Vec<_>>();
     notes.sort_by_key(|tab| std::cmp::Reverse(tab.last_opened_at.unwrap_or(tab.updated_at)));
@@ -71,11 +97,7 @@ pub fn create_note(workspace: &Workspace, title: Option<String>) -> Result<NoteC
     let now = now_ms()?;
     let id = unique_note_id(&tabs, now);
     let system_title = title.as_ref().is_none_or(|value| value.trim().is_empty());
-    let title = if system_title {
-        next_untitled_title(&tabs)
-    } else {
-        normalized_title(title)
-    };
+    let title = normalized_title(title);
     let file_name = format!("{id}.md");
     let content = format!("# {title}\n\n");
     let path = note_file_path(workspace, &file_name)?;
@@ -190,8 +212,21 @@ pub fn rename_note(workspace: &Workspace, note_id: &str, title: String) -> Resul
     let mut tabs = load_tabs(workspace)?;
     let tab = find_note_tab_mut(&mut tabs, note_id)?;
     let now = now_ms()?;
+    let previous_title = tab.title.clone();
+    let next_title = normalized_title(Some(title));
 
-    tab.title = normalized_title(Some(title));
+    if tab.system_title {
+        let path = note_path(workspace, tab)?;
+        let content = fs::read_to_string(&path)
+            .with_context(|| format!("failed to read note file {}", path.display()))?;
+        if let Some(updated_content) =
+            renamed_default_heading(&content, &previous_title, &next_title)
+        {
+            write_atomic(&path, &updated_content)?;
+        }
+    }
+
+    tab.title = next_title;
     tab.system_title = false;
     tab.updated_at = now;
     let renamed = tab.clone();
@@ -242,7 +277,28 @@ pub fn close_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
 
 pub fn open_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
     let mut tabs = load_tabs(workspace)?;
-    let tab = find_note_tab_mut(&mut tabs, note_id)?;
+    let tab_index = tabs
+        .tabs
+        .iter()
+        .position(|tab| tab.id == note_id && !tab.deleted)
+        .with_context(|| format!("note not found: {note_id}"))?;
+    let path = note_path(workspace, &tabs.tabs[tab_index])?;
+    if !path.is_file() {
+        if !tabs.tabs[tab_index].pinned {
+            tabs.tabs[tab_index].deleted = true;
+            tabs.tabs[tab_index].open = false;
+            tabs.tabs[tab_index].updated_at = now_ms()?;
+            if tabs.active_tab_id == note_id {
+                if let Some(next_tab) = tabs.tabs.iter().find(|tab| !tab.deleted) {
+                    tabs.active_tab_id = next_tab.id.clone();
+                }
+            }
+            save_tabs(workspace, &tabs)?;
+        }
+        bail!("note file does not exist: {}", path.display());
+    }
+
+    let tab = &mut tabs.tabs[tab_index];
     tab.open = true;
     tab.last_opened_at = Some(now_ms()?);
     let opened = tab.clone();
@@ -251,12 +307,15 @@ pub fn open_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
 }
 
 pub fn archive_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
-    if matches!(note_id, "inbox" | "clipboard") { bail!("{note_id} is pinned and cannot be archived"); }
+    if matches!(note_id, "inbox" | "clipboard") {
+        bail!("{note_id} is pinned and cannot be archived");
+    }
     let mut tabs = load_tabs(workspace)?;
     let tab = find_note_tab_mut(&mut tabs, note_id)?;
     let source = note_path(workspace, tab)?;
     let target = archive_file_path(workspace, &tab.file_name)?;
-    fs::rename(&source, &target).with_context(|| format!("failed to archive note {}", source.display()))?;
+    fs::rename(&source, &target)
+        .with_context(|| format!("failed to archive note {}", source.display()))?;
     tab.archived = true;
     tab.open = false;
     tab.updated_at = now_ms()?;
@@ -268,10 +327,13 @@ pub fn archive_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
 pub fn unarchive_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
     let mut tabs = load_tabs(workspace)?;
     let tab = find_note_tab_mut(&mut tabs, note_id)?;
-    if !tab.archived { bail!("note is not archived: {note_id}"); }
+    if !tab.archived {
+        bail!("note is not archived: {note_id}");
+    }
     let source = archive_file_path(workspace, &tab.file_name)?;
     let target = note_file_path(workspace, &tab.file_name)?;
-    fs::rename(&source, &target).with_context(|| format!("failed to restore archived note {}", source.display()))?;
+    fs::rename(&source, &target)
+        .with_context(|| format!("failed to restore archived note {}", source.display()))?;
     tab.archived = false;
     tab.open = true;
     tab.last_opened_at = Some(now_ms()?);
@@ -328,23 +390,26 @@ fn save_tabs(workspace: &Workspace, tabs: &TabsState) -> Result<()> {
 
 fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result<bool> {
     let mut changed = false;
-    let trash_file_names = fs::read_dir(&workspace.trash_dir)
-        .with_context(|| format!("failed to read trash dir {}", workspace.trash_dir.display()))?
-        .filter_map(|entry| entry.ok())
-        .map(|entry| entry.file_name().to_string_lossy().into_owned())
-        .collect::<Vec<_>>();
 
     for tab in &mut tabs.tabs {
         if tab.deleted || tab.pinned {
             continue;
         }
 
+        if tab.system_title
+            && tab
+                .title
+                .strip_prefix("Untitled ")
+                .is_some_and(|suffix| suffix.parse::<u32>().is_ok())
+        {
+            tab.title = "Untitled".to_owned();
+            changed = true;
+        }
+
         let note_path = note_path(workspace, tab)?;
-        let has_matching_trash_file = trash_file_names.iter().any(|file_name| {
-            file_name.starts_with("deleted-") && file_name.ends_with(&tab.file_name)
-        });
-        if !note_path.exists() && has_matching_trash_file {
+        if !note_path.is_file() {
             tab.deleted = true;
+            tab.open = false;
             tab.updated_at = now_ms()?;
             changed = true;
         }
@@ -365,7 +430,11 @@ fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result
 }
 
 fn note_path(workspace: &Workspace, tab: &NoteTab) -> Result<std::path::PathBuf> {
-    if tab.archived { archive_file_path(workspace, &tab.file_name) } else { note_file_path(workspace, &tab.file_name) }
+    if tab.archived {
+        archive_file_path(workspace, &tab.file_name)
+    } else {
+        note_file_path(workspace, &tab.file_name)
+    }
 }
 
 fn find_note_tab(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
@@ -393,17 +462,17 @@ fn normalized_title(title: Option<String>) -> String {
     }
 }
 
-fn next_untitled_title(tabs: &TabsState) -> String {
-    let next = tabs
-        .tabs
-        .iter()
-        .filter(|tab| tab.system_title)
-        .filter_map(|tab| tab.title.strip_prefix("Untitled "))
-        .filter_map(|suffix| suffix.parse::<u32>().ok())
-        .max()
-        .unwrap_or(0)
-        + 1;
-    format!("Untitled {next}")
+fn renamed_default_heading(
+    content: &str,
+    previous_title: &str,
+    next_title: &str,
+) -> Option<String> {
+    let previous_heading = format!("# {previous_title}");
+    let remainder = content.strip_prefix(&previous_heading)?;
+    if !(remainder.is_empty() || remainder.starts_with('\n') || remainder.starts_with("\r\n")) {
+        return None;
+    }
+    Some(format!("# {next_title}{remainder}"))
 }
 
 fn unique_note_id(tabs: &TabsState, now: i64) -> String {
@@ -526,6 +595,23 @@ mod tests {
     }
 
     #[test]
+    fn opening_a_manually_deleted_note_removes_it_from_recent_notes() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, None).expect("create note");
+        let source = note_file_path(&workspace, &created.file_name).expect("note path");
+        fs::remove_file(source).expect("remove note file");
+
+        let error =
+            open_note(&workspace, &created.id).expect_err("opening a missing note must fail");
+        assert!(error.to_string().contains("note file does not exist"));
+        assert!(list_recent_notes(&workspace, 20)
+            .expect("recent notes")
+            .iter()
+            .all(|tab| tab.id != created.id));
+    }
+
+    #[test]
     fn generated_untitled_marker_is_cleared_by_rename() {
         let temp_dir = tempfile::tempdir().expect("temp dir");
         let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
@@ -540,6 +626,42 @@ mod tests {
 
         let renamed = rename_note(&workspace, &created.id, "Untitled".to_owned()).expect("rename");
         assert!(!renamed.system_title);
+    }
+
+    #[test]
+    fn renaming_a_generated_note_updates_its_default_heading() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, None).expect("create note");
+
+        let renamed =
+            rename_note(&workspace, &created.id, "Project notes".to_owned()).expect("rename");
+
+        assert_eq!(renamed.title, "Project notes");
+        assert!(!renamed.system_title);
+        assert_eq!(
+            read_note(&workspace, &created.id)
+                .expect("read note")
+                .content,
+            "# Project notes\n\n"
+        );
+    }
+
+    #[test]
+    fn renaming_a_custom_note_keeps_its_heading() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created =
+            create_note(&workspace, Some("Original heading".to_owned())).expect("create note");
+
+        rename_note(&workspace, &created.id, "New tab title".to_owned()).expect("rename");
+
+        assert_eq!(
+            read_note(&workspace, &created.id)
+                .expect("read note")
+                .content,
+            "# Original heading\n\n"
+        );
     }
 
     #[test]
@@ -563,15 +685,41 @@ mod tests {
     }
 
     #[test]
-    fn generated_untitled_notes_receive_incrementing_titles() {
+    fn generated_untitled_notes_use_the_default_title() {
         let temp_dir = tempfile::tempdir().expect("temp dir");
         let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
 
         let first = create_note(&workspace, None).expect("first note");
         let second = create_note(&workspace, None).expect("second note");
 
-        assert_eq!(first.title, "Untitled 1");
-        assert_eq!(second.title, "Untitled 2");
+        assert_eq!(first.title, "Untitled");
+        assert_eq!(second.title, "Untitled");
+        assert_ne!(first.id, second.id);
+        assert_ne!(first.file_name, second.file_name);
+    }
+
+    #[test]
+    fn list_notes_restores_legacy_generated_untitled_titles() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, None).expect("create note");
+
+        let mut tabs = load_tabs(&workspace).expect("load tabs");
+        let tab = tabs
+            .tabs
+            .iter_mut()
+            .find(|tab| tab.id == created.id)
+            .expect("created tab");
+        tab.title = "Untitled 20".to_owned();
+        tab.system_title = true;
+        save_tabs(&workspace, &tabs).expect("save tabs");
+
+        let restored = list_notes(&workspace)
+            .expect("list notes")
+            .into_iter()
+            .find(|tab| tab.id == created.id)
+            .expect("restored tab");
+        assert_eq!(restored.title, "Untitled");
     }
 
     #[test]
@@ -582,9 +730,21 @@ mod tests {
 
         archive_note(&workspace, &created.id).expect("archive");
 
-        assert!(list_notes(&workspace).expect("active notes").iter().all(|tab| tab.id != created.id));
-        assert!(list_searchable_notes(&workspace).expect("searchable notes").iter().any(|tab| tab.id == created.id));
-        assert!(archive_file_path(&workspace, &created.file_name).expect("path").is_file());
+        assert!(list_notes(&workspace)
+            .expect("active notes")
+            .iter()
+            .all(|tab| tab.id != created.id));
+        assert!(list_archived_notes(&workspace)
+            .expect("archived notes")
+            .iter()
+            .any(|tab| tab.id == created.id));
+        assert!(list_searchable_notes(&workspace)
+            .expect("searchable notes")
+            .iter()
+            .any(|tab| tab.id == created.id));
+        assert!(archive_file_path(&workspace, &created.file_name)
+            .expect("path")
+            .is_file());
     }
 
     #[test]
@@ -595,9 +755,17 @@ mod tests {
 
         close_note(&workspace, &created.id).expect("close");
 
-        assert!(note_file_path(&workspace, &created.file_name).expect("path").is_file());
-        assert!(list_open_notes(&workspace).expect("open notes").iter().all(|tab| tab.id != created.id));
-        assert!(list_recent_notes(&workspace, 20).expect("recent notes").iter().any(|tab| tab.id == created.id));
+        assert!(note_file_path(&workspace, &created.file_name)
+            .expect("path")
+            .is_file());
+        assert!(list_open_notes(&workspace)
+            .expect("open notes")
+            .iter()
+            .all(|tab| tab.id != created.id));
+        assert!(list_recent_notes(&workspace, 20)
+            .expect("recent notes")
+            .iter()
+            .any(|tab| tab.id == created.id));
     }
 
     #[test]

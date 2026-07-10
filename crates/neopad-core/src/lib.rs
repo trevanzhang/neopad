@@ -11,10 +11,10 @@ pub mod workspace;
 pub use config::{load_config, save_config, AppConfig, McpConfig, PreviewMode, Theme, UiConfig};
 pub use lock::{lock_workspace_for_write, WorkspaceWriteLock};
 pub use note::{
-    append_to_clipboard_note, append_to_note, archive_note, close_note, create_note, delete_note_to_trash,
-    list_notes, list_open_notes, list_recent_notes, list_searchable_notes, open_note, read_note, rename_note, set_note_color,
-    unarchive_note, write_note_atomic, write_note_atomic_checked,
-    NoteContent,
+    append_to_clipboard_note, append_to_note, archive_note, close_note, create_note,
+    delete_note_to_trash, list_archived_notes, list_notes, list_open_notes, list_recent_notes,
+    list_searchable_notes, open_note, read_note, rename_note, set_note_color, unarchive_note,
+    write_note_atomic, write_note_atomic_checked, NoteContent,
 };
 pub use reminder::{
     claim_due_reminders, complete_due_reminders, complete_reminder, list_reminders,

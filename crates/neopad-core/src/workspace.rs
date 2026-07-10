@@ -67,7 +67,10 @@ pub fn ensure_workspace_layout(workspace: &Workspace) -> Result<()> {
         )
     })?;
     fs::create_dir_all(&workspace.archive_dir).with_context(|| {
-        format!("failed to create archive directory at {}", workspace.archive_dir.display())
+        format!(
+            "failed to create archive directory at {}",
+            workspace.archive_dir.display()
+        )
     })?;
     fs::create_dir_all(&workspace.trash_dir).with_context(|| {
         format!(

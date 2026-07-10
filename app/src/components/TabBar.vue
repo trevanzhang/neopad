@@ -71,6 +71,46 @@ function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'u
   else emit('unarchiveTab', tabId)
 }
 
+function deleteTabWithShortcut(event: KeyboardEvent, tabId: string) {
+  if (!event.altKey || event.ctrlKey || event.shiftKey || event.metaKey) return
+  const target = event.target
+  if (target instanceof HTMLElement && target.closest('.tab-context-menu') && !target.closest('[role="menuitem"]')) return
+  event.preventDefault()
+  event.stopPropagation()
+  contextMenu.value = null
+  emit('deleteTab', tabId)
+}
+
+function renameTabWithShortcut(event: KeyboardEvent, tabId: string) {
+  if (event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) return
+  const target = event.target
+  if (target instanceof HTMLElement && target.closest('.tab-context-menu') && !target.closest('[role="menuitem"]')) return
+  event.preventDefault()
+  event.stopPropagation()
+  contextMenu.value = null
+  emit('renameTab', tabId)
+}
+
+function archiveTabWithShortcut(event: KeyboardEvent, tabId: string) {
+  if (event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) return
+  const target = event.target
+  if (target instanceof HTMLElement && target.closest('.tab-context-menu') && !target.closest('[role="menuitem"]')) return
+  event.preventDefault()
+  event.stopPropagation()
+  contextMenu.value = null
+  emit('archiveTab', tabId)
+}
+
+function closeTabWithShortcut(event: KeyboardEvent, tabId: string) {
+  if (!event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) return
+  const target = event.target
+  if (target instanceof HTMLElement && target.closest('.tab-context-menu') && !target.closest('[role="menuitem"]')) return
+  event.preventDefault()
+  event.stopPropagation()
+  contextMenu.value = null
+  emit('closeTab', tabId)
+}
+
 function updateColor(color: string | null) {
   const tabId = contextMenu.value?.tabId
   if (!tabId) return
@@ -101,6 +141,10 @@ function updateColor(color: string | null) {
       @click="$emit('selectTab', tab.id)"
       @dblclick="$emit('titleDoubleClick', tab.id)"
       @contextmenu="openContextMenu($event, tab)"
+      @keydown.f2="renameTabWithShortcut($event, tab.id)"
+      @keydown.delete="deleteTabWithShortcut($event, tab.id)"
+      @keydown.f12="archiveTabWithShortcut($event, tab.id)"
+      @keydown.ctrl.w="closeTabWithShortcut($event, tab.id)"
     >
       <span v-if="tab.external" class="tab-external-icon" aria-hidden="true" />
       <span class="tab-label">{{ tab.title }}</span>
@@ -123,14 +167,19 @@ function updateColor(color: string | null) {
       role="menu"
       :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
       @contextmenu.prevent
+      @keydown.f2="renameTabWithShortcut($event, contextMenu.tabId)"
+      @keydown.delete="deleteTabWithShortcut($event, contextMenu.tabId)"
+      @keydown.f12="archiveTabWithShortcut($event, contextMenu.tabId)"
+      @keydown.ctrl.w="closeTabWithShortcut($event, contextMenu.tabId)"
     >
       <button
         type="button"
         role="menuitem"
-        :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'"
-        @click="runContextAction('rename')"
-      >
-        {{ messages.rename }}
+      :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'"
+      @click="runContextAction('rename')"
+    >
+        <span>{{ messages.rename }}</span>
+        <span class="tab-context-shortcut">{{ messages.f2 }}</span>
       </button>
       <button
         type="button"
@@ -138,13 +187,26 @@ function updateColor(color: string | null) {
         :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'"
         @click="runContextAction('delete')"
       >
-        {{ messages.delete }}
+        <span>{{ messages.delete }}</span>
+        <span class="tab-context-shortcut">{{ messages.altDel }}</span>
       </button>
-      <button type="button" role="menuitem" :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'" @click="runContextAction('archive')">
-        {{ messages.archive }}
+      <button
+        type="button"
+        role="menuitem"
+        :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'"
+        @click="runContextAction('archive')"
+      >
+        <span>{{ messages.archive }}</span>
+        <span class="tab-context-shortcut">{{ messages.f12 }}</span>
       </button>
-      <button type="button" role="menuitem" :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'" @click="runContextAction('close')">
-        {{ messages.close }}
+      <button
+        type="button"
+        role="menuitem"
+        :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'"
+        @click="runContextAction('close')"
+      >
+        <span>{{ messages.close }}</span>
+        <span class="tab-context-shortcut">{{ messages.ctrlW }}</span>
       </button>
       <div class="menu-separator" role="separator" />
       <span class="tab-context-label">{{ messages.color }}</span>

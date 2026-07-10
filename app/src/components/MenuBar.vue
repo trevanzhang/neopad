@@ -27,6 +27,7 @@ const emit = defineEmits<{
   loadFile: []
   saveAsFile: []
   exportAll: []
+  viewArchive: []
   openTrash: []
   hideWindow: []
   exitApp: []
@@ -224,6 +225,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
         <div class="menu-separator" role="separator" />
         <button type="button" @click="$emit('exportAll')">{{ messages.exportAll }}</button>
         <div class="menu-separator" role="separator" />
+        <button type="button" @click="$emit('viewArchive')">{{ messages.viewArchive }}</button>
         <button type="button" @click="$emit('openTrash')">{{ messages.trash }}</button>
         <div class="menu-separator" role="separator" />
         <button type="button" class="menu-command" @click="$emit('hideWindow')">
@@ -338,9 +340,11 @@ function handleMenuKeydown(event: KeyboardEvent) {
         </button>
         <button type="button" class="menu-command" :disabled="!pageActionsEnabled" @click="$emit('deletePage')">
           <span>{{ messages.deletePage }}</span>
+          <span class="menu-shortcut">{{ messages.altDel }}</span>
         </button>
         <button type="button" class="menu-command" :disabled="!pageActionsEnabled" @click="toggleArchive">
-          {{ activeTabArchived ? messages.unarchivePage : messages.archivePage }}
+          <span>{{ activeTabArchived ? messages.unarchivePage : messages.archivePage }}</span>
+          <span class="menu-shortcut">{{ messages.f12 }}</span>
         </button>
         <button type="button" class="menu-command" :disabled="!pageActionsEnabled" @click="$emit('closePage')">
           <span>{{ messages.closePage }}</span>

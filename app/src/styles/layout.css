@@ -23,6 +23,7 @@ body {
 .app-shell.immersive .status-bar,
 .app-shell.immersive .search-panel,
 .app-shell.immersive .settings-panel,
+.app-shell.immersive .archive-list-panel,
 .app-shell.immersive .help-panel {
   display: none;
 }
@@ -345,6 +346,10 @@ body {
 }
 
 .tab-context-menu > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
   height: 29px;
   padding: 0 18px;
   text-align: left;
@@ -425,6 +430,7 @@ body {
 
 .app-shell.tab-vertical .search-panel,
 .app-shell.tab-vertical .settings-panel,
+.app-shell.tab-vertical .archive-list-panel,
 .app-shell.tab-vertical .help-panel {
   top: 84px;
 }
@@ -556,6 +562,7 @@ body {
 .theme-dark .tab-context-menu,
 .theme-dark .settings-panel,
 .theme-dark .search-panel,
+.theme-dark .archive-list-panel,
 .theme-dark .help-panel {
   color: var(--np-text);
   background: var(--np-menu);
@@ -566,6 +573,7 @@ body {
 .theme-dark .tab-context-menu > button,
 .theme-dark .settings-panel button,
 .theme-dark .search-panel button,
+.theme-dark .archive-list-panel button,
 .theme-dark .help-panel button {
   color: var(--np-text);
 }
@@ -622,6 +630,28 @@ body {
 .theme-dark .reminder-table tbody tr:hover td,
 .theme-dark .reminder-table tbody tr:focus td {
   background: var(--np-control-active);
+}
+
+.tab-context-shortcut {
+  margin-left: auto;
+}
+
+.theme-dark .archive-list-header,
+.theme-dark .archive-note-list li {
+  color: var(--np-text);
+  background: var(--np-menu);
+  border-color: var(--np-border);
+}
+
+.theme-dark .archive-list-empty {
+  color: var(--np-muted);
+}
+
+.theme-dark .archive-button,
+.theme-dark .archive-restore-button {
+  color: var(--np-text);
+  background: var(--np-control);
+  border-color: var(--np-border);
 }
 
 .theme-dark .menu-separator {
@@ -1110,6 +1140,92 @@ body {
   color: #111111;
   background: #ffffff;
   border-color: #8f8f8f;
+}
+
+.archive-list-panel {
+  position: absolute;
+  inset: 74px 16px 38px;
+  z-index: 14;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  overflow: hidden;
+  color: #111111;
+  background: #ffffff;
+  border: 1px solid #8f8f8f;
+  border-radius: 8px;
+  box-shadow: 3px 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+.archive-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: #efefef;
+  border-bottom: 1px solid #b7b7b7;
+}
+
+.archive-toolbar {
+  display: flex;
+  gap: 6px;
+}
+
+.archive-button,
+.archive-restore-button {
+  height: 30px;
+  padding: 0 12px;
+  color: #111111;
+  background: #eeeeee;
+  border: 1px solid #8f8f8f;
+  border-radius: 4px;
+}
+
+.archive-list-body {
+  min-height: 0;
+  overflow: auto;
+}
+
+.archive-list-empty {
+  margin: 24px;
+  color: #666666;
+}
+
+.archive-note-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.archive-note-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #d3d3d3;
+}
+
+.archive-note-list span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-button:hover:not(:disabled),
+.archive-button:focus-visible:not(:disabled),
+.archive-restore-button:hover:not(:disabled),
+.archive-restore-button:focus-visible:not(:disabled) {
+  border-color: #2b65c8;
+  box-shadow: 0 0 0 2px rgba(43, 101, 200, 0.16);
+}
+
+.archive-button:disabled,
+.archive-restore-button:disabled {
+  cursor: default;
+  opacity: 0.58;
 }
 
 .search-result strong {
