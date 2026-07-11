@@ -72,7 +72,8 @@ from previous versions do not block startup.
 - Note list, read, create, write, rename, append, close, archive, restore, and
   trash operations.
 - Atomic writes through temporary files and replace/rename behavior.
-- mtime-checked writes for MCP update conflict protection.
+- Strictly monotonic internal revisions and content-hash revisions for
+  external-file conflict protection.
 - Full-text search over active and archived Markdown note files.
 - Reminder parsing, ordering, and notification delivery-state persistence.
 - Config and tab metadata defaults.
@@ -145,8 +146,8 @@ console window.
 
 ## Packaging
 
-The Windows target currently builds an MSI package only. The Tauri config points
-to:
+The Windows target builds an MSI package only. Cross-platform build scripts
+select DMG on macOS and DEB plus AppImage on Linux. The Tauri config points to:
 
 ```text
 app/src-tauri/wix/main.wxs

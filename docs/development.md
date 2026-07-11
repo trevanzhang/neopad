@@ -142,14 +142,18 @@ cargo build -p neopad-mcp --release
 
 ## Packaging Notes
 
-The app bundles for all supported platforms:
+The root build script selects explicit bundles for the current platform:
 
-```json
-"targets": "all"
+```text
+Windows  msi
+macOS    dmg
+Linux    deb,appimage
 ```
 
-This produces `.msi` (Windows), `.dmg` (macOS), and `.deb` + `.AppImage`
-(Linux). NSIS is intentionally not part of the current build path.
+`tauri.conf.json` uses MSI as its safe direct-build default. The root script
+overrides it on macOS and Linux. NSIS is intentionally not part of the current
+build path; do not use `targets: "all"` because that also enables NSIS on
+Windows.
 
 The Windows release executable uses the Windows GUI subsystem so it does not
 open a console window on launch.
@@ -171,8 +175,10 @@ is a full background for welcome and finish pages, not a standalone logo slot.
 
 ## Cross-Platform Builds
 
-Cross-platform release builds run automatically in GitHub Actions when a `v*`
-tag is pushed (see `.github/workflows/release.yml`). The matrix covers:
+Pull requests compile the complete Rust workspace on Linux x64 and macOS ARM64
+in addition to the Windows test and desktop E2E jobs. Cross-platform release
+builds run automatically in GitHub Actions when a `v*` tag is pushed (see
+`.github/workflows/release.yml`). The matrix covers:
 
 - Windows x64 (`x86_64-pc-windows-msvc`) producing `.msi`
 - macOS ARM64 (`aarch64-apple-darwin`) producing `.dmg`
@@ -187,6 +193,21 @@ libssl-dev libgtk-3-dev libayatana-appindicator3-dev
 
 macOS builds cross-compile for Apple Silicon from the `macos-latest` (ARM64)
 runner using `--target aarch64-apple-darwin`.
+
+CI and release preflight both reject known production npm vulnerabilities with
+`pnpm audit --prod`. A separate CI job installs the locked `cargo-audit 0.22.2`
+release and rejects RustSec advisories; release preflight repeats that Rust
+dependency audit. The release workflow also runs version/tag validation,
+formatting, Clippy, tests, and the frontend build. Each platform must produce
+its complete expected artifact set, and SHA-256 manifests are attached to a
+draft Release. The draft must not be published until Windows Authenticode and
+macOS signing/notarization have been verified with project-owned credentials.
+
+The two `quick-xml 0.39.4` advisories listed in `.cargo/audit.toml` are narrowly
+ignored only for `wayland-scanner 0.31.10`: the proc-macro parses protocol XML
+shipped by Wayland crates during compilation and has no runtime or user-input
+path. The runtime plist path uses `plist 1.10.0` and `quick-xml 0.41.0`. Remove
+the ignores as soon as `wayland-scanner` publishes a compatible update.
 
 Known platform gaps: window opacity and autostart are no-ops on macOS and
 Linux. Both compile cleanly but have no effect outside Windows.

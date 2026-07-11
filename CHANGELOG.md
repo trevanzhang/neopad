@@ -11,6 +11,39 @@ patch versions are reserved for compatible fixes.
 - Added cross-platform release builds via GitHub Actions. Pushing a `v*` tag
   now produces Windows `.msi`, macOS `.dmg` (ARM64), and Linux `.deb` +
   `.AppImage` installers automatically.
+- Added release preflight checks, exact artifact validation, and SHA-256
+  manifests. Automated releases now remain drafts until signature and
+  notarization checks are completed.
+- Added production npm and RustSec dependency audit gates, plus Linux x64 and
+  macOS ARM64 workspace compilation on pull requests.
+
+### Changed
+
+- External Markdown conflict checks now use content revisions instead of
+  millisecond modification times, and external paths must first be approved by
+  the native file picker.
+- Desktop-managed MCP tokens are passed through the child environment instead
+  of command-line arguments, and the HTTP service only accepts loopback binds.
+- Platform builds now request explicit bundle types so Windows builds no
+  longer generate an unintended NSIS installer.
+- Preview, settings, reminder, archive, and dialog surfaces are loaded on
+  demand, reducing the initial JavaScript bundle by about 130 kB.
+
+### Fixed
+
+- Prevented page switches and content-replacing actions when autosave fails,
+  preserving the pending editor snapshot for retry.
+- Preserved the newest queued edit when an in-flight autosave fails, with a
+  regression test covering the explicit retry path.
+- Made note conflict versions strictly monotonic, including rapid writes in
+  the same millisecond.
+- Removed implicit, unlocked metadata writes from note-list queries and added
+  locked reconciliation at desktop and MCP boundaries.
+- Added rollback for note content and file moves when the matching metadata
+  update fails.
+- Restored a clean Clippy `-D warnings` build for the MCP authentication path.
+- Upgraded the plist XML parser path to `quick-xml 0.41.0`, removing two
+  high-severity RustSec findings from runtime-reachable dependencies.
 
 ## 0.4.6 - 2026-07-10
 

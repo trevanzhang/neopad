@@ -91,6 +91,7 @@ moved to NeoPad's trash directory instead of being physically deleted.
 
 - The service is off by default.
 - The default bind address is `127.0.0.1`.
+- Non-loopback bind addresses are rejected.
 - HTTP requests require `Authorization: Bearer <local-token>`.
 - Browser-originated requests must use a local origin.
 - CLI and agent requests without an `Origin` header are allowed when the bearer
@@ -114,8 +115,8 @@ Manual packaging steps, if needed:
 
 ```powershell
 cargo build -p neopad-mcp --release
-powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/prepare-mcp-sidecar.ps1
-pnpm --filter neopad-app tauri build
+node scripts/prepare-mcp-sidecar.mjs
+node scripts/build-tauri-bundle.mjs
 ```
 
 Do not reintroduce stdio mode for the desktop-managed server. Local agents

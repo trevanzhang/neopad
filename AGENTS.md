@@ -115,8 +115,9 @@ Releases are built automatically by GitHub Actions when a `v*` tag is pushed.
    Linux x64     .AppImage (ubuntu-22.04)
    ```
 
-5. After the workflow finishes, edit the Release to set the title and notes.
-   The CI-generated Release starts with a default title and no notes.
+5. The workflow creates a draft Release. Before publishing it, verify the
+   SHA-256 manifests and platform signatures/notarization, then set the title
+   and notes. Never publish unsigned public installers.
 6. Update `CHANGELOG.md`: move entries from `## Unreleased` into a dated
    `## x.y.z` section if not already done.
 
@@ -125,13 +126,16 @@ the GitHub Release and re-push the tag.
 
 ## Cross-Platform Packaging Notes
 
-The app bundles for all platforms (`"targets": "all"` in `tauri.conf.json`):
+The build scripts select an explicit bundle set per platform:
 
 - Windows: `.msi` (WiX)
 - macOS: `.dmg`
 - Linux: `.deb` and `.AppImage`
 
-Do not re-enable NSIS unless the task is specifically about NSIS packaging.
+`tauri.conf.json` defaults to MSI for direct Windows builds, while the
+cross-platform scripts override that default with the platform-specific set.
+Do not use `targets: "all"` or re-enable NSIS unless the task is specifically
+about NSIS packaging.
 
 ### Windows (WiX)
 
