@@ -61,13 +61,42 @@ import { isTauriRuntime } from './lib/runtime'
 import { AutosaveCoordinator } from './lib/autosave'
 import { editorBackgroundForTheme } from './lib/theme'
 import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
+import {
+  convertChinese,
+  digestText,
+  downloadText,
+  renderInsertTemplate,
+  safeFileName,
+  titleFromFileName,
+  toFullWidth,
+  toHalfWidth,
+} from './lib/document-utils'
+import {
+  defaultDateTimeSeparatorTemplate,
+  initialBooleanSetting,
+  initialDateTimeSeparatorTemplate,
+  initialJsonSetting,
+  initialLanguage,
+  initialNumberSetting,
+  initialPreviewContentWidth,
+  initialPreviewFontFamily,
+  initialPreviewLineHeight,
+  initialPreviewTheme,
+  initialStringSetting,
+  initialTabBarOrientation,
+  initialTheme,
+  initialTitleDoubleClickAction,
+  legacyDateTimeSeparatorTemplate,
+  normalizePreviewTheme,
+  type TabBarOrientation,
+  type TitleDoubleClickAction,
+} from './lib/preferences'
 import type { NoteTab, Reminder, SearchResult } from './types/note'
 import {
   isEditorMode,
   isPreviewContentWidth,
   isPreviewFontFamily,
   isPreviewLineHeight,
-  isPreviewTheme,
   nextEditorMode,
   previewThemes,
   type EditorMode,
@@ -81,9 +110,7 @@ import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification'
 
-type TabBarOrientation = 'horizontal' | 'vertical'
 type HelpTopic = 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about'
-type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
 type InputDialogState = { title: string; initialValue: string }
 type ConfirmationDialogState = { title: string; message: string; confirmLabel: string; danger: boolean }
 
@@ -186,8 +213,6 @@ const clipboardShortcutBaseKey = ref(normalizeStoredShortcutKey(initialStringSet
 const clipboardShortcutModifiers = ref<string[]>(initialJsonSetting('neopad.clipboardShortcutModifiers', ['Ctrl', 'Shift']))
 const insertSeparatorTemplate = ref(initialStringSetting('neopad.insertSeparatorTemplate', "crlf() + chars('-', 80) + crlf()"))
 const insertDateTimeTemplate = ref(initialStringSetting('neopad.insertDateTimeTemplate', "date() + ' ' + time()"))
-const legacyDateTimeSeparatorTemplate = "crlf() + chars('-', 29) + ' ' + date() + ' ' + time()"
-const defaultDateTimeSeparatorTemplate = "crlf() + chars('-', 29) + ' ' + date() + ' ' + time() + ' ' + chars('-', 29) + crlf()"
 const insertDateTimeSeparatorTemplate = ref(initialDateTimeSeparatorTemplate())
 const customInsertTexts = ref<string[]>(initialJsonSetting('neopad.customInsertTexts', []))
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -571,104 +596,6 @@ watch(
   },
   { deep: true },
 )
-
-function initialLanguage(): AppLanguage {
-  if (typeof window === 'undefined') {
-    return 'en'
-  }
-
-  return window.localStorage.getItem('neopad.language') === 'zh' ? 'zh' : 'en'
-}
-
-function initialTheme(): AppTheme {
-  if (typeof window === 'undefined') return 'light'
-  const stored = window.localStorage.getItem('neopad.theme')
-  if (stored === 'light' || stored === 'dark') return stored
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-}
-
-function initialPreviewTheme(): PreviewTheme {
-  return normalizePreviewTheme(initialStringSetting('neopad.previewTheme', 'light'))
-}
-
-function normalizePreviewTheme(value: string): PreviewTheme {
-  if (isPreviewTheme(value)) return value
-  if (value === 'neopad' || value === 'paper' || value === 'solomd') return 'light'
-  if (value === 'github') return 'githubLight'
-  return 'light'
-}
-
-function initialPreviewFontFamily(): PreviewFontFamily {
-  const stored = initialStringSetting('neopad.previewFontFamily', 'editor')
-  return isPreviewFontFamily(stored) ? stored : 'editor'
-}
-
-function initialPreviewLineHeight(): PreviewLineHeight {
-  const stored = initialStringSetting('neopad.previewLineHeight', 'standard')
-  return isPreviewLineHeight(stored) ? stored : 'standard'
-}
-
-function initialPreviewContentWidth(): PreviewContentWidth {
-  const stored = initialStringSetting('neopad.previewContentWidth', 'standard')
-  return isPreviewContentWidth(stored) ? stored : 'standard'
-}
-
-function initialTabBarOrientation(): TabBarOrientation {
-  if (typeof window === 'undefined') {
-    return 'horizontal'
-  }
-
-  return window.localStorage.getItem('neopad.tabBarOrientation') === 'vertical' ? 'vertical' : 'horizontal'
-}
-
-function initialBooleanSetting(key: string, fallback: boolean) {
-  if (typeof window === 'undefined') {
-    return fallback
-  }
-
-  const value = window.localStorage.getItem(key)
-  return value === null ? fallback : value === 'true'
-}
-
-function initialStringSetting(key: string, fallback: string) {
-  if (typeof window === 'undefined') {
-    return fallback
-  }
-
-  return window.localStorage.getItem(key) || fallback
-}
-
-function initialNumberSetting(key: string, fallback: number, min: number, max: number) {
-  if (typeof window === 'undefined') {
-    return fallback
-  }
-
-  const value = Number(window.localStorage.getItem(key))
-  return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback
-}
-
-function initialJsonSetting<T>(key: string, fallback: T) {
-  if (typeof window === 'undefined') {
-    return fallback
-  }
-
-  try {
-    const stored = window.localStorage.getItem(key)
-    return stored ? JSON.parse(stored) as T : fallback
-  } catch {
-    return fallback
-  }
-}
-
-function initialTitleDoubleClickAction(): TitleDoubleClickAction {
-  const value = initialStringSetting('neopad.titleDoubleClickAction', 'rename')
-  return value === 'none' || value === 'delete' || value === 'rename' ? value : 'rename'
-}
-
-function initialDateTimeSeparatorTemplate() {
-  const value = initialStringSetting('neopad.insertDateTimeSeparatorTemplate', defaultDateTimeSeparatorTemplate)
-  return value === legacyDateTimeSeparatorTemplate ? defaultDateTimeSeparatorTemplate : value
-}
 
 function focusEditorAfterPageAction() {
   if (previewMode.value === 'preview') return
@@ -1677,9 +1604,9 @@ async function transformText(action: string, text: string) {
     case 'md5Hash':
       return md5(text)
     case 'sha1Hash':
-      return digestText('SHA-1', text)
+      return digestText('SHA-1', text, t.value.status.unsupportedHash)
     case 'sha256Hash':
-      return digestText('SHA-256', text)
+      return digestText('SHA-256', text, t.value.status.unsupportedHash)
     default:
       return text
   }
@@ -2621,87 +2548,6 @@ function createLocalTabFromContent(title: string, nextContent: string) {
   activeTabId.value = tab.id
   content.value = nextContent
   focusEditorAfterPageAction()
-}
-
-function titleFromFileName(fileName: string) {
-  const withoutExtension = fileName.replace(/\.[^/.]+$/, '')
-  return withoutExtension.trim() || 'Untitled'
-}
-
-function safeFileName(title: string) {
-  return title.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').replace(/\s+/g, ' ') || 'Untitled'
-}
-
-function downloadText(fileName: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }))
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  link.click()
-  URL.revokeObjectURL(url)
-}
-
-function renderInsertTemplate(template: string) {
-  const now = new Date()
-  const parts = template.split(/\s*\+\s*/g)
-  return parts.map((part) => renderInsertTemplatePart(part.trim(), now)).join('')
-}
-
-function renderInsertTemplatePart(part: string, date: Date) {
-  if (part === 'crlf()') {
-    return '\n'
-  }
-  if (part === 'date()') {
-    return formatDate(date)
-  }
-  if (part === 'time()') {
-    return formatTime(date)
-  }
-
-  const charsMatch = part.match(/^chars\(['"](.+)['"],\s*(\d+)\)$/)
-  if (charsMatch) {
-    return charsMatch[1].repeat(Number(charsMatch[2]))
-  }
-
-  const quotedMatch = part.match(/^['"](.*)['"]$/)
-  if (quotedMatch) {
-    return quotedMatch[1]
-  }
-
-  return part
-}
-
-function formatDate(date: Date) {
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-function formatTime(date: Date) {
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
-function toHalfWidth(text: string) {
-  return text.replace(/[\uff01-\uff5e]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0)).replace(/\u3000/g, ' ')
-}
-
-function toFullWidth(text: string) {
-  return text.replace(/[!-~]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0xfee0)).replace(/ /g, '\u3000')
-}
-
-function convertChinese(text: string, map: Record<string, string>) {
-  return text.replace(/./g, (char) => map[char] ?? char)
-}
-
-async function digestText(algorithm: AlgorithmIdentifier, text: string) {
-  if (!crypto.subtle) {
-    throw new Error(t.value.status.unsupportedHash)
-  }
-
-  const hash = await crypto.subtle.digest(algorithm, new TextEncoder().encode(text))
-  return Array.from(new Uint8Array(hash))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
 }
 
 function md5(text: string) {
