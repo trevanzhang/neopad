@@ -1295,7 +1295,7 @@ body {
 }
 
 .font-dialog {
-  width: min(560px, 100%);
+  width: min(440px, 100%);
 }
 
 .font-dialog-body {
@@ -1306,7 +1306,6 @@ body {
 
 .font-dialog-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 170px;
   gap: 16px;
 }
 
@@ -1328,7 +1327,6 @@ body {
 }
 
 .font-dialog-size-field {
-  grid-template-columns: 1fr auto;
   align-items: center;
 }
 
