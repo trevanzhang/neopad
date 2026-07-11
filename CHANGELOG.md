@@ -19,6 +19,9 @@ patch versions are reserved for compatible fixes.
 
 ### Changed
 
+- Refactored the frontend composition root into focused document, note
+  lifecycle, preferences, native settings, search, reminder, archive, MCP, and
+  dialog modules while preserving existing UI and data behavior.
 - External Markdown conflict checks now use content revisions instead of
   millisecond modification times, and external paths must first be approved by
   the native file picker.

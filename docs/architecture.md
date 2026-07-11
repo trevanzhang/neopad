@@ -20,6 +20,26 @@ neopad-mcp
 Both the desktop app and MCP server use `neopad-core` for workspace access. Do
 not duplicate note, search, path, or write logic outside the core crate.
 
+## Frontend Composition
+
+`App.vue` is the composition root rather than the owner of every application
+state machine. Domain behavior is split into focused Vue composables:
+
+- `useDocumentSession` owns loading, autosave, stale-load generations, and
+  external-document revisions.
+- `useNoteLifecycle` owns tab selection, create/rename/close/trash/archive,
+  clipboard capture, and the mandatory save barrier before navigation.
+- `usePreferenceState` and `useNativeSettings` separate browser persistence
+  from Tauri-native settings synchronization.
+- `useSearchState`, `useReminderState`, `useArchiveState`, and `useMcpService`
+  own their respective async state and failure boundaries.
+- `useDialogs` serializes input and confirmation requests.
+
+Keep dependencies explicit when adding a composable. Do not introduce a global
+store merely to reduce prop or line counts. Keyboard precedence remains in the
+composition root because it coordinates all modal surfaces; extract it only
+with characterization coverage for the complete shortcut matrix.
+
 ## Data Flow
 
 ```text
