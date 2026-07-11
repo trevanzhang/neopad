@@ -41,10 +41,16 @@ state machine. Domain behavior is split into focused Vue composables:
   behavior.
 - `text-transform.ts`, `help-content.ts`, and the document utility modules keep
   pure text behavior and static presentation data outside the composition root.
+- `EditorPane.vue` owns the live CodeMirror instance and command surface only.
+  The custom search panel, editor themes, and line calculator live in focused
+  `editor-*` modules; pure match-count and expression behavior has regression
+  coverage independent of the desktop runtime.
 
 Keep dependencies explicit when adding a composable. Do not introduce a global
 store merely to reduce prop or line counts. New global shortcuts must extend
 the router tests whenever they interact with modal or overlay precedence.
+CodeMirror adapters should remain separate from pure editor behavior so the
+latter can be exercised in Vitest without WebView or DOM setup.
 
 ## Data Flow
 

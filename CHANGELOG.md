@@ -26,6 +26,9 @@ patch versions are reserved for compatible fixes.
   while retaining the existing modal, Vim, menu, and Escape precedence.
 - Extracted window lifecycle, help content, and text transformations; added
   regression vectors for MD5, localized help, and shortcut routing.
+- Reduced the CodeMirror editor component to its live instance and command
+  responsibilities by extracting search-panel UI, themes, and line-calculation
+  logic, with regression coverage for match navigation and expression parsing.
 - External Markdown conflict checks now use content revisions instead of
   millisecond modification times, and external paths must first be approved by
   the native file picker.
