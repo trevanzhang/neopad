@@ -261,10 +261,16 @@ body {
 .tab-item[style]::before {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
+  pointer-events: none;
   content: '';
   background: var(--tab-color);
   border-radius: inherit;
+}
+
+.tab-item > * {
+  position: relative;
+  z-index: 1;
 }
 
 .tab-item:hover {
