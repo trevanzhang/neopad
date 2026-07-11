@@ -147,8 +147,9 @@ the configured workspace.
 - The app starts in edit mode by default. `F4` is the fixed local shortcut for
   cycling edit, split, and preview modes.
 - `Ctrl+O` opens an explicitly selected external Markdown file in place. Its
-  writes use atomic replacement and a modification-time conflict check; the
-  file remains outside NeoPad lifecycle operations unless copied into archive.
+  picker-approved canonical path is persisted, and writes use atomic
+  replacement with a SHA-256 content-revision conflict check. The file remains
+  outside NeoPad lifecycle operations unless copied into archive.
 - Tray menu: show, hide, new note, save clipboard, settings, quit.
 - Global shortcuts:
   - `Alt+Z`: toggle window.

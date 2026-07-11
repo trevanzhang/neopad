@@ -55,8 +55,9 @@ Implemented MVP capabilities:
 - Native Save As for exporting the active note to Markdown or all notes to a
   ZIP archive with one Markdown file per tab.
 - `Ctrl+O` opens external Markdown files in place and autosaves changes back
-  to their original paths. External files can be copied into the NeoPad archive
-  without changing the originals.
+  to their original paths. Access requires native-picker approval and writes
+  use content revisions to detect out-of-band edits. External files can be
+  copied into the NeoPad archive without changing the originals.
 - Manual clipboard capture into `clipboard.md` with readable local timestamp
   separator lines.
 - Tray menu.
@@ -81,13 +82,18 @@ Implemented MVP capabilities:
 - Core filesystem access must go through `neopad-core`.
 - Paths must be validated so callers cannot escape the configured workspace.
 - Atomic writes must be preserved.
-- MCP full-page updates must keep timestamp conflict protection.
+- Navigation and content-replacing actions must stop when the save barrier
+  cannot persist pending edits.
+- Full-page updates must keep `expectedUpdatedAt` conflict protection, and
+  external file changes must also be detected through content revisions.
 
 ## MCP Rules
 
 - `neopad-mcp` communicates over local Streamable HTTP at `/mcp`.
 - The service is off by default and binds to `127.0.0.1` by default.
 - Bearer token authentication is required for HTTP requests.
+- Desktop-managed bearer tokens must be passed through the child environment,
+  not command-line arguments.
 - Browser-originated requests must pass local Origin validation.
 - stderr is used for diagnostics.
 - When enabled, local agents with the token can read and write notes.

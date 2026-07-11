@@ -62,14 +62,18 @@ The repository currently contains a working Windows-focused MVP:
 - Global search groups matching lines by note, shows a per-note match count,
   and lets you expand repeated matches only when needed.
 - `Ctrl+O` opens an external Markdown file in place through the native file
-  picker. Changes autosave back to the original path with a modification-time
-  check. External files can be copied into the NeoPad archive without moving or
-  deleting their originals. Native Save As dialogs export the active note as
-  Markdown or all notes as a ZIP archive containing one Markdown file per tab.
+  picker. Only picker-approved paths can be reopened, and changes autosave back
+  to the original path with a SHA-256 content-revision conflict check. External
+  files can be copied into the NeoPad archive without moving or deleting their
+  originals. Native Save As dialogs export the active note as Markdown or all
+  notes as a ZIP archive containing one Markdown file per tab.
 - Standalone local HTTP `neopad-mcp` service managed from Settings, with bearer
   token access for local agents. The dedicated MCP settings page can start or
   stop the service, show the local URL and token, regenerate the token, and copy
   an agent configuration snippet.
+- Save barriers prevent navigation and content-replacing actions from
+  discarding pending edits. Note metadata is reconciled under a cross-process
+  lock, and interrupted archive/trash state is recovered from Markdown files.
 - Windows MSI packaging with app icon, branded WiX installer images, and desktop
   and start-menu shortcut icons. The MSI includes `neopad-mcp.exe` as a bundled
   sidecar binary.
@@ -181,10 +185,12 @@ Build the MCP server:
 cargo build -p neopad-mcp --release
 ```
 
-Run the HTTP server directly:
+Run the HTTP server directly without exposing the token in the process command
+line:
 
 ```powershell
-target\release\neopad-mcp.exe --workspace ~/.neopad serve --host 127.0.0.1 --port 8765 --token <local-token>
+$env:NEOPAD_MCP_TOKEN = '<local-token>'
+target\release\neopad-mcp.exe --workspace ~/.neopad serve --host 127.0.0.1 --port 8765
 ```
 
 NeoPad can also start and stop this process from Settings. The copied agent
@@ -205,7 +211,8 @@ configuration uses the local URL and bearer token:
 
 The service is off by default. When enabled, local agents with the token can
 read and write NeoPad notes. The HTTP server rejects non-loopback bind
-addresses.
+addresses. The desktop app also passes its managed token through the child
+environment rather than command-line arguments.
 
 ## Keyboard Shortcuts
 

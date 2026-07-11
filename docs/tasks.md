@@ -13,7 +13,8 @@ This file tracks the implemented MVP relative to the original task plan.
   - `meta/tabs.json`
   - `config.json`
 - Note CRUD, close-without-delete, archive, and trash move behavior.
-- Atomic writes and mtime-checked writes.
+- Durable atomic writes, monotonic update timestamps, and content-revision
+  checks for out-of-band edits.
 - Cross-process write locking for desktop and write-enabled MCP operations.
 - Tauri command bridge.
 - Vue app shell with tabs, editor, preview, search, settings, and status bar.
@@ -42,7 +43,8 @@ This file tracks the implemented MVP relative to the original task plan.
 - ZIP export for active and archived NeoPad notes, preserving each note as its
   own Markdown file.
 - Native opening and in-place autosave for external Markdown files, with a
-  persistent recent-document list and copy-to-archive behavior.
+  native-picker authorization boundary, content-revision conflicts, persistent
+  recent-document list, and copy-to-archive behavior.
 - Manual clipboard capture to `clipboard.md`.
 - Standalone Streamable HTTP `neopad-mcp` read and write tools.
 - Dedicated MCP settings page with service start/stop, status, token display,
@@ -53,11 +55,18 @@ This file tracks the implemented MVP relative to the original task plan.
   MCP sidecar, and hidden release console windows.
 - Synchronized application versions with a CI consistency check and
   release changelog.
+- Frontend composition split into focused document, note lifecycle,
+  preferences, native settings, search, reminder, archive, MCP, dialog, window,
+  and editor-support modules with deterministic unit coverage.
+- Audited cross-platform CI and draft release workflows with pinned actions,
+  production dependency gates, exact artifact validation, and SHA-256 manifests.
 
 ## Current Build Targets
 
-- Windows MSI package.
-- Standalone `neopad-mcp.exe`.
+- Windows x64 MSI.
+- macOS ARM64 DMG.
+- Linux x64 DEB and AppImage.
+- Bundled standalone `neopad-mcp` sidecar.
 
 ## Recommended Next Tasks
 

@@ -39,11 +39,13 @@ target/release/neopad-mcp.exe
 ## Run
 
 ```powershell
-target\release\neopad-mcp.exe --workspace ~/.neopad serve --host 127.0.0.1 --port 8765 --token <local-token>
+$env:NEOPAD_MCP_TOKEN = '<local-token>'
+target\release\neopad-mcp.exe --workspace ~/.neopad serve --host 127.0.0.1 --port 8765
 ```
 
 If `--workspace` is omitted, the server uses the default workspace from
-`neopad-core`.
+`neopad-core`. Direct CLI use still accepts `--token`, but the environment form
+avoids exposing the token in process arguments and is what the desktop app uses.
 
 The default endpoint is:
 
@@ -78,7 +80,8 @@ The HTTP service is read-write when enabled:
 - `create_page`: create a new page, optionally with initial content.
 - `append_to_page`: append Markdown to an existing page.
 - `update_page`: replace a page only when `expectedUpdatedAt` matches the
-  current note timestamp.
+  current note timestamp. The core also rejects the write if the Markdown file
+  content changed outside NeoPad.
 - `list_pages`: list note metadata and file sizes.
 - `read_page`: read one page as Markdown.
 - `search_pages`: search all Markdown pages.

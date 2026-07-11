@@ -116,11 +116,12 @@ bundle and exercises note creation, autosave across tab switches, and settings.
 Relevant files:
 
 ```text
-app/src/lib/autosave.test.ts  Frontend autosave unit tests
-mcp-server/tests/http.rs      MCP HTTP child-process protocol tests
-e2e/wdio.conf.ts              Desktop WebDriver configuration
-e2e/specs/                    Desktop interaction specifications
-scripts/setup-e2e.ps1         Windows driver setup
+app/src/composables/*.test.ts  Document, lifecycle, and preference state tests
+app/src/lib/*.test.ts          Autosave, shortcuts, search, editor, and text tests
+mcp-server/tests/http.rs       MCP HTTP child-process protocol tests
+e2e/wdio.conf.ts               Desktop WebDriver configuration
+e2e/specs/                     Desktop interaction specifications
+scripts/setup-e2e.ps1          Windows driver setup
 ```
 
 ## Verification Checklist
@@ -128,11 +129,17 @@ scripts/setup-e2e.ps1         Windows driver setup
 Use this baseline before handing off functional changes:
 
 ```powershell
-cargo test
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
 pnpm test:frontend
 pnpm build
-pnpm tauri:build
+pnpm check:versions
 ```
+
+Run `pnpm test:e2e` for desktop workflow changes and `pnpm tauri:build` when
+packaging or sidecar behavior changes. Production dependency changes must also
+pass `pnpm audit --prod` and `cargo audit`.
 
 For MCP-only changes, also run:
 
