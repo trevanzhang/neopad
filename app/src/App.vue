@@ -19,23 +19,17 @@ import {
   getUiConfig,
   getWorkspace,
   hideWindow,
-  claimDueReminders,
-  completeDueReminders,
-  completeReminder,
   listNotes,
   listArchivedNotes,
   listRecentNotes,
-  listReminders,
   openTrash,
   openNote,
   openExternalMarkdown,
   quitApp,
   renameNote,
-  reopenReminder,
   saveClipboard,
   saveMarkdownFile,
   saveUiConfig,
-  searchNotes,
   setNoteColor,
   unarchiveNote,
   readExternalMarkdown,
@@ -57,6 +51,8 @@ import type { AppTheme, McpStatus } from './lib/invoke'
 import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
 import { useDocumentSession } from './composables/useDocumentSession'
+import { useSearchState } from './composables/useSearchState'
+import { useReminderState } from './composables/useReminderState'
 import { editorBackgroundForTheme } from './lib/theme'
 import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
 import {
@@ -106,7 +102,6 @@ import {
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification'
 
 type HelpTopic = 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about'
 type InputDialogState = { title: string; initialValue: string }
@@ -156,11 +151,6 @@ const statusMessage = ref('Markdown')
 const previewMode = ref<EditorMode>('edit')
 const defaultEditorMode = ref<EditorMode>('edit')
 const editorModeShortcut = ref('F4' as const)
-const searchOpen = ref(false)
-const reminderDialogOpen = ref(false)
-const reminderListOpen = ref(false)
-const reminders = ref<Reminder[]>([])
-const remindersLoading = ref(false)
 const archiveListOpen = ref(false)
 const archivedNotes = ref<NoteTab[]>([])
 const archiveLoading = ref(false)
@@ -173,11 +163,6 @@ let resolveInputDialog: ((value: string | null) => void) | null = null
 const confirmationDialog = ref<ConfirmationDialogState | null>(null)
 let resolveConfirmationDialog: ((confirmed: boolean) => void) | null = null
 const immersiveMode = ref(false)
-const searchQuery = ref('')
-const searchResults = ref<SearchResult[]>([])
-const searching = ref(false)
-const searchResultLimit = ref(100)
-const searchHasMore = ref(false)
 const alwaysOnTop = ref(false)
 const theme = ref<AppTheme>(initialTheme())
 const language = ref<AppLanguage>(initialLanguage())
@@ -236,6 +221,39 @@ const {
   failedMessage: () => t.value.status.failed,
   rememberExternalDocument,
 })
+const {
+  searchOpen,
+  searchQuery,
+  searchResults,
+  searching,
+  searchHasMore,
+  scheduleSearch,
+  loadMoreSearchResults,
+  clearSearch,
+  disposeSearchState,
+} = useSearchState(() => {
+  saveState.value = 'Failed'
+})
+const {
+  reminderDialogOpen,
+  reminderListOpen,
+  reminders,
+  remindersLoading,
+  refreshReminders,
+  completeReminderItem,
+  reopenReminderItem,
+  completeAllDueReminders,
+  startReminderPolling,
+  disposeReminderState,
+} = useReminderState({
+  activeTabId,
+  forceSave,
+  loadActiveNote,
+  notificationTitle: () => t.value.reminders.notificationTitle,
+  onError: () => {
+    saveState.value = 'Failed'
+  },
+})
 const displayTabs = computed(() => tabs.value.map((tab) => ({
   ...tab,
   title: tab.id === 'inbox'
@@ -263,10 +281,8 @@ const editorModeLabel = computed(() => {
 })
 const effectiveEditorBackground = computed(() => editorBackgroundForTheme(theme.value, editorBackgroundColor.value))
 const themeToggleLabel = computed(() => theme.value === 'dark' ? t.value.status.switchToLight : t.value.status.switchToDark)
-let searchTimer: number | null = null
 let uiConfigTimer: number | null = null
 let nativeSettingsTimer: number | null = null
-let reminderPollTimer: number | null = null
 let unlistenNewNoteRequested: UnlistenFn | null = null
 let unlistenSaveClipboardRequested: UnlistenFn | null = null
 let unlistenOpenSettings: UnlistenFn | null = null
@@ -274,7 +290,6 @@ let unlistenCloseRequested: UnlistenFn | null = null
 let unlistenHideRequested: UnlistenFn | null = null
 let unlistenQuitRequested: UnlistenFn | null = null
 let uiConfigLoaded = false
-let notificationPermissionDenied = false
 const deletingTabIds = new Set<string>()
 
 onMounted(async () => {
@@ -305,8 +320,7 @@ onMounted(async () => {
     nativeSettingsTimer = null
     void syncNativeSettings()
   }, 5000)
-  await checkDueReminders()
-  reminderPollTimer = window.setInterval(() => void checkDueReminders(), 30_000)
+  await startReminderPolling()
 })
 
 async function registerNativeEventListeners() {
@@ -359,10 +373,10 @@ async function resetWebviewZoom() {
 
 onBeforeUnmount(() => {
   disposeDocumentSession()
-  clearSearchTimer()
+  disposeSearchState()
   if (uiConfigTimer) window.clearTimeout(uiConfigTimer)
   if (nativeSettingsTimer) window.clearTimeout(nativeSettingsTimer)
-  if (reminderPollTimer) window.clearInterval(reminderPollTimer)
+  disposeReminderState()
   void unlistenNewNoteRequested?.()
   void unlistenSaveClipboardRequested?.()
   void unlistenOpenSettings?.()
@@ -372,17 +386,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown, { capture: true })
   window.removeEventListener('beforeunload', forceSaveOnExit)
   document.removeEventListener('visibilitychange', forceSaveOnHide)
-})
-
-watch(searchQuery, () => {
-  searchResultLimit.value = 100
-  searchHasMore.value = false
-  if (!searchOpen.value || !isTauriRuntime()) {
-    searchResults.value = []
-    return
-  }
-
-  scheduleSearch()
 })
 
 watch(language, () => {
@@ -1323,9 +1326,7 @@ function showSettingsPlaceholder() {
 
 function closeSearch(returnFocusToEditor = true) {
   searchOpen.value = false
-  searchResults.value = []
-  searchHasMore.value = false
-  clearSearchTimer()
+  clearSearch()
   if (returnFocusToEditor) focusEditorAfterPageAction()
 }
 
@@ -1436,19 +1437,6 @@ function closeReminderList(returnFocusToEditor = true) {
   if (returnFocusToEditor) focusEditorAfterPageAction()
 }
 
-async function refreshReminders() {
-  if (!isTauriRuntime()) return
-  remindersLoading.value = true
-  try {
-    if (!(await forceSave())) return
-    reminders.value = await listReminders()
-  } catch {
-    saveState.value = 'Failed'
-  } finally {
-    remindersLoading.value = false
-  }
-}
-
 async function selectReminder(reminder: Reminder) {
   const generation = nextNoteLoadGeneration()
   if (!(await forceSave())) return
@@ -1459,63 +1447,6 @@ async function selectReminder(reminder: Reminder) {
   if (previewMode.value === 'preview') previewMode.value = 'edit'
   await nextTick()
   editorPane.value?.goToLine(reminder.lineNumber)
-}
-
-async function completeReminderItem(reminder: Reminder) {
-  try {
-    if (!(await forceSave())) return
-    await completeReminder(reminder)
-    if (reminder.noteId === activeTabId.value) await loadActiveNote()
-    await refreshReminders()
-  } catch {
-    saveState.value = 'Failed'
-    await refreshReminders()
-  }
-}
-
-async function reopenReminderItem(reminder: Reminder) {
-  try {
-    if (!(await forceSave())) return
-    await reopenReminder(reminder)
-    if (reminder.noteId === activeTabId.value) await loadActiveNote()
-    await refreshReminders()
-  } catch {
-    saveState.value = 'Failed'
-    await refreshReminders()
-  }
-}
-
-async function completeAllDueReminders() {
-  try {
-    if (!(await forceSave())) return
-    await completeDueReminders()
-    await loadActiveNote()
-    await refreshReminders()
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function checkDueReminders() {
-  if (!isTauriRuntime() || notificationPermissionDenied) return
-  try {
-    const current = await listReminders()
-    if (!current.some((reminder) => reminder.status === 'due')) return
-    let granted = await isPermissionGranted()
-    if (!granted) granted = (await requestPermission()) === 'granted'
-    if (!granted) {
-      notificationPermissionDenied = true
-      return
-    }
-
-    const due = await claimDueReminders()
-    for (const reminder of due) {
-      sendNotification({ title: t.value.reminders.notificationTitle, body: reminder.content })
-    }
-    if (reminderListOpen.value && due.length > 0) await refreshReminders()
-  } catch {
-    // Notification failures must not interrupt note editing.
-  }
 }
 
 async function processEditorText(action: string) {
@@ -2368,48 +2299,6 @@ function setShortcutBaseKey(value: string) {
 
 function setClipboardShortcutBaseKey(value: string) {
   clipboardShortcutBaseKey.value = normalizeShortcutInput(value)
-}
-
-function scheduleSearch() {
-  clearSearchTimer()
-  searching.value = true
-  searchTimer = window.setTimeout(() => {
-    void runSearch()
-  }, 200)
-}
-
-async function runSearch() {
-  clearSearchTimer()
-  const query = searchQuery.value.trim()
-  if (!query) {
-    searchResults.value = []
-    searchHasMore.value = false
-    searching.value = false
-    return
-  }
-
-  try {
-    const results = await searchNotes(query, searchResultLimit.value)
-    searchResults.value = results
-    searchHasMore.value = results.length === searchResultLimit.value
-  } catch {
-    saveState.value = 'Failed'
-  } finally {
-    searching.value = false
-  }
-}
-
-function loadMoreSearchResults() {
-  if (searching.value || !searchQuery.value.trim()) return
-  searchResultLimit.value += 100
-  void runSearch()
-}
-
-function clearSearchTimer() {
-  if (searchTimer) {
-    window.clearTimeout(searchTimer)
-    searchTimer = null
-  }
 }
 
 function upsertTab(tab: NoteTab) {
