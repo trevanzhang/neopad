@@ -1252,11 +1252,11 @@ body {
 .input-dialog-header button {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   color: var(--np-muted);
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
   background: transparent;
   border: 1px solid transparent;
