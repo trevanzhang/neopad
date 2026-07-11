@@ -1285,15 +1285,17 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       @cancel="finishConfirmationDialog(false)"
     />
 
-    <section v-if="helpTopic" class="help-panel" role="dialog" aria-modal="true" :aria-label="helpContent.title">
-      <header class="help-header">
-        <strong>{{ helpContent.title }}</strong>
-        <button type="button" @click="closeHelp()">{{ t.settings.close }}</button>
-      </header>
-      <div class="help-body">
-        <p v-for="line in helpContent.lines" :key="line">{{ line }}</p>
-      </div>
-    </section>
+    <div v-if="helpTopic" class="input-dialog-backdrop" role="presentation" @mousedown.self="closeHelp()">
+      <section class="input-dialog help-panel" role="dialog" aria-modal="true" :aria-label="helpContent.title">
+        <header class="input-dialog-header">
+          <strong>{{ helpContent.title }}</strong>
+          <button type="button" :aria-label="t.settings.close" :title="t.settings.close" @click="closeHelp()">&times;</button>
+        </header>
+        <div class="input-dialog-body help-body">
+          <p v-for="line in helpContent.lines" :key="line">{{ line }}</p>
+        </div>
+      </section>
+    </div>
 
     <template #status>
       <StatusBar

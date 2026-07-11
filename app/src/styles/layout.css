@@ -1164,8 +1164,7 @@ body {
   white-space: nowrap;
 }
 
-.settings-panel,
-.help-panel {
+.settings-panel {
   position: absolute;
   inset: 0;
   z-index: 12;
@@ -1181,15 +1180,17 @@ body {
   box-shadow: var(--np-shadow-panel);
 }
 
+.help-panel {
+  width: min(460px, 100%);
+}
+
 .settings-header,
-.help-header,
 .settings-section {
   padding: 10px 12px;
   border-bottom: 1px solid var(--np-border);
 }
 
-.settings-header,
-.help-header {
+.settings-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1198,11 +1199,10 @@ body {
 
 .help-body {
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 10px;
   color: var(--np-text);
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .help-body p {
@@ -1226,7 +1226,7 @@ body {
   color: var(--np-text);
   background: var(--np-surface);
   border: 1px solid var(--np-border);
-  border-radius: 3px;
+  border-radius: 6px;
   box-shadow: var(--np-shadow);
 }
 
@@ -1234,20 +1234,38 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 42px;
-  padding: 6px 10px 6px 14px;
-  background: var(--np-chrome);
+  min-height: 44px;
+  padding: 0 8px 0 16px;
   border-bottom: 1px solid var(--np-border);
 }
 
+.input-dialog-header strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .input-dialog-header button {
-  width: 30px;
-  height: 30px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
   padding: 0;
+  color: var(--np-muted);
+  font-size: 18px;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.input-dialog-header button:hover,
+.input-dialog-header button:focus-visible {
+  color: var(--np-text);
+  background: var(--np-hover);
 }
 
 .input-dialog-body {
-  padding: 16px;
+  padding: 20px;
 }
 
 .input-dialog-body label {
@@ -1258,11 +1276,17 @@ body {
 .input-dialog-body input {
   width: 100%;
   height: 32px;
-  padding: 0 9px;
+  padding: 0 10px;
   color: var(--np-text);
-  background: var(--np-code);
+  background: var(--np-surface);
   border: 1px solid var(--np-border);
-  border-radius: 2px;
+  border-radius: 3px;
+}
+
+.input-dialog-body input:focus-visible {
+  outline: none;
+  border-color: var(--np-accent);
+  box-shadow: 0 0 0 2px var(--np-accent-soft);
 }
 
 .font-dialog {
@@ -1271,14 +1295,14 @@ body {
 
 .font-dialog-body {
   display: grid;
-  gap: 16px;
-  padding: 18px 20px;
+  gap: 18px;
+  padding: 20px;
 }
 
 .font-dialog-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 170px;
-  gap: 14px;
+  gap: 16px;
 }
 
 .font-dialog-field {
@@ -1290,12 +1314,12 @@ body {
 
 .font-dialog-field select {
   width: 100%;
-  height: 36px;
-  padding: 0 12px;
+  height: 34px;
+  padding: 0 10px;
   color: var(--np-text);
-  background: var(--np-code);
+  background: var(--np-surface);
   border: 1px solid var(--np-border);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .font-dialog-size-field {
@@ -1312,24 +1336,24 @@ body {
 .font-dialog-size-field strong {
   color: var(--np-text);
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .font-dialog-preview-shell {
-  padding: 12px;
-  background: var(--np-window);
-  border: 1px solid var(--np-border);
-  border-radius: 6px;
+  padding: 14px;
+  background: var(--np-chrome-elevated);
+  border-radius: 3px;
 }
 
 .font-dialog-preview {
   min-height: 72px;
   display: grid;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 16px;
   color: var(--np-text);
   background: var(--np-surface);
   border: 1px solid var(--np-border);
-  border-radius: 4px;
+  border-radius: 3px;
   line-height: 1.45;
   white-space: nowrap;
   overflow: hidden;
@@ -1340,28 +1364,44 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 10px 16px 14px;
+  padding: 12px 20px 16px;
 }
 
 .input-dialog button {
-  min-width: 72px;
-  height: 30px;
+  min-width: 76px;
+  height: 32px;
+  padding: 0 14px;
   color: var(--np-text);
-  background: var(--np-control);
+  font-size: 13px;
+  background: var(--np-surface);
   border: 1px solid var(--np-border);
   border-radius: 3px;
 }
 
+.input-dialog button:hover {
+  background: var(--np-hover);
+}
+
 .input-dialog button.primary {
   color: var(--np-accent-contrast, #ffffff);
+  font-weight: 500;
   background: var(--np-accent);
   border-color: var(--np-accent);
 }
 
+.input-dialog button.primary:hover {
+  filter: brightness(1.08);
+}
+
 .input-dialog button.danger {
   color: var(--np-danger-contrast, #ffffff);
+  font-weight: 500;
   background: var(--np-danger);
   border-color: var(--np-danger);
+}
+
+.input-dialog button.danger:hover {
+  filter: brightness(1.08);
 }
 
 .confirmation-dialog-message {
