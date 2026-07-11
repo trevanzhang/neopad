@@ -249,12 +249,22 @@ body {
 }
 
 .tab-item {
+  position: relative;
   flex: 0 1 auto;
   max-width: 170px;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.tab-item[style]::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: '';
+  background: var(--tab-color);
+  border-radius: inherit;
 }
 
 .tab-item:hover {
@@ -300,6 +310,10 @@ body {
 
 .tab-item.active .tab-external-icon::after {
   background: var(--np-surface);
+}
+
+.theme-dark .tab-item[style]::before {
+  opacity: 0.35;
 }
 
 .tab-add {

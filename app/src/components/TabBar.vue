@@ -137,7 +137,7 @@ function updateColor(color: string | null) {
       :class="{ active: tab.id === activeTabId }"
       type="button"
       :title="tab.externalPath ?? tab.title"
-      :style="tab.color ? { backgroundColor: tab.color } : undefined"
+      :style="tab.color ? { '--tab-color': tab.color } : undefined"
       @click="$emit('selectTab', tab.id)"
       @dblclick="$emit('titleDoubleClick', tab.id)"
       @contextmenu="openContextMenu($event, tab)"
