@@ -22,6 +22,10 @@ patch versions are reserved for compatible fixes.
 - Refactored the frontend composition root into focused document, note
   lifecycle, preferences, native settings, search, reminder, archive, MCP, and
   dialog modules while preserving existing UI and data behavior.
+- Moved keyboard shortcut priority routing behind a pure, characterized module
+  while retaining the existing modal, Vim, menu, and Escape precedence.
+- Extracted window lifecycle, help content, and text transformations; added
+  regression vectors for MD5, localized help, and shortcut routing.
 - External Markdown conflict checks now use content revisions instead of
   millisecond modification times, and external paths must first be approved by
   the native file picker.

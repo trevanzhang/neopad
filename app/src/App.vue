@@ -13,20 +13,18 @@ import {
   getAppVersion,
   getShortcutWarnings,
   getWorkspace,
-  hideWindow,
   listNotes,
   listRecentNotes,
   openTrash,
   openNote,
   openExternalMarkdown,
-  quitApp,
   saveMarkdownFile,
   readExternalMarkdown,
   toggleMainWindowMaximize,
   toggleAlwaysOnTop,
   writeNote,
 } from './lib/invoke'
-import { messages, type AppLanguage } from './lib/i18n'
+import { messages } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
 import { useDocumentSession } from './composables/useDocumentSession'
 import { useSearchState } from './composables/useSearchState'
@@ -37,19 +35,13 @@ import { useArchiveState } from './composables/useArchiveState'
 import { usePreferenceState } from './composables/usePreferenceState'
 import { useNativeSettings } from './composables/useNativeSettings'
 import { useNoteLifecycle } from './composables/useNoteLifecycle'
+import { useWindowLifecycle } from './composables/useWindowLifecycle'
 import { editorBackgroundForTheme } from './lib/theme'
-import { formatShortcutLabel, normalizeShortcutInput } from './lib/shortcut'
-import {
-  convertChinese,
-  digestText,
-  downloadText,
-  renderInsertTemplate,
-  safeFileName,
-  titleFromFileName,
-  toFullWidth,
-  toHalfWidth,
-} from './lib/document-utils'
-import { simplifiedToTraditionalMap, traditionalToSimplifiedMap } from './lib/chinese-maps'
+import { normalizeShortcutInput } from './lib/shortcut'
+import { downloadText, renderInsertTemplate, safeFileName, titleFromFileName } from './lib/document-utils'
+import { transformText } from './lib/text-transform'
+import { getHelpContent, type HelpTopic } from './lib/help-content'
+import { createKeyboardHandler, isEditableElement } from './lib/keyboard-shortcuts'
 import { initialJsonSetting } from './lib/preferences'
 import type { NoteTab, Reminder, SearchResult } from './types/note'
 import {
@@ -57,11 +49,8 @@ import {
   previewThemes,
   type EditorMode,
 } from './types/editor'
-import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
-type HelpTopic = 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about'
 
 const ArchiveList = defineAsyncComponent(() => import('./components/ArchiveList.vue'))
 const ConfirmationDialog = defineAsyncComponent(() => import('./components/ConfirmationDialog.vue'))
@@ -274,6 +263,89 @@ const {
   requestInput, requestConfirmation, focusEditor: focusEditorAfterPageAction,
   refreshRecentNotes, refreshArchivedNotes, upsertTab,
 })
+const {
+  registerNativeEventListeners,
+  resetWebviewZoom,
+  hideMainWindow,
+  exitApp,
+  disposeWindowLifecycle,
+} = useWindowLifecycle({
+  closeToMinimize,
+  createLocalTab,
+  saveCurrentClipboard,
+  openSettings,
+  saveBeforeWindowAction,
+  onError: () => { saveState.value = 'Failed' },
+})
+const handleKeydown = createKeyboardHandler({
+  state: {
+    modalOpen: () => Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value),
+    reminderDialogOpen: () => reminderDialogOpen.value,
+    reminderListOpen: () => reminderListOpen.value,
+    archiveListOpen: () => archiveListOpen.value,
+    confirmationOpen: () => Boolean(confirmationDialog.value),
+    inputOpen: () => Boolean(inputDialog.value),
+    fontDialogOpen: () => fontDialogOpen.value,
+    immersiveMode: () => immersiveMode.value,
+    settingsOpen: () => settingsOpen.value,
+    helpOpen: () => Boolean(helpTopic.value),
+    searchOpen: () => searchOpen.value,
+    vimMode: () => vimMode.value,
+    vimUseCtrlShortcuts: () => vimUseCtrlShortcuts.value,
+    vimNormalMode: () => activeVimMode.value === 'normal',
+    editorFocused: () => Boolean(editorPane.value?.isEditorFocused()),
+    editableTarget: isEditableElement,
+    menuOrContextOpen: () => Boolean(document.querySelector('.menu-root:focus-within, .tab-context-menu')),
+    tabContextOpen: () => Boolean(document.querySelector('.tab-context-menu')),
+    findPanelOpen: () => Boolean(document.querySelector('.np-find-panel')),
+    nativeRuntime: isTauriRuntime,
+  },
+  actions: {
+    openShortcutHelp: () => openHelpTopic('shortcuts'),
+    cycleTab,
+    toggleTheme,
+    togglePreviewTheme,
+    openReminderList,
+    closeReminderList,
+    toggleImmersiveMode,
+    archiveActivePage,
+    deleteActivePage,
+    closeReminderDialog,
+    closeArchiveList,
+    cancelConfirmation: () => finishConfirmationDialog(false),
+    cancelInput: () => finishInputDialog(null),
+    closeFontDialog,
+    exitImmersiveMode: () => setImmersiveMode(false),
+    closeSettings,
+    closeHelp,
+    closeSearch,
+    closeEditorFind: () => editorPane.value?.closeEditorFind(),
+    cycleEditorMode,
+    renameActivePage,
+    toggleMainWindowMaximize,
+    createLocalTab,
+    closeActivePage,
+    triggerLoadFile,
+    showSearch: showSearchPlaceholder,
+    openFind: openFindPanel,
+    openReplace: openReplacePanel,
+    copy: copyEditorSelection,
+    cut: cutEditorSelection,
+    paste: pasteIntoEditor,
+    selectAll: selectAllEditorText,
+    findNext: findNextMatch,
+    calculateExpression: calculateCurrentLineExpression,
+    hideMainWindow,
+    toggleTabBarOrientation,
+    togglePin,
+    openSettings,
+    insertDateTimeSeparator,
+    insertSeparator,
+    insertDateTime,
+    insertReminder,
+    saveCurrentClipboard,
+  },
+})
 const displayTabs = computed(() => tabs.value.map((tab) => ({
   ...tab,
   title: tab.id === 'inbox'
@@ -293,7 +365,13 @@ const localizedSaveState = computed(() => {
   }
   return t.value.status.saved
 })
-const helpContent = computed(() => getHelpContent(helpTopic.value, language.value))
+const helpContent = computed(() => getHelpContent(helpTopic.value, language.value, {
+  appVersion: appVersion.value,
+  shortcutBaseKey: shortcutBaseKey.value,
+  shortcutModifiers: shortcutModifiers.value,
+  clipboardShortcutBaseKey: clipboardShortcutBaseKey.value,
+  clipboardShortcutModifiers: clipboardShortcutModifiers.value,
+}))
 const editorModeLabel = computed(() => {
   if (previewMode.value === 'preview') return t.value.status.previewMode
   if (previewMode.value === 'split') return t.value.status.hybridMode
@@ -301,12 +379,6 @@ const editorModeLabel = computed(() => {
 })
 const effectiveEditorBackground = computed(() => editorBackgroundForTheme(theme.value, editorBackgroundColor.value))
 const themeToggleLabel = computed(() => theme.value === 'dark' ? t.value.status.switchToLight : t.value.status.switchToDark)
-let unlistenNewNoteRequested: UnlistenFn | null = null
-let unlistenSaveClipboardRequested: UnlistenFn | null = null
-let unlistenOpenSettings: UnlistenFn | null = null
-let unlistenCloseRequested: UnlistenFn | null = null
-let unlistenHideRequested: UnlistenFn | null = null
-let unlistenQuitRequested: UnlistenFn | null = null
 
 onMounted(async () => {
   if (!isTauriRuntime()) {
@@ -334,70 +406,6 @@ onMounted(async () => {
   })
   scheduleNativeSettingsSync()
   await startReminderPolling()
-})
-
-async function registerNativeEventListeners() {
-  try {
-    const [
-      newNote,
-      saveClipboardRequest,
-      openSettingsRequest,
-      closeRequest,
-      hideRequest,
-      quitRequest,
-    ] = await Promise.all([
-      listen('neopad://new-note-requested', () => {
-        void createLocalTab()
-      }),
-      listen('neopad://save-clipboard-requested', () => {
-        void saveCurrentClipboard()
-      }),
-      listen('neopad://open-settings', () => {
-        openSettings()
-      }),
-      listen('neopad://close-requested', () => {
-        void handleCloseRequested()
-      }),
-      listen('neopad://hide-requested', () => {
-        void handleHideRequested()
-      }),
-      listen('neopad://quit-requested', () => {
-        void handleQuitRequested()
-      }),
-    ])
-    unlistenNewNoteRequested = newNote
-    unlistenSaveClipboardRequested = saveClipboardRequest
-    unlistenOpenSettings = openSettingsRequest
-    unlistenCloseRequested = closeRequest
-    unlistenHideRequested = hideRequest
-    unlistenQuitRequested = quitRequest
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function resetWebviewZoom() {
-  try {
-    await getCurrentWebview().setZoom(1)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-onBeforeUnmount(() => {
-  disposeDocumentSession()
-  disposeSearchState()
-  disposeNativeSettings()
-  disposeReminderState()
-  void unlistenNewNoteRequested?.()
-  void unlistenSaveClipboardRequested?.()
-  void unlistenOpenSettings?.()
-  void unlistenCloseRequested?.()
-  void unlistenHideRequested?.()
-  void unlistenQuitRequested?.()
-  window.removeEventListener('keydown', handleKeydown, { capture: true })
-  window.removeEventListener('beforeunload', forceSaveOnExit)
-  document.removeEventListener('visibilitychange', forceSaveOnHide)
 })
 
 function focusEditorAfterPageAction() {
@@ -554,43 +562,6 @@ async function openTrashFolder() {
     statusMessage.value = t.value.status.trashOpened
   } catch {
     saveState.value = 'Failed'
-  }
-}
-
-async function hideMainWindow() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  if (!(await saveBeforeWindowAction())) return
-  await hideWindow()
-}
-
-async function exitApp() {
-  if (!(await saveBeforeWindowAction())) return
-  if (isTauriRuntime()) {
-    await quitApp()
-  }
-}
-
-async function handleCloseRequested() {
-  if (closeToMinimize.value) {
-    await handleHideRequested()
-  } else {
-    await handleQuitRequested()
-  }
-}
-
-async function handleHideRequested() {
-  if (!isTauriRuntime()) return
-  if (!(await saveBeforeWindowAction())) return
-  await hideWindow()
-}
-
-async function handleQuitRequested() {
-  if (!(await saveBeforeWindowAction())) return
-  if (isTauriRuntime()) {
-    await quitApp()
   }
 }
 
@@ -871,70 +842,12 @@ async function selectReminder(reminder: Reminder) {
 
 async function processEditorText(action: string) {
   try {
-    const processed = await editorPane.value?.transformText((text) => transformText(action, text))
+    const processed = await editorPane.value?.transformText((text) => transformText(action, text, t.value.status.unsupportedHash))
     if (processed) {
       statusMessage.value = t.value.status.textProcessed
     }
   } catch {
     saveState.value = 'Failed'
-  }
-}
-
-async function transformText(action: string, text: string) {
-  switch (action) {
-    case 'uppercase':
-      return text.toUpperCase()
-    case 'lowercase':
-      return text.toLowerCase()
-    case 'removeExtraSpaces':
-      return text.replace(/[ \t]+/g, ' ')
-    case 'trimLeadingSpaces':
-      return text
-        .split('\n')
-        .map((line) => line.trim())
-        .join('\n')
-    case 'removeEmptyLines':
-      return text
-        .split('\n')
-        .filter((line) => line.trim() !== '')
-        .join('\n')
-    case 'removeDuplicateEmptyLines':
-      return text.replace(/(\n\s*){3,}/g, '\n\n')
-    case 'sortLines':
-      return text.split('\n').sort((a, b) => a.localeCompare(b)).join('\n')
-    case 'uniqueLines':
-      return Array.from(new Set(text.split('\n'))).join('\n')
-    case 'toSimplified':
-      return convertChinese(text, traditionalToSimplifiedMap)
-    case 'toTraditional':
-      return convertChinese(text, simplifiedToTraditionalMap)
-    case 'toHalfWidth':
-      return toHalfWidth(text)
-    case 'toFullWidth':
-      return toFullWidth(text)
-    case 'addLineNumbers':
-      return text
-        .split('\n')
-        .map((line, index) => `${index + 1}. ${line}`)
-        .join('\n')
-    case 'removeLineNumbers':
-      return text.replace(/^\s*\d+[\).\u3001]\s*/gm, '')
-    case 'urlEncode':
-      return encodeURIComponent(text)
-    case 'urlDecode':
-      return decodeURIComponent(text)
-    case 'base64Encode':
-      return btoa(unescape(encodeURIComponent(text)))
-    case 'base64Decode':
-      return decodeURIComponent(escape(atob(text)))
-    case 'md5Hash':
-      return md5(text)
-    case 'sha1Hash':
-      return digestText('SHA-1', text, t.value.status.unsupportedHash)
-    case 'sha256Hash':
-      return digestText('SHA-256', text, t.value.status.unsupportedHash)
-    default:
-      return text
   }
 }
 
@@ -1051,374 +964,6 @@ function cycleEditorMode() {
   setEditorMode(nextEditorMode(previewMode.value))
 }
 
-function matchesEditorModeShortcut(event: KeyboardEvent) {
-  return event.key === 'F4' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
-}
-
-function matchesDeletePageShortcut(event: KeyboardEvent) {
-  return event.key === 'Delete' && event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey
-}
-
-function isEditableElement(element: EventTarget | null) {
-  if (!(element instanceof HTMLElement)) return false
-  return (
-    element instanceof HTMLInputElement ||
-    element instanceof HTMLTextAreaElement ||
-    element instanceof HTMLSelectElement ||
-    element.isContentEditable
-  )
-}
-
-function handleKeydown(event: KeyboardEvent) {
-  const modalOpen = Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value)
-  if (modalOpen && event.key !== 'Escape') {
-    const key = event.key.toLowerCase()
-    const isCtrlShortcut =
-      event.ctrlKey && !event.altKey && !event.metaKey && (key === 'tab' || key === 'n' || key === 'w' || key === 'o')
-    const isFunctionShortcut =
-      !event.ctrlKey &&
-      !event.altKey &&
-      !event.shiftKey &&
-      !event.metaKey &&
-      (event.key === 'F4' || event.key === 'F5' || event.key === 'F7' || event.key === 'F9' || event.key === 'F11' || event.key === 'F12')
-    const isDeletePageShortcut = matchesDeletePageShortcut(event)
-    const isEditorModeShortcut = matchesEditorModeShortcut(event)
-    if (isCtrlShortcut || isFunctionShortcut || isDeletePageShortcut || isEditorModeShortcut) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
-    return
-  }
-
-  if (
-    event.key === 'F1' &&
-    !event.ctrlKey &&
-    !event.altKey &&
-    !event.shiftKey &&
-    !event.metaKey &&
-    (!isEditableElement(event.target) || Boolean(editorPane.value?.isEditorFocused())) &&
-    !document.querySelector('.menu-root:focus-within, .tab-context-menu')
-  ) {
-    event.preventDefault()
-    event.stopPropagation()
-    openHelpTopic('shortcuts')
-    return
-  }
-
-  if (event.key === 'Tab' && event.ctrlKey && !event.altKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    cycleTab(event.shiftKey ? -1 : 1)
-    return
-  }
-
-  if (event.key === 'F9' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    toggleTheme()
-    return
-  }
-
-  if (event.key === 'F7' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    togglePreviewTheme()
-    return
-  }
-
-  if (event.key === 'F5' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    if (reminderListOpen.value) closeReminderList()
-    else void openReminderList()
-    return
-  }
-
-  if (event.key === 'F11' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    toggleImmersiveMode()
-    return
-  }
-
-  if (
-    event.key === 'F12' &&
-    !event.ctrlKey &&
-    !event.altKey &&
-    !event.shiftKey &&
-    !event.metaKey &&
-    !reminderListOpen.value &&
-    !archiveListOpen.value &&
-    !settingsOpen.value &&
-    !helpTopic.value &&
-    !searchOpen.value &&
-    !document.querySelector('.menu-root:focus-within, .tab-context-menu')
-  ) {
-    event.preventDefault()
-    event.stopPropagation()
-    void archiveActivePage()
-    return
-  }
-
-  if (
-    matchesDeletePageShortcut(event) &&
-    !reminderListOpen.value &&
-    !archiveListOpen.value &&
-    !settingsOpen.value &&
-    !helpTopic.value &&
-    !searchOpen.value &&
-    !document.querySelector('.tab-context-menu')
-  ) {
-    event.preventDefault()
-    event.stopPropagation()
-    void deleteActivePage()
-    return
-  }
-
-  if (event.key === 'Escape') {
-    if (reminderDialogOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeReminderDialog()
-      return
-    }
-
-    if (reminderListOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeReminderList()
-      return
-    }
-
-    if (archiveListOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeArchiveList()
-      return
-    }
-
-    if (confirmationDialog.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      finishConfirmationDialog(false)
-      return
-    }
-
-    if (inputDialog.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      finishInputDialog(null)
-      return
-    }
-
-    if (fontDialogOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeFontDialog()
-      return
-    }
-
-    if (immersiveMode.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      void setImmersiveMode(false)
-      return
-    }
-
-    if (settingsOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeSettings()
-      return
-    }
-
-    if (helpTopic.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeHelp()
-      return
-    }
-
-    if (searchOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeSearch()
-      return
-    }
-
-    if (document.querySelector('.np-find-panel')) {
-      event.preventDefault()
-      event.stopPropagation()
-      editorPane.value?.closeEditorFind()
-      return
-    }
-
-    // Menus and tab context menus own Escape while they are open. Their
-    // component listeners close the surface later in the same event dispatch.
-    if (document.querySelector('.menu-root:focus-within, .tab-context-menu')) return
-  }
-
-  if (matchesEditorModeShortcut(event)) {
-    event.preventDefault()
-    event.stopPropagation()
-    cycleEditorMode()
-    return
-  }
-
-  if (
-    event.key === 'F2' &&
-    !event.ctrlKey &&
-    !event.altKey &&
-    !event.shiftKey &&
-    !event.metaKey &&
-    !reminderListOpen.value &&
-    !archiveListOpen.value &&
-    !settingsOpen.value &&
-    !helpTopic.value &&
-    !searchOpen.value &&
-    !document.querySelector('.menu-root:focus-within, .tab-context-menu')
-  ) {
-    event.preventDefault()
-    event.stopPropagation()
-    void renameActivePage()
-    return
-  }
-
-  if (event.key === 'Enter' && event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    if (isTauriRuntime()) {
-      void toggleMainWindowMaximize()
-    }
-    return
-  }
-
-  if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    const key = event.key.toLowerCase()
-    if (key === 'n') {
-      event.preventDefault()
-      event.stopPropagation()
-      void createLocalTab()
-      return
-    }
-    if (key === 'w') {
-      if (document.querySelector('.tab-context-menu')) return
-      event.preventDefault()
-      event.stopPropagation()
-      void closeActivePage()
-      return
-    }
-    if (key === 'o') {
-      event.preventDefault()
-      event.stopPropagation()
-      triggerLoadFile()
-      return
-    }
-  }
-
-  if (vimMode.value && editorPane.value?.isEditorFocused()) {
-    const isApplicationFunctionKey = event.key === 'F3' || event.key === 'F6' || event.key === 'F8' || event.key === 'F10'
-    const shouldHideFromNormalMode = event.key === 'Escape' && activeVimMode.value === 'normal'
-    const isPreservedCtrlShortcut = vimUseCtrlShortcuts.value && (event.ctrlKey || event.metaKey)
-    if (!isApplicationFunctionKey && !shouldHideFromNormalMode && !isPreservedCtrlShortcut) {
-      return
-    }
-  }
-
-  if (vimMode.value && vimUseCtrlShortcuts.value && editorPane.value?.isEditorFocused() && event.ctrlKey && !event.altKey) {
-    const key = event.key.toLowerCase()
-    if (key === 'f') {
-      event.preventDefault()
-      event.stopPropagation()
-      if (event.shiftKey) showSearchPlaceholder()
-      else openFindPanel()
-      return
-    }
-    if (key === 'r' && !event.shiftKey) {
-      event.preventDefault()
-      event.stopPropagation()
-      openReplacePanel()
-      return
-    }
-    if (key === 'c') { event.preventDefault(); void copyEditorSelection(); return }
-    if (key === 'x') { event.preventDefault(); void cutEditorSelection(); return }
-    if (key === 'v' && !event.shiftKey) { event.preventDefault(); void pasteIntoEditor(); return }
-    if (key === 'a') { event.preventDefault(); selectAllEditorText(); return }
-  }
-
-  if (!vimMode.value && event.key.toLowerCase() === 'f' && event.ctrlKey && !event.altKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.shiftKey) showSearchPlaceholder()
-    else openFindPanel()
-    return
-  }
-
-  if (!vimMode.value && event.key.toLowerCase() === 'r' && event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    openReplacePanel()
-    return
-  }
-
-  if (event.key === 'F3' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    findNextMatch()
-    return
-  }
-
-  if (event.key === 'Enter' && event.ctrlKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    calculateCurrentLineExpression()
-    return
-  }
-
-  if (event.key === 'Escape' && isTauriRuntime()) {
-    event.preventDefault()
-    void hideMainWindow()
-  }
-
-  if (event.key === 'F10') {
-    event.preventDefault()
-    toggleTabBarOrientation()
-  }
-
-  if (event.key === 'F6') {
-    event.preventDefault()
-    void togglePin()
-  }
-
-  if (event.key === 'F8') {
-    event.preventDefault()
-    openSettings()
-  }
-
-  if (event.code === 'Minus' && event.ctrlKey && event.shiftKey) {
-    event.preventDefault()
-    insertDateTimeSeparator()
-  } else if (event.code === 'Minus' && event.ctrlKey) {
-    event.preventDefault()
-    insertSeparator()
-  }
-
-  if (event.key.toLowerCase() === 'd' && event.ctrlKey) {
-    event.preventDefault()
-    insertDateTime()
-  }
-
-  if (event.key.toLowerCase() === 'e' && event.ctrlKey) {
-    event.preventDefault()
-    insertReminder()
-  }
-
-  if (event.key.toLowerCase() === 'v' && event.ctrlKey && event.shiftKey) {
-    event.preventDefault()
-    void saveCurrentClipboard()
-  }
-}
-
 function setVimInsertExitKey(key: string) {
   vimInsertExitKey.value = Array.from(key)
     .filter((character) => character.length === 1 && !/\s/.test(character))
@@ -1463,237 +1008,6 @@ function createLocalTabFromContent(title: string, nextContent: string) {
   activeTabId.value = tab.id
   content.value = nextContent
   focusEditorAfterPageAction()
-}
-
-function md5(text: string) {
-  const rotateLeft = (value: number, shift: number) => (value << shift) | (value >>> (32 - shift))
-  const add = (left: number, right: number) => (left + right) & 0xffffffff
-  const cmn = (q: number, a: number, b: number, x: number, s: number, t: number) => add(rotateLeft(add(add(a, q), add(x, t)), s), b)
-  const ff = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn((b & c) | (~b & d), a, b, x, s, t)
-  const gg = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn((b & d) | (c & ~d), a, b, x, s, t)
-  const hh = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn(b ^ c ^ d, a, b, x, s, t)
-  const ii = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn(c ^ (b | ~d), a, b, x, s, t)
-  const words = md5Words(text)
-  let a = 1732584193
-  let b = -271733879
-  let c = -1732584194
-  let d = 271733878
-
-  for (let i = 0; i < words.length; i += 16) {
-    const aa = a
-    const bb = b
-    const cc = c
-    const dd = d
-    a = ff(a, b, c, d, words[i], 7, -680876936)
-    d = ff(d, a, b, c, words[i + 1], 12, -389564586)
-    c = ff(c, d, a, b, words[i + 2], 17, 606105819)
-    b = ff(b, c, d, a, words[i + 3], 22, -1044525330)
-    a = ff(a, b, c, d, words[i + 4], 7, -176418897)
-    d = ff(d, a, b, c, words[i + 5], 12, 1200080426)
-    c = ff(c, d, a, b, words[i + 6], 17, -1473231341)
-    b = ff(b, c, d, a, words[i + 7], 22, -45705983)
-    a = ff(a, b, c, d, words[i + 8], 7, 1770035416)
-    d = ff(d, a, b, c, words[i + 9], 12, -1958414417)
-    c = ff(c, d, a, b, words[i + 10], 17, -42063)
-    b = ff(b, c, d, a, words[i + 11], 22, -1990404162)
-    a = ff(a, b, c, d, words[i + 12], 7, 1804603682)
-    d = ff(d, a, b, c, words[i + 13], 12, -40341101)
-    c = ff(c, d, a, b, words[i + 14], 17, -1502002290)
-    b = ff(b, c, d, a, words[i + 15], 22, 1236535329)
-    a = gg(a, b, c, d, words[i + 1], 5, -165796510)
-    d = gg(d, a, b, c, words[i + 6], 9, -1069501632)
-    c = gg(c, d, a, b, words[i + 11], 14, 643717713)
-    b = gg(b, c, d, a, words[i], 20, -373897302)
-    a = gg(a, b, c, d, words[i + 5], 5, -701558691)
-    d = gg(d, a, b, c, words[i + 10], 9, 38016083)
-    c = gg(c, d, a, b, words[i + 15], 14, -660478335)
-    b = gg(b, c, d, a, words[i + 4], 20, -405537848)
-    a = gg(a, b, c, d, words[i + 9], 5, 568446438)
-    d = gg(d, a, b, c, words[i + 14], 9, -1019803690)
-    c = gg(c, d, a, b, words[i + 3], 14, -187363961)
-    b = gg(b, c, d, a, words[i + 8], 20, 1163531501)
-    a = gg(a, b, c, d, words[i + 13], 5, -1444681467)
-    d = gg(d, a, b, c, words[i + 2], 9, -51403784)
-    c = gg(c, d, a, b, words[i + 7], 14, 1735328473)
-    b = gg(b, c, d, a, words[i + 12], 20, -1926607734)
-    a = hh(a, b, c, d, words[i + 5], 4, -378558)
-    d = hh(d, a, b, c, words[i + 8], 11, -2022574463)
-    c = hh(c, d, a, b, words[i + 11], 16, 1839030562)
-    b = hh(b, c, d, a, words[i + 14], 23, -35309556)
-    a = hh(a, b, c, d, words[i + 1], 4, -1530992060)
-    d = hh(d, a, b, c, words[i + 4], 11, 1272893353)
-    c = hh(c, d, a, b, words[i + 7], 16, -155497632)
-    b = hh(b, c, d, a, words[i + 10], 23, -1094730640)
-    a = hh(a, b, c, d, words[i + 13], 4, 681279174)
-    d = hh(d, a, b, c, words[i], 11, -358537222)
-    c = hh(c, d, a, b, words[i + 3], 16, -722521979)
-    b = hh(b, c, d, a, words[i + 6], 23, 76029189)
-    a = hh(a, b, c, d, words[i + 9], 4, -640364487)
-    d = hh(d, a, b, c, words[i + 12], 11, -421815835)
-    c = hh(c, d, a, b, words[i + 15], 16, 530742520)
-    b = hh(b, c, d, a, words[i + 2], 23, -995338651)
-    a = ii(a, b, c, d, words[i], 6, -198630844)
-    d = ii(d, a, b, c, words[i + 7], 10, 1126891415)
-    c = ii(c, d, a, b, words[i + 14], 15, -1416354905)
-    b = ii(b, c, d, a, words[i + 5], 21, -57434055)
-    a = ii(a, b, c, d, words[i + 12], 6, 1700485571)
-    d = ii(d, a, b, c, words[i + 3], 10, -1894986606)
-    c = ii(c, d, a, b, words[i + 10], 15, -1051523)
-    b = ii(b, c, d, a, words[i + 1], 21, -2054922799)
-    a = ii(a, b, c, d, words[i + 8], 6, 1873313359)
-    d = ii(d, a, b, c, words[i + 15], 10, -30611744)
-    c = ii(c, d, a, b, words[i + 6], 15, -1560198380)
-    b = ii(b, c, d, a, words[i + 13], 21, 1309151649)
-    a = ii(a, b, c, d, words[i + 4], 6, -145523070)
-    d = ii(d, a, b, c, words[i + 11], 10, -1120210379)
-    c = ii(c, d, a, b, words[i + 2], 15, 718787259)
-    b = ii(b, c, d, a, words[i + 9], 21, -343485551)
-    a = add(a, aa)
-    b = add(b, bb)
-    c = add(c, cc)
-    d = add(d, dd)
-  }
-
-  return [a, b, c, d].map((value) => md5Hex(value)).join('')
-}
-
-function md5Words(text: string) {
-  const bytes = Array.from(new TextEncoder().encode(text))
-  const words: number[] = []
-  bytes.forEach((byte, index) => {
-    words[index >> 2] = (words[index >> 2] || 0) | (byte << ((index % 4) * 8))
-  })
-  words[bytes.length >> 2] = (words[bytes.length >> 2] || 0) | (0x80 << ((bytes.length % 4) * 8))
-  words[(((bytes.length + 8) >> 6) + 1) * 16 - 2] = bytes.length * 8
-  return words
-}
-
-function md5Hex(value: number) {
-  let output = ''
-  for (let i = 0; i < 4; i += 1) {
-    output += ((value >> (i * 8)) & 0xff).toString(16).padStart(2, '0')
-  }
-  return output
-}
-
-function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
-  const zh = currentLanguage === 'zh'
-
-  if (topic === 'shortcuts') {
-    return {
-      title: zh ? '\u5feb\u6377\u952e\u5217\u8868' : 'Shortcut List',
-      lines: [
-        `${formatShortcutLabel(shortcutBaseKey.value, shortcutModifiers.value)} - ` + (zh ? '\u663e\u793a/\u9690\u85cf\u7a97\u53e3' : 'Show/hide window'),
-        `${formatShortcutLabel(clipboardShortcutBaseKey.value, clipboardShortcutModifiers.value)} - ` + (zh ? '\u4fdd\u5b58\u526a\u8d34\u677f' : 'Save clipboard'),
-        'F1 - ' + (zh ? '\u6253\u5f00\u5feb\u6377\u952e\u5e2e\u52a9' : 'Open shortcut help'),
-        'Alt+Enter - ' + (zh ? '\u6700\u5927\u5316/\u8fd8\u539f\u7a97\u53e3' : 'Maximize/restore window'),
-        'Ctrl+N - ' + (zh ? '\u65b0\u5efa\u6807\u7b7e\u9875' : 'New tab'),
-        'F2 - ' + (zh ? '\u91cd\u547d\u540d\u6807\u7b7e\u9875' : 'Rename tab'),
-        'Alt+Del - ' + (zh ? '\u5c06\u5f53\u524d\u6807\u7b7e\u9875\u79fb\u81f3\u56de\u6536\u7ad9' : 'Move current tab to Trash'),
-        'Ctrl+W - ' + (zh ? '\u5173\u95ed\u6807\u7b7e\u9875' : 'Close tab'),
-        'Ctrl+O - ' + (zh ? '\u4ece\u6587\u4ef6\u8f7d\u5165' : 'Load from file'),
-        'Ctrl+Tab / Ctrl+Shift+Tab - ' + (zh ? '\u5207\u6362\u4e0b\u4e00\u4e2a/\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875' : 'Switch next/previous tab'),
-        'Ctrl+F - ' + (zh ? '\u67e5\u627e' : 'Find'),
-        'Ctrl+Shift+F - ' + (zh ? '\u5168\u5c40\u641c\u7d22' : 'Global search'),
-        'Ctrl+D - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4' : 'Insert date time'),
-        'Ctrl+- - ' + (zh ? '\u63d2\u5165\u5206\u9694\u884c' : 'Insert separator'),
-        'Ctrl+Shift+- - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4\u5206\u9694\u884c' : 'Insert date time separator'),
-        'Ctrl+E - ' + (zh ? '\u63d2\u5165\u63d0\u9192' : 'Insert reminder'),
-        'F4 - ' + (zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f' : 'Cycle editor mode'),
-        'F5 - ' + (zh ? '\u6253\u5f00/\u5173\u95ed\u63d0\u9192\u5217\u8868' : 'Open/close reminder list'),
-        'F6 - ' + (zh ? '\u5207\u6362\u7a97\u53e3\u7f6e\u9876' : 'Toggle window on top'),
-        'F7 - ' + (zh ? '\u5207\u6362\u9884\u89c8\u4e3b\u9898' : 'Toggle preview theme'),
-        'F8 - ' + (zh ? '\u6253\u5f00\u8bbe\u7f6e' : 'Open settings'),
-        'F9 - ' + (zh ? '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f' : 'Toggle day/night mode'),
-        'F11 - ' + (zh ? '\u5207\u6362\u6c89\u6d78\u5f0f\u5168\u5c4f' : 'Toggle immersive fullscreen'),
-        'F12 - ' + (zh ? '\u5f52\u6863\u5f53\u524d\u6807\u7b7e\u9875' : 'Archive current tab'),
-        'F10 - ' + (zh ? '\u5207\u6362\u6807\u7b7e\u680f\u65b9\u5411' : 'Toggle tab bar orientation'),
-        'Esc - ' + (zh ? '\u9690\u85cf\u7a97\u53e3' : 'Hide window'),
-      ],
-    }
-  }
-
-  if (topic === 'markdown') {
-    return {
-      title: zh ? 'Markdown 简明指南' : 'Markdown Quick Guide',
-      lines: zh
-        ? [
-            '# 一级标题；## 二级标题；### 三级标题',
-            '**粗体**；*斜体*；~~删除线~~',
-            '- 无序列表；1. 有序列表；- [ ] 待办；- [x] 已完成',
-            '[链接文字](https://example.com)；![图片说明](图片地址)',
-            '> 引用文字；`行内代码`；三个反引号包裹代码块',
-            '--- 单独一行可插入分隔线。段落之间空一行。',
-          ]
-        : [
-            '# Heading 1; ## Heading 2; ### Heading 3',
-            '**bold**; *italic*; ~~strikethrough~~',
-            '- Bulleted list; 1. numbered list; - [ ] task; - [x] done',
-            '[link text](https://example.com); ![image description](image-url)',
-            '> Quote; `inline code`; wrap code blocks in three backticks',
-            'Use --- on its own line for a divider. Leave a blank line between paragraphs.',
-          ],
-    }
-  }
-
-  if (topic === 'expression') {
-    return {
-      title: zh ? '\u8868\u8fbe\u5f0f\u8ba1\u7b97\u6307\u5357' : 'Expression Guide',
-      lines: zh
-        ? [
-            '\u5728\u7f16\u8f91\u6a21\u5f0f\u4e0b\uff0c\u8f93\u5165\u4e00\u884c\u6570\u5b66\u8868\u8fbe\u5f0f\u540e\u6309 Ctrl+Enter\uff0cNeoPad \u4f1a\u5728\u884c\u5c3e\u8ffd\u52a0\u8ba1\u7b97\u7ed3\u679c\u3002',
-            '\u652f\u6301 +, -, *, /, %, ^ \u548c\u62ec\u53f7\uff0c\u4e5f\u652f\u6301 \u00d7 \u548c \u00f7 \u7b26\u53f7\u3002',
-            '\u793a\u4f8b\uff1a899*565-451 \u6309 Ctrl+Enter \u540e\u53d8\u4e3a 899*565-451 = 507484\u3002',
-            '\u5982\u679c\u884c\u5185\u5305\u542b\u975e\u8868\u8fbe\u5f0f\u6587\u5b57\uff0c\u4f1a\u5c3d\u91cf\u8ba1\u7b97\u53ef\u8bc6\u522b\u7684\u524d\u7f00\u90e8\u5206\u3002',
-          ]
-        : [
-            'In edit mode, type a math expression on one line and press Ctrl+Enter. NeoPad appends the result to that line.',
-            'Supported operators: +, -, *, /, %, ^, parentheses, ×, and ÷.',
-            'Example: 899*565-451 becomes 899*565-451 = 507484.',
-            'If the line contains non-expression text, NeoPad tries to calculate the recognizable expression prefix.',
-          ],
-    }
-  }
-
-  if (topic === 'about') {
-    return {
-      title: zh ? '\u5173\u4e8e NeoPad' : 'About NeoPad',
-      lines: zh
-        ? [
-            'NeoPad - \u8f7b\u91cf\u3001\u672c\u5730\u4f18\u5148\u7684 Markdown \u684c\u9762\u4fbf\u7b7e\u3002',
-            ...(appVersion.value ? [`\u7248\u672c\uff1a${appVersion.value}`] : []),
-            '\u4f5c\u8005\uff1aTrevanZhang',
-            '\u5f00\u6e90\u9879\u76ee\uff1ahttps://github.com/trevanzhang/neopad',
-            '\u5f00\u6e90\u534f\u8bae\uff1aMIT License',
-            '\u6280\u672f\u6808\uff1aTauri 2, Vue 3, TypeScript, Rust',
-          ]
-        : [
-            'NeoPad - a lightweight, local-first Markdown desktop note pad.',
-            ...(appVersion.value ? [`Version: ${appVersion.value}`] : []),
-            'Author: TrevanZhang',
-            'Open source: https://github.com/trevanzhang/neopad',
-            'License: MIT License',
-            'Built with Tauri 2, Vue 3, TypeScript, and Rust.',
-          ],
-    }
-  }
-
-  return {
-    title: zh ? '\u8f6f\u4ef6\u8bf4\u660e' : 'Software Help',
-    lines: zh
-      ? [
-          'NeoPad \u662f\u4e00\u6b3e\u8f7b\u91cf\u7684\u672c\u5730\u4f18\u5148\u684c\u9762\u4fbf\u7b7e\uff0c\u4e13\u6ce8\u4e8e\u5feb\u901f\u8bb0\u5f55\u548c\u67e5\u627e\u3002',
-          '\u7b14\u8bb0\u4ee5 Markdown \u6587\u4ef6\u81ea\u52a8\u4fdd\u5b58\u5728\u672c\u5730\uff0c\u65e0\u9700\u8d26\u53f7\uff0c\u4e0d\u4f9d\u8d56\u4e91\u670d\u52a1\u3002',
-          '\u652f\u6301\u591a\u6807\u7b7e\u9875\u3001\u5168\u6587\u641c\u7d22\u3001\u526a\u8d34\u677f\u91c7\u96c6\u3001Markdown \u9884\u89c8\u3001Vim \u952e\u4f4d\u548c\u884c\u5185\u8ba1\u7b97\u3002',
-          '\u72ec\u7acb MCP \u670d\u52a1\u5668\u53ef\u4f9b\u672c\u5730 AI \u5de5\u5177\u8bbf\u95ee\u540c\u4e00\u7b14\u8bb0\u5de5\u4f5c\u533a\uff0c\u9ed8\u8ba4\u53ea\u8bfb\u3002',
-        ]
-      : [
-          'NeoPad is a lightweight, local-first desktop note pad focused on fast capture and retrieval.',
-          'Notes are autosaved locally as Markdown files. No account or cloud service is required.',
-          'It supports tabs, full-text search, clipboard capture, Markdown preview, Vim keys, and inline calculations.',
-          'A standalone, read-only-by-default MCP server lets local AI tools access the same note workspace.',
-        ],
-  }
 }
 
 </script>

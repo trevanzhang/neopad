@@ -34,11 +34,17 @@ state machine. Domain behavior is split into focused Vue composables:
 - `useSearchState`, `useReminderState`, `useArchiveState`, and `useMcpService`
   own their respective async state and failure boundaries.
 - `useDialogs` serializes input and confirmation requests.
+- `keyboard-shortcuts.ts` is a pure priority router with explicit state getters
+  and application actions; characterization tests protect modal blocking,
+  Escape precedence, tab cycling, and native window fallback.
+- `useWindowLifecycle` owns Tauri event listeners and save-before-hide/quit
+  behavior.
+- `text-transform.ts`, `help-content.ts`, and the document utility modules keep
+  pure text behavior and static presentation data outside the composition root.
 
 Keep dependencies explicit when adding a composable. Do not introduce a global
-store merely to reduce prop or line counts. Keyboard precedence remains in the
-composition root because it coordinates all modal surfaces; extract it only
-with characterization coverage for the complete shortcut matrix.
+store merely to reduce prop or line counts. New global shortcuts must extend
+the router tests whenever they interact with modal or overlay precedence.
 
 ## Data Flow
 
