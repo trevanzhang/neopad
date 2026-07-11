@@ -187,7 +187,7 @@ export type AppMessages = {
     saveClipboard: string
     hideWindow: string
     editor: string
-    previewMode: string
+    defaultMode: string
     previewAppearance: string
     editorFont: string
     editorFontSize: string
@@ -517,7 +517,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       saveClipboard: 'Save clipboard',
       hideWindow: 'Hide window',
       editor: 'Editor',
-      previewMode: 'Preview mode',
+      defaultMode: 'Default mode',
       previewAppearance: 'Preview Appearance',
       editorFont: 'Font Family',
       editorFontSize: 'Size',
@@ -845,7 +845,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       saveClipboard: '\u4fdd\u5b58\u526a\u8d34\u677f',
       hideWindow: '\u9690\u85cf\u7a97\u53e3',
       editor: '\u7f16\u8f91\u5668',
-      previewMode: '\u9884\u89c8\u6a21\u5f0f',
+      defaultMode: '\u9ed8\u8ba4\u6a21\u5f0f',
       previewAppearance: '\u9884\u89c8\u5916\u89c2',
       editorFont: '\u5b57\u4f53',
       editorFontSize: '\u5b57\u53f7',

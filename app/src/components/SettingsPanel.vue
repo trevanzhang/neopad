@@ -262,7 +262,7 @@ function deleteCustomText(current: string[]) {
         </fieldset>
 
         <label class="settings-row">
-          <span>{{ messages.previewMode }}</span>
+          <span>{{ messages.defaultMode }}</span>
           <select :value="previewMode" @change="$emit('update:previewMode', ($event.target as HTMLSelectElement).value as EditorMode)">
             <option value="edit">{{ menuMessages.editMode }}</option>
             <option value="split">{{ menuMessages.splitMode }}</option>

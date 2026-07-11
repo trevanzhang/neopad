@@ -144,8 +144,9 @@ the configured workspace.
 - Single and bulk overdue completion operations atomically change `[ ]` to
   `[x]` while preserving the reminder lines.
 - Native reminder notifications while the desktop process remains running.
-- The app starts in edit mode by default. `F4` is the fixed local shortcut for
-  cycling edit, split, and preview modes.
+- New installations start in Edit mode; later launches restore the Default Mode
+  chosen in Settings > General. `F4` is the fixed local shortcut for cycling
+  edit, split, and preview modes.
 - `Ctrl+O` opens an explicitly selected external Markdown file in place. Its
   picker-approved canonical path is persisted, and writes use atomic
   replacement with a SHA-256 content-revision conflict check. The file remains

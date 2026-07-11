@@ -15,7 +15,6 @@ body {
   color: var(--np-text);
   background: var(--np-window);
   border: 1px solid var(--np-border);
-  border-radius: 4px;
   box-shadow: none;
 }
 
@@ -809,7 +808,7 @@ body {
 }
 
 .search-header button,
-.settings-header button,
+.settings-header button:not(.settings-close),
 .help-header button,
 .settings-actions button {
   height: 30px;
@@ -821,7 +820,7 @@ body {
 }
 
 .search-header button:hover,
-.settings-header button:hover,
+.settings-header button:not(.settings-close):hover,
 .help-header button:hover,
 .settings-actions button:hover {
   background: var(--np-hover);
@@ -1408,7 +1407,7 @@ body {
   padding: 12px 20px 16px;
 }
 
-.input-dialog button {
+.input-dialog-actions button {
   min-width: 76px;
   height: 32px;
   padding: 0 14px;
@@ -1419,29 +1418,29 @@ body {
   border-radius: 3px;
 }
 
-.input-dialog button:hover {
+.input-dialog-actions button:hover {
   background: var(--np-hover);
 }
 
-.input-dialog button.primary {
+.input-dialog-actions button.primary {
   color: var(--np-accent-contrast, #ffffff);
   font-weight: 500;
   background: var(--np-accent);
   border-color: var(--np-accent);
 }
 
-.input-dialog button.primary:hover {
+.input-dialog-actions button.primary:hover {
   filter: brightness(1.08);
 }
 
-.input-dialog button.danger {
+.input-dialog-actions button.danger {
   color: var(--np-danger-contrast, #ffffff);
   font-weight: 500;
   background: var(--np-danger);
   border-color: var(--np-danger);
 }
 
-.input-dialog button.danger:hover {
+.input-dialog-actions button.danger:hover {
   filter: brightness(1.08);
 }
 

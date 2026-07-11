@@ -33,9 +33,10 @@ Implemented MVP capabilities:
 - Multiple tabs backed by local metadata, including close-without-delete and
   recent-document workflows.
 - Autosave.
-- Edit, split, and preview editor modes with a persisted default and fixed
-  `F4` cycling shortcut; all three modes remain available in immersive
-  fullscreen. NeoPad launches into edit mode by default.
+- Edit, split, and preview editor modes with a persisted Default Mode setting
+  and fixed `F4` cycling shortcut; all three modes remain available in
+  immersive fullscreen. New installations start in Edit mode, and later
+  launches restore the saved default.
 - Page creation with incrementing untitled names, rename, archive, and trash
   actions with protected default pages.
 - Persistent optional tab colors managed from the tab context menu.
