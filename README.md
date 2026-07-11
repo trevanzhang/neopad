@@ -26,9 +26,9 @@ The repository currently contains a working Windows-focused MVP:
   maximize/restore.
 - Clipboard captures use readable local timestamps in compact separator lines.
 - Edit, split, and preview editor modes selectable from the View menu, status
-  bar, fixed `F4` shortcut, and persisted default setting. NeoPad now opens in
-  edit mode by default even when another default view is configured for later
-  mode switches.
+  bar, and fixed `F4` shortcut. The Default Mode selector in Settings > General
+  takes effect immediately and is restored on later launches; new installations
+  start in Edit mode.
 - Optional Vim key bindings for the CodeMirror editor, with persisted settings
   in the Advanced tab, configurable Insert exit sequence, and a visible Normal,
   Insert, or Visual mode indicator. NeoPad Ctrl shortcuts can optionally take

@@ -34,7 +34,7 @@ onMounted(() => {
     <form class="input-dialog" role="dialog" aria-modal="true" :aria-label="title" @submit.prevent="confirmInput()">
       <header class="input-dialog-header">
         <strong>{{ title }}</strong>
-        <button type="button" :aria-label="cancelLabel" :title="cancelLabel" @click="$emit('cancel')">&times;</button>
+        <button type="button" :aria-label="cancelLabel" :title="cancelLabel" @click="$emit('cancel')"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg></button>
       </header>
       <div class="input-dialog-body">
         <label>

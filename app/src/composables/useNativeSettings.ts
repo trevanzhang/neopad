@@ -54,8 +54,8 @@ export function useNativeSettings(options: NativeSettingsOptions) {
           ? 'light'
           : window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
       const storedMode = isEditorMode(stored.previewMode) ? stored.previewMode : 'edit'
-      p.previewMode.value = 'edit'
-      p.defaultEditorMode.value = 'edit'
+      p.previewMode.value = storedMode
+      p.defaultEditorMode.value = storedMode
       p.language.value = ui.language === 'zh' ? 'zh' : 'en'
       p.vimMode.value = ui.vimMode
       p.vimUseCtrlShortcuts.value = ui.vimUseCtrlShortcuts
@@ -93,7 +93,7 @@ export function useNativeSettings(options: NativeSettingsOptions) {
       const shouldMigrateEditorShortcut = (ui.editorModeShortcut as string) !== 'F4'
       p.editorModeShortcut.value = 'F4'
       uiConfigLoaded.value = true
-      if (storedMode !== 'edit' || shouldMigrateEditorShortcut) persistUiConfig()
+      if (shouldMigrateEditorShortcut) persistUiConfig()
     } catch {
       options.onError()
     }

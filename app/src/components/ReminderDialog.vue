@@ -50,7 +50,7 @@ function formatTime(value: Date) {
     <form class="input-dialog reminder-dialog" role="dialog" aria-modal="true" :aria-label="title" @submit.prevent="submit">
       <header class="input-dialog-header">
         <strong>{{ title }}</strong>
-        <button type="button" :aria-label="cancelLabel" @click="$emit('cancel')">×</button>
+        <button type="button" :aria-label="cancelLabel" @click="$emit('cancel')"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg></button>
       </header>
       <div class="input-dialog-body reminder-dialog-fields">
         <label>
