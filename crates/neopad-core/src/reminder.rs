@@ -58,13 +58,11 @@ pub fn parse_reminder_line(line: &str) -> Option<ParsedReminder> {
     let line = line.trim_start();
     let (completed, remainder) = if let Some(value) = line.strip_prefix("- [ ]") {
         (false, value)
-    } else if let Some(value) = line
-        .strip_prefix("- [x]")
-        .or_else(|| line.strip_prefix("- [X]"))
-    {
-        (true, value)
     } else {
-        return None;
+        let value = line
+            .strip_prefix("- [x]")
+            .or_else(|| line.strip_prefix("- [X]"))?;
+        (true, value)
     };
 
     let remainder = remainder.trim_start();
