@@ -1,6 +1,7 @@
 use crate::{AppConfig, TabsState};
 use anyhow::{Context, Result};
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -49,6 +50,13 @@ pub fn default_workspace_dir() -> Result<PathBuf> {
 pub fn init_workspace(path: Option<PathBuf>) -> Result<Workspace> {
     let root = path.unwrap_or(default_workspace_dir()?);
     let workspace = Workspace::new(root);
+    fs::create_dir_all(&workspace.root).with_context(|| {
+        format!(
+            "failed to create workspace directory at {}",
+            workspace.root.display()
+        )
+    })?;
+    let _lock = crate::lock_workspace_for_write(&workspace)?;
     ensure_workspace_layout(&workspace)?;
     Ok(workspace)
 }
@@ -96,12 +104,22 @@ pub fn ensure_workspace_layout(workspace: &Workspace) -> Result<()> {
 }
 
 fn write_file_if_missing(path: &Path, contents: &str) -> Result<()> {
-    if path.exists() {
-        return Ok(());
-    }
-
-    fs::write(path, contents)
-        .with_context(|| format!("failed to write default file at {}", path.display()))
+    let mut file = match fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+    {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => return Ok(()),
+        Err(error) => {
+            return Err(error)
+                .with_context(|| format!("failed to create default file at {}", path.display()))
+        }
+    };
+    file.write_all(contents.as_bytes())
+        .with_context(|| format!("failed to write default file at {}", path.display()))?;
+    file.sync_all()
+        .with_context(|| format!("failed to flush default file at {}", path.display()))
 }
 
 fn default_config_json(workspace: &Workspace) -> Result<String> {

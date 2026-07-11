@@ -1,17 +1,9 @@
 ﻿<script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppShell from './components/AppShell.vue'
-import ArchiveList from './components/ArchiveList.vue'
-import ConfirmationDialog from './components/ConfirmationDialog.vue'
 import EditorPane from './components/EditorPane.vue'
-import FontDialog from './components/FontDialog.vue'
-import InputDialog from './components/InputDialog.vue'
 import MenuBar from './components/MenuBar.vue'
-import PreviewPane from './components/PreviewPane.vue'
-import ReminderDialog from './components/ReminderDialog.vue'
-import ReminderList from './components/ReminderList.vue'
 import SearchPanel from './components/SearchPanel.vue'
-import SettingsPanel from './components/SettingsPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import TabBar from './components/TabBar.vue'
 import {
@@ -94,6 +86,15 @@ type HelpTopic = 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about'
 type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
 type InputDialogState = { title: string; initialValue: string }
 type ConfirmationDialogState = { title: string; message: string; confirmLabel: string; danger: boolean }
+
+const ArchiveList = defineAsyncComponent(() => import('./components/ArchiveList.vue'))
+const ConfirmationDialog = defineAsyncComponent(() => import('./components/ConfirmationDialog.vue'))
+const FontDialog = defineAsyncComponent(() => import('./components/FontDialog.vue'))
+const InputDialog = defineAsyncComponent(() => import('./components/InputDialog.vue'))
+const PreviewPane = defineAsyncComponent(() => import('./components/PreviewPane.vue'))
+const ReminderDialog = defineAsyncComponent(() => import('./components/ReminderDialog.vue'))
+const ReminderList = defineAsyncComponent(() => import('./components/ReminderList.vue'))
+const SettingsPanel = defineAsyncComponent(() => import('./components/SettingsPanel.vue'))
 
 const now = Date.now()
 const tabs = ref<NoteTab[]>([
@@ -243,14 +244,21 @@ let loadingNoteGeneration: number | null = null
 const deletingTabIds = new Set<string>()
 const autosave = new AutosaveCoordinator({
   delayMs: 500,
-  save: ({ noteId, content: nextContent, expectedUpdatedAt }: { noteId: string; content: string; expectedUpdatedAt: number }) =>
-    saveDocument(noteId, nextContent, expectedUpdatedAt),
+  save: ({ noteId, content: nextContent }: { noteId: string; content: string }) =>
+    saveDocument(noteId, nextContent),
   onSaved: ({ noteId }, saved) => {
     const tab = tabs.value.find((item) => item.id === noteId)
-    if (tab) tab.updatedAt = saved.updatedAt
+    if (tab) {
+      tab.updatedAt = saved.updatedAt
+      if ('revision' in saved) tab.externalRevision = saved.revision
+    }
   },
   onStateChange: (state) => {
     saveState.value = state
+  },
+  onError: (error) => {
+    const message = error instanceof Error ? error.message : String(error)
+    statusMessage.value = message || t.value.status.failed
   },
 })
 
@@ -362,7 +370,7 @@ watch(content, (nextContent) => {
 
   const tab = activeTab.value
   if (tab) {
-    autosave.markChanged({ noteId: tab.id, content: content.value, expectedUpdatedAt: tab.updatedAt })
+    autosave.markChanged({ noteId: tab.id, content: content.value })
   }
 })
 
@@ -673,7 +681,7 @@ async function selectTab(tabId: string) {
   }
 
   const generation = nextNoteLoadGeneration()
-  await forceSave()
+  if (!(await forceSave())) return
   if (!isCurrentNoteLoad(generation)) return
   activeTabId.value = tabId
   if (await loadActiveNote(generation)) {
@@ -949,7 +957,7 @@ async function unarchiveTab(tab: NoteTab) {
 async function createLocalTab() {
   const generation = nextNoteLoadGeneration()
   if (isTauriRuntime()) {
-    await forceSave()
+    if (!(await forceSave())) return
     if (!isCurrentNoteLoad(generation)) return
     try {
       const note = await createNote()
@@ -1004,7 +1012,7 @@ async function saveCurrentClipboard() {
 
   const generation = nextNoteLoadGeneration()
   try {
-    await forceSave()
+    if (!(await forceSave())) return
     if (!isCurrentNoteLoad(generation)) return
     const note = await saveClipboard()
     if (!isCurrentNoteLoad(generation)) return
@@ -1066,6 +1074,7 @@ async function openExternalDocumentPath(path: string, loaded?: import('./types/n
       systemTitle: false,
       external: true,
       externalPath: document.path,
+      externalRevision: document.revision,
     }
     upsertTab(tab)
     activeTabId.value = tab.id
@@ -1090,7 +1099,7 @@ async function loadFileFromInput(event: Event) {
 
   const generation = nextNoteLoadGeneration()
   try {
-    await forceSave()
+    if (!(await forceSave())) return
     if (!isCurrentNoteLoad(generation)) return
     const fileContent = await file.text()
     if (!isCurrentNoteLoad(generation)) return
@@ -1128,7 +1137,7 @@ async function loadFileFromInput(event: Event) {
 }
 
 async function saveAsFile() {
-  await forceSave()
+  if (!(await forceSave())) return
   const title = activeTab.value?.title || 'Untitled'
   const fileName = `${safeFileName(title)}.md`
 
@@ -1146,7 +1155,7 @@ async function saveAsFile() {
 }
 
 async function exportAllNotes() {
-  await forceSave()
+  if (!(await forceSave())) return
 
   try {
     if (isTauriRuntime()) {
@@ -1420,7 +1429,7 @@ function closeSearch(returnFocusToEditor = true) {
 
 async function selectSearchResult(result: SearchResult) {
   const generation = nextNoteLoadGeneration()
-  await forceSave()
+  if (!(await forceSave())) return
   if (!isCurrentNoteLoad(generation)) return
   try {
     const opened = isTauriRuntime() ? await openNote(result.noteId) : tabs.value.find((tab) => tab.id === result.noteId)
@@ -1529,7 +1538,7 @@ async function refreshReminders() {
   if (!isTauriRuntime()) return
   remindersLoading.value = true
   try {
-    await forceSave()
+    if (!(await forceSave())) return
     reminders.value = await listReminders()
   } catch {
     saveState.value = 'Failed'
@@ -1540,7 +1549,7 @@ async function refreshReminders() {
 
 async function selectReminder(reminder: Reminder) {
   const generation = nextNoteLoadGeneration()
-  await forceSave()
+  if (!(await forceSave())) return
   if (!isCurrentNoteLoad(generation)) return
   activeTabId.value = reminder.noteId
   await loadActiveNote(generation)
@@ -1552,7 +1561,7 @@ async function selectReminder(reminder: Reminder) {
 
 async function completeReminderItem(reminder: Reminder) {
   try {
-    await forceSave()
+    if (!(await forceSave())) return
     await completeReminder(reminder)
     if (reminder.noteId === activeTabId.value) await loadActiveNote()
     await refreshReminders()
@@ -1564,7 +1573,7 @@ async function completeReminderItem(reminder: Reminder) {
 
 async function reopenReminderItem(reminder: Reminder) {
   try {
-    await forceSave()
+    if (!(await forceSave())) return
     await reopenReminder(reminder)
     if (reminder.noteId === activeTabId.value) await loadActiveNote()
     await refreshReminders()
@@ -1576,7 +1585,7 @@ async function reopenReminderItem(reminder: Reminder) {
 
 async function completeAllDueReminders() {
   try {
-    await forceSave()
+    if (!(await forceSave())) return
     await completeDueReminders()
     await loadActiveNote()
     await refreshReminders()
@@ -2103,11 +2112,13 @@ async function forceSave() {
   return autosave.flush()
 }
 
-async function saveDocument(noteId: string, nextContent: string, expectedUpdatedAt: number) {
+async function saveDocument(noteId: string, nextContent: string) {
   const tab = tabs.value.find((item) => item.id === noteId)
   if (tab?.external && tab.externalPath) {
-    const saved = await writeExternalMarkdown(tab.externalPath, nextContent, expectedUpdatedAt)
+    if (!tab.externalRevision) throw new Error('external document revision is missing')
+    const saved = await writeExternalMarkdown(tab.externalPath, nextContent, tab.externalRevision)
     tab.updatedAt = saved.updatedAt
+    tab.externalRevision = saved.revision
     rememberExternalDocument(tab)
     return {
       id: noteId,
@@ -2115,9 +2126,11 @@ async function saveDocument(noteId: string, nextContent: string, expectedUpdated
       fileName: tab.fileName,
       content: saved.content,
       updatedAt: saved.updatedAt,
+      revision: saved.revision,
     }
   }
-  return writeNote(noteId, nextContent, expectedUpdatedAt)
+  if (!tab) throw new Error(`note tab not found: ${noteId}`)
+  return writeNote(noteId, nextContent, tab.updatedAt)
 }
 
 async function saveBeforeWindowAction() {

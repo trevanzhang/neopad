@@ -8,6 +8,7 @@ const workspace = path.join(root, 'target', 'e2e-workspace')
 const application = path.join(root, 'target', 'release', 'neopad-app.exe')
 const edgeDriver = path.join(root, 'target', 'tools', 'msedgedriver.exe')
 process.env.NEOPAD_WORKSPACE = workspace
+process.env.NEOPAD_E2E = '1'
 let tauriDriver: ChildProcess | null = null
 
 function waitForPort(port: number, timeoutMs: number) {

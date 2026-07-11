@@ -59,8 +59,8 @@ async fn handle_mcp(
     headers: HeaderMap,
     Json(request): Json<Value>,
 ) -> Response {
-    if let Err(response) = state.auth.validate(&headers) {
-        return response;
+    if let Err(error) = state.auth.validate(&headers) {
+        return error.into_response();
     }
 
     let response = state.server.handle_request(request);

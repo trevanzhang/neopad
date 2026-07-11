@@ -25,12 +25,12 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' customprotocol: asset:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: data: blob:; font-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-src 'none'"
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["msi"],
     "externalBin": [
       "../../target/release/neopad-mcp"
     ],

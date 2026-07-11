@@ -4,6 +4,8 @@ use crate::{ensure_workspace_layout, NoteTab, TabsState, Workspace};
 use anyhow::{bail, Context, Result};
 use chrono::Local;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::collections::HashSet;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -18,56 +20,35 @@ pub struct NoteContent {
 }
 
 pub fn list_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
-    let mut tabs = load_tabs(workspace)?;
-    if reconcile_trashed_tabs(workspace, &mut tabs)? {
-        save_tabs(workspace, &tabs)?;
-    }
-    Ok(tabs
-        .tabs
+    Ok(existing_tabs(workspace, load_tabs(workspace)?.tabs)?
         .into_iter()
         .filter(|tab| !tab.deleted && !tab.archived)
         .collect())
 }
 
 pub fn list_archived_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
-    let mut tabs = load_tabs(workspace)?;
-    if reconcile_trashed_tabs(workspace, &mut tabs)? {
-        save_tabs(workspace, &tabs)?;
-    }
-    Ok(tabs
-        .tabs
+    Ok(existing_tabs(workspace, load_tabs(workspace)?.tabs)?
         .into_iter()
         .filter(|tab| !tab.deleted && tab.archived)
         .collect())
 }
 
 pub fn list_open_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
-    let mut tabs = load_tabs(workspace)?;
-    if reconcile_trashed_tabs(workspace, &mut tabs)? {
-        save_tabs(workspace, &tabs)?;
-    }
-    Ok(tabs
-        .tabs
+    Ok(existing_tabs(workspace, load_tabs(workspace)?.tabs)?
         .into_iter()
         .filter(|tab| !tab.deleted && tab.open)
         .collect())
 }
 
 pub fn list_searchable_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
-    let mut tabs = load_tabs(workspace)?;
-    if reconcile_trashed_tabs(workspace, &mut tabs)? {
-        save_tabs(workspace, &tabs)?;
-    }
-    Ok(tabs.tabs.into_iter().filter(|tab| !tab.deleted).collect())
+    Ok(existing_tabs(workspace, load_tabs(workspace)?.tabs)?
+        .into_iter()
+        .filter(|tab| !tab.deleted)
+        .collect())
 }
 
 pub fn list_recent_notes(workspace: &Workspace, limit: usize) -> Result<Vec<NoteTab>> {
-    let mut tabs = load_tabs(workspace)?;
-    if reconcile_trashed_tabs(workspace, &mut tabs)? {
-        save_tabs(workspace, &tabs)?;
-    }
-    let mut notes = tabs
-        .tabs
+    let mut notes = existing_tabs(workspace, load_tabs(workspace)?.tabs)?
         .into_iter()
         .filter(|tab| !tab.deleted)
         .collect::<Vec<_>>();
@@ -117,9 +98,16 @@ pub fn create_note(workspace: &Workspace, title: Option<String>) -> Result<NoteC
         last_opened_at: Some(now),
         system_title,
         color: None,
+        content_revision: Some(content_revision(&content)),
     });
     tabs.active_tab_id = id.clone();
-    save_tabs(workspace, &tabs)?;
+    if let Err(error) = save_tabs(workspace, &tabs) {
+        let rollback = trash_file_path(workspace, &format!("orphaned-{}-{file_name}", now_ms()?))?;
+        fs::rename(&path, &rollback).with_context(|| {
+            format!("failed to roll back note creation after metadata error: {error:#}")
+        })?;
+        return Err(error);
+    }
 
     Ok(NoteContent {
         id,
@@ -138,10 +126,13 @@ pub fn write_note_atomic(
     let mut tabs = load_tabs(workspace)?;
     let tab = find_note_tab_mut(&mut tabs, note_id)?;
     let path = note_path(workspace, tab)?;
-    let now = now_ms()?;
+    let now = next_updated_at(tab.updated_at)?;
+    let previous_content = fs::read_to_string(&path)
+        .with_context(|| format!("failed to read note file {}", path.display()))?;
 
     write_atomic(&path, content)?;
     tab.updated_at = now;
+    tab.content_revision = Some(content_revision(content));
 
     let note = NoteContent {
         id: tab.id.clone(),
@@ -150,7 +141,12 @@ pub fn write_note_atomic(
         content: content.to_owned(),
         updated_at: now,
     };
-    save_tabs(workspace, &tabs)?;
+    if let Err(error) = save_tabs(workspace, &tabs) {
+        write_atomic(&path, &previous_content).with_context(|| {
+            format!("failed to roll back note content after metadata error: {error:#}")
+        })?;
+        return Err(error);
+    }
 
     Ok(note)
 }
@@ -166,6 +162,16 @@ pub fn write_note_atomic_checked(
     content: &str,
     expected_updated_at: i64,
 ) -> Result<NoteContent> {
+    let tab = find_note_tab(workspace, note_id)?;
+    let path = note_path(workspace, &tab)?;
+    let disk_content = fs::read_to_string(&path)
+        .with_context(|| format!("failed to read note file {}", path.display()))?;
+    if tab
+        .content_revision
+        .is_some_and(|revision| revision != content_revision(&disk_content))
+    {
+        bail!("note was modified outside NeoPad: {note_id}");
+    }
     let current = read_note(workspace, note_id)?;
     if current.updated_at != expected_updated_at {
         bail!(
@@ -211,9 +217,10 @@ pub fn rename_note(workspace: &Workspace, note_id: &str, title: String) -> Resul
 
     let mut tabs = load_tabs(workspace)?;
     let tab = find_note_tab_mut(&mut tabs, note_id)?;
-    let now = now_ms()?;
+    let now = next_updated_at(tab.updated_at)?;
     let previous_title = tab.title.clone();
     let next_title = normalized_title(Some(title));
+    let mut previous_content = None;
 
     if tab.system_title {
         let path = note_path(workspace, tab)?;
@@ -222,6 +229,7 @@ pub fn rename_note(workspace: &Workspace, note_id: &str, title: String) -> Resul
         if let Some(updated_content) =
             renamed_default_heading(&content, &previous_title, &next_title)
         {
+            previous_content = Some((path.clone(), content));
             write_atomic(&path, &updated_content)?;
         }
     }
@@ -230,7 +238,14 @@ pub fn rename_note(workspace: &Workspace, note_id: &str, title: String) -> Resul
     tab.system_title = false;
     tab.updated_at = now;
     let renamed = tab.clone();
-    save_tabs(workspace, &tabs)?;
+    if let Err(error) = save_tabs(workspace, &tabs) {
+        if let Some((path, content)) = previous_content {
+            write_atomic(&path, &content).with_context(|| {
+                format!("failed to roll back note rename after metadata error: {error:#}")
+            })?;
+        }
+        return Err(error);
+    }
 
     Ok(renamed)
 }
@@ -256,9 +271,14 @@ pub fn delete_note_to_trash(workspace: &Workspace, note_id: &str) -> Result<Note
 
     tab.deleted = true;
     tab.open = false;
-    tab.updated_at = now_ms()?;
+    tab.updated_at = next_updated_at(tab.updated_at)?;
     let deleted = tab.clone();
-    save_tabs(workspace, &tabs)?;
+    if let Err(error) = save_tabs(workspace, &tabs) {
+        fs::rename(&target, &source).with_context(|| {
+            format!("failed to restore trashed note after metadata error: {error:#}")
+        })?;
+        return Err(error);
+    }
 
     Ok(deleted)
 }
@@ -287,7 +307,7 @@ pub fn open_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
         if !tabs.tabs[tab_index].pinned {
             tabs.tabs[tab_index].deleted = true;
             tabs.tabs[tab_index].open = false;
-            tabs.tabs[tab_index].updated_at = now_ms()?;
+            tabs.tabs[tab_index].updated_at = next_updated_at(tabs.tabs[tab_index].updated_at)?;
             if tabs.active_tab_id == note_id {
                 if let Some(next_tab) = tabs.tabs.iter().find(|tab| !tab.deleted) {
                     tabs.active_tab_id = next_tab.id.clone();
@@ -318,9 +338,14 @@ pub fn archive_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
         .with_context(|| format!("failed to archive note {}", source.display()))?;
     tab.archived = true;
     tab.open = false;
-    tab.updated_at = now_ms()?;
+    tab.updated_at = next_updated_at(tab.updated_at)?;
     let archived = tab.clone();
-    save_tabs(workspace, &tabs)?;
+    if let Err(error) = save_tabs(workspace, &tabs) {
+        fs::rename(&target, &source).with_context(|| {
+            format!("failed to restore archived note after metadata error: {error:#}")
+        })?;
+        return Err(error);
+    }
     Ok(archived)
 }
 
@@ -337,9 +362,14 @@ pub fn unarchive_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
     tab.archived = false;
     tab.open = true;
     tab.last_opened_at = Some(now_ms()?);
-    tab.updated_at = now_ms()?;
+    tab.updated_at = next_updated_at(tab.updated_at)?;
     let restored = tab.clone();
-    save_tabs(workspace, &tabs)?;
+    if let Err(error) = save_tabs(workspace, &tabs) {
+        fs::rename(&target, &source).with_context(|| {
+            format!("failed to re-archive note after metadata error: {error:#}")
+        })?;
+        return Err(error);
+    }
     Ok(restored)
 }
 
@@ -365,14 +395,13 @@ pub fn set_note_color(
     let mut tabs = load_tabs(workspace)?;
     let tab = find_note_tab_mut(&mut tabs, note_id)?;
     tab.color = color;
-    tab.updated_at = now_ms()?;
+    tab.updated_at = next_updated_at(tab.updated_at)?;
     let updated = tab.clone();
     save_tabs(workspace, &tabs)?;
     Ok(updated)
 }
 
 fn load_tabs(workspace: &Workspace) -> Result<TabsState> {
-    ensure_workspace_layout(workspace)?;
     let contents = fs::read_to_string(&workspace.tabs_path)
         .with_context(|| format!("failed to read tabs file {}", workspace.tabs_path.display()))?;
     serde_json::from_str(&contents).with_context(|| {
@@ -388,11 +417,24 @@ fn save_tabs(workspace: &Workspace, tabs: &TabsState) -> Result<()> {
     write_atomic(&workspace.tabs_path, &contents)
 }
 
+/// Reconciles tab metadata with note files already present on disk.
+///
+/// Callers must hold `lock_workspace_for_write` because this operation may
+/// rewrite the complete tabs metadata file.
+pub fn reconcile_note_metadata(workspace: &Workspace) -> Result<bool> {
+    let mut tabs = load_tabs(workspace)?;
+    let changed = reconcile_trashed_tabs(workspace, &mut tabs)?;
+    if changed {
+        save_tabs(workspace, &tabs)?;
+    }
+    Ok(changed)
+}
+
 fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result<bool> {
     let mut changed = false;
 
     for tab in &mut tabs.tabs {
-        if tab.deleted || tab.pinned {
+        if tab.deleted {
             continue;
         }
 
@@ -406,14 +448,45 @@ fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result
             changed = true;
         }
 
-        let note_path = note_path(workspace, tab)?;
-        if !note_path.is_file() {
+        let mut current_path = note_path(workspace, tab)?;
+        if !current_path.is_file() && !tab.pinned {
+            let alternate = if tab.archived {
+                note_file_path(workspace, &tab.file_name)?
+            } else {
+                archive_file_path(workspace, &tab.file_name)?
+            };
+            if alternate.is_file() {
+                tab.archived = !tab.archived;
+                tab.open = !tab.archived;
+                tab.updated_at = next_updated_at(tab.updated_at)?;
+                current_path = alternate;
+                changed = true;
+            }
+        }
+
+        if !current_path.is_file() {
+            if tab.pinned {
+                continue;
+            }
             tab.deleted = true;
             tab.open = false;
-            tab.updated_at = now_ms()?;
+            tab.updated_at = next_updated_at(tab.updated_at)?;
+            changed = true;
+            continue;
+        }
+
+        let content = fs::read_to_string(&current_path)
+            .with_context(|| format!("failed to read note file {}", current_path.display()))?;
+        let revision = content_revision(&content);
+        if tab.content_revision.as_deref() != Some(revision.as_str()) {
+            tab.content_revision = Some(revision);
+            tab.updated_at = next_updated_at(tab.updated_at)?;
             changed = true;
         }
     }
+
+    changed |= reconcile_orphaned_notes(workspace, tabs, false)?;
+    changed |= reconcile_orphaned_notes(workspace, tabs, true)?;
 
     let active_is_available = tabs
         .tabs
@@ -427,6 +500,98 @@ fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result
     }
 
     Ok(changed)
+}
+
+fn reconcile_orphaned_notes(
+    workspace: &Workspace,
+    tabs: &mut TabsState,
+    archived: bool,
+) -> Result<bool> {
+    let directory = if archived {
+        &workspace.archive_dir
+    } else {
+        &workspace.notes_dir
+    };
+    let referenced = tabs
+        .tabs
+        .iter()
+        .filter(|tab| !tab.deleted && tab.archived == archived)
+        .map(|tab| tab.file_name.clone())
+        .collect::<HashSet<_>>();
+    let mut orphans = Vec::new();
+
+    for entry in fs::read_dir(directory)
+        .with_context(|| format!("failed to read notes directory {}", directory.display()))?
+    {
+        let entry = entry?;
+        let path = entry.path();
+        let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        if path.is_file()
+            && path.extension().and_then(|extension| extension.to_str()) == Some("md")
+            && !referenced.contains(file_name)
+        {
+            orphans.push((file_name.to_owned(), path));
+        }
+    }
+
+    let changed = !orphans.is_empty();
+    for (file_name, path) in orphans {
+        let content = fs::read_to_string(&path)
+            .with_context(|| format!("failed to read orphaned note {}", path.display()))?;
+        let base_id = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or("recovered")
+            .to_owned();
+        let mut id = base_id.clone();
+        let mut suffix = 1;
+        while tabs.tabs.iter().any(|tab| tab.id == id) {
+            id = format!("{base_id}-{suffix}");
+            suffix += 1;
+        }
+        let title = content
+            .lines()
+            .next()
+            .and_then(|line| line.strip_prefix("# "))
+            .filter(|title| !title.trim().is_empty())
+            .unwrap_or(&base_id)
+            .trim()
+            .to_owned();
+        let now = fs::metadata(&path)
+            .and_then(|metadata| metadata.modified())
+            .ok()
+            .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+            .map_or(now_ms()?, |duration| duration.as_millis() as i64);
+        tabs.tabs.push(NoteTab {
+            id,
+            title,
+            file_name,
+            created_at: now,
+            updated_at: now,
+            pinned: false,
+            deleted: false,
+            archived,
+            open: !archived,
+            last_opened_at: None,
+            system_title: false,
+            color: None,
+            content_revision: Some(content_revision(&content)),
+        });
+    }
+
+    Ok(changed)
+}
+
+fn existing_tabs(workspace: &Workspace, tabs: Vec<NoteTab>) -> Result<Vec<NoteTab>> {
+    tabs.into_iter()
+        .filter_map(|tab| match note_path(workspace, &tab) {
+            Ok(path) if path.is_file() => Some(Ok(tab)),
+            Ok(_) => None,
+            Err(error) => Some(Err(error)),
+        })
+        .collect()
 }
 
 fn note_path(workspace: &Workspace, tab: &NoteTab) -> Result<std::path::PathBuf> {
@@ -497,6 +662,14 @@ fn now_ms() -> Result<i64> {
         .duration_since(UNIX_EPOCH)
         .context("system time is before unix epoch")?;
     Ok(duration.as_millis() as i64)
+}
+
+fn next_updated_at(previous: i64) -> Result<i64> {
+    Ok(now_ms()?.max(previous.saturating_add(1)))
+}
+
+fn content_revision(content: &str) -> String {
+    format!("{:x}", Sha256::digest(content.as_bytes()))
 }
 
 fn timestamp_separator() -> String {
@@ -581,6 +754,7 @@ mod tests {
         .expect("trash path");
         fs::rename(source, target).expect("move to trash without updating tabs");
 
+        reconcile_note_metadata(&workspace).expect("reconcile");
         let listed = list_notes(&workspace).expect("list");
 
         assert!(listed.iter().all(|tab| tab.id != created.id));
@@ -714,6 +888,7 @@ mod tests {
         tab.system_title = true;
         save_tabs(&workspace, &tabs).expect("save tabs");
 
+        reconcile_note_metadata(&workspace).expect("reconcile");
         let restored = list_notes(&workspace)
             .expect("list notes")
             .into_iter()
@@ -800,5 +975,66 @@ mod tests {
         assert!(
             write_note_atomic_checked(&workspace, &note.id, "new", note.updated_at - 1).is_err()
         );
+    }
+
+    #[test]
+    fn consecutive_writes_always_advance_the_conflict_version() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Versioned".to_owned())).expect("create");
+
+        let first = write_note_atomic_checked(&workspace, &created.id, "first", created.updated_at)
+            .expect("first write");
+        let second = write_note_atomic_checked(&workspace, &created.id, "second", first.updated_at)
+            .expect("second write");
+
+        assert!(first.updated_at > created.updated_at);
+        assert!(second.updated_at > first.updated_at);
+        assert!(
+            write_note_atomic_checked(&workspace, &created.id, "stale", first.updated_at).is_err()
+        );
+    }
+
+    #[test]
+    fn checked_write_rejects_content_changed_outside_neopad() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("External edit".to_owned())).expect("create");
+        let path = note_file_path(&workspace, &created.file_name).expect("path");
+        fs::write(path, "changed outside NeoPad").expect("external write");
+
+        let error = write_note_atomic_checked(
+            &workspace,
+            &created.id,
+            "stale editor content",
+            created.updated_at,
+        )
+        .expect_err("external edit must be detected");
+
+        assert!(error.to_string().contains("outside NeoPad"));
+    }
+
+    #[test]
+    fn reconciliation_recovers_orphaned_and_interrupted_archive_notes() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        fs::write(
+            workspace.notes_dir.join("recovered.md"),
+            "# Recovered\n\nBody",
+        )
+        .expect("orphan note");
+        let created = create_note(&workspace, Some("Interrupted".to_owned())).expect("create");
+        fs::rename(
+            note_file_path(&workspace, &created.file_name).expect("active path"),
+            archive_file_path(&workspace, &created.file_name).expect("archive path"),
+        )
+        .expect("interrupted archive move");
+
+        reconcile_note_metadata(&workspace).expect("reconcile");
+
+        let recovered = list_notes(&workspace).expect("active notes");
+        assert!(recovered.iter().any(|tab| tab.file_name == "recovered.md"));
+        let archived = list_archived_notes(&workspace).expect("archived notes");
+        assert!(archived.iter().any(|tab| tab.id == created.id));
     }
 }

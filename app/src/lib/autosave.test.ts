@@ -68,6 +68,45 @@ describe('AutosaveCoordinator', () => {
     expect(states.at(-1)).toBe('Failed')
   })
 
+  it('keeps a failed snapshot available for an explicit retry', async () => {
+    const save = vi
+      .fn<(snapshot: Snapshot) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('disk full'))
+      .mockResolvedValueOnce()
+    const coordinator = new AutosaveCoordinator({ delayMs: 500, save })
+    const snapshot = { noteId: 'inbox', content: 'recover me' }
+
+    coordinator.markChanged(snapshot)
+
+    expect(await coordinator.flush()).toBe(false)
+    expect(await coordinator.flush()).toBe(true)
+    expect(save).toHaveBeenNthCalledWith(1, snapshot)
+    expect(save).toHaveBeenNthCalledWith(2, snapshot)
+  })
+
+  it('preserves the newest edit when an in-flight save fails', async () => {
+    const first = deferred<void>()
+    const calls: Snapshot[] = []
+    const save = vi.fn((snapshot: Snapshot) => {
+      calls.push(snapshot)
+      if (calls.length === 1) return first.promise
+      return Promise.resolve()
+    })
+    const coordinator = new AutosaveCoordinator({ delayMs: 500, save })
+
+    coordinator.markChanged({ noteId: 'inbox', content: 'first draft' })
+    const firstFlush = coordinator.flush()
+    coordinator.markChanged({ noteId: 'inbox', content: 'latest draft' })
+    first.reject(new Error('disk full'))
+
+    expect(await firstFlush).toBe(false)
+    expect(await coordinator.flush()).toBe(true)
+    expect(calls).toEqual([
+      { noteId: 'inbox', content: 'first draft' },
+      { noteId: 'inbox', content: 'latest draft' },
+    ])
+  })
+
   it('cancels a pending save when authoritative content is loaded', async () => {
     vi.useFakeTimers()
     const save = vi.fn(async () => undefined)

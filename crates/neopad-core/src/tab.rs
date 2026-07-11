@@ -20,6 +20,8 @@ pub struct NoteTab {
     pub system_title: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_revision: Option<String>,
 }
 
 fn default_open() -> bool {
@@ -53,6 +55,7 @@ impl TabsState {
                     last_opened_at: Some(now_ms),
                     system_title: false,
                     color: None,
+                    content_revision: None,
                 },
                 NoteTab {
                     id: "clipboard".to_owned(),
@@ -67,6 +70,7 @@ impl TabsState {
                     last_opened_at: Some(now_ms),
                     system_title: false,
                     color: None,
+                    content_revision: None,
                 },
             ],
         }

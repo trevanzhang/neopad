@@ -23,6 +23,8 @@ pub struct AppConfig {
     pub max_search_results: usize,
     pub mcp: McpConfig,
     #[serde(default)]
+    pub approved_external_markdown_paths: Vec<String>,
+    #[serde(default)]
     pub ui: UiConfig,
 }
 
@@ -277,6 +279,7 @@ impl AppConfig {
                 port: default_mcp_port(),
                 token: String::new(),
             },
+            approved_external_markdown_paths: Vec::new(),
             ui: UiConfig::default(),
         }
     }

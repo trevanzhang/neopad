@@ -1,7 +1,20 @@
 use axum::{
-    body::Body,
-    http::{header, HeaderMap, Response, StatusCode},
+    http::{header, HeaderMap, StatusCode},
+    response::{IntoResponse, Response},
 };
+use subtle::ConstantTimeEq;
+
+#[derive(Debug, Clone, Copy)]
+pub struct AuthError {
+    status: StatusCode,
+    message: &'static str,
+}
+
+impl IntoResponse for AuthError {
+    fn into_response(self) -> Response {
+        (self.status, self.message).into_response()
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Auth {
@@ -13,12 +26,12 @@ impl Auth {
         Self { token }
     }
 
-    pub fn validate(&self, headers: &HeaderMap) -> Result<(), Response<Body>> {
+    pub fn validate(&self, headers: &HeaderMap) -> Result<(), AuthError> {
         self.validate_origin(headers)?;
         self.validate_bearer(headers)
     }
 
-    fn validate_bearer(&self, headers: &HeaderMap) -> Result<(), Response<Body>> {
+    fn validate_bearer(&self, headers: &HeaderMap) -> Result<(), AuthError> {
         let Some(value) = headers.get(header::AUTHORIZATION) else {
             return Err(plain(StatusCode::UNAUTHORIZED, "missing bearer token"));
         };
@@ -28,13 +41,13 @@ impl Auth {
         let Some(token) = value.strip_prefix("Bearer ") else {
             return Err(plain(StatusCode::UNAUTHORIZED, "invalid bearer token"));
         };
-        if token != self.token {
+        if token.as_bytes().ct_eq(self.token.as_bytes()).unwrap_u8() != 1 {
             return Err(plain(StatusCode::UNAUTHORIZED, "invalid bearer token"));
         }
         Ok(())
     }
 
-    fn validate_origin(&self, headers: &HeaderMap) -> Result<(), Response<Body>> {
+    fn validate_origin(&self, headers: &HeaderMap) -> Result<(), AuthError> {
         let Some(origin) = headers.get(header::ORIGIN) else {
             return Ok(());
         };
@@ -64,11 +77,8 @@ fn is_local_origin(origin: &str) -> bool {
     matches!(host, "127.0.0.1" | "localhost" | "[::1]" | "::1")
 }
 
-fn plain(status: StatusCode, message: &'static str) -> Response<Body> {
-    Response::builder()
-        .status(status)
-        .body(Body::from(message))
-        .expect("response")
+fn plain(status: StatusCode, message: &'static str) -> AuthError {
+    AuthError { status, message }
 }
 
 #[cfg(test)]

@@ -11,8 +11,10 @@ export type NoteTab = {
   lastOpenedAt?: number
   external?: boolean
   externalPath?: string
+  externalRevision?: string
   systemTitle: boolean
   color?: string
+  contentRevision?: string
 }
 
 export type ExternalDocument = {
@@ -21,6 +23,7 @@ export type ExternalDocument = {
   fileName: string
   content: string
   updatedAt: number
+  revision: string
 }
 
 export type NoteContent = {

@@ -12,7 +12,10 @@ pub fn write_atomic(path: &Path, contents: &str) -> Result<()> {
         .with_context(|| format!("failed to create parent directory {}", parent.display()))?;
 
     let tmp_path = temp_path(path)?;
-    let mut tmp_file = fs::File::create(&tmp_path)
+    let mut tmp_file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&tmp_path)
         .with_context(|| format!("failed to create temp file {}", tmp_path.display()))?;
     tmp_file
         .write_all(contents.as_bytes())
@@ -23,7 +26,10 @@ pub fn write_atomic(path: &Path, contents: &str) -> Result<()> {
     drop(tmp_file);
 
     match replace_file(&tmp_path, path) {
-        Ok(()) => Ok(()),
+        Ok(()) => {
+            sync_parent_directory(parent)?;
+            Ok(())
+        }
         Err(error) => {
             let _ = fs::remove_file(&tmp_path);
             Err(error).with_context(|| {
@@ -35,6 +41,19 @@ pub fn write_atomic(path: &Path, contents: &str) -> Result<()> {
             })
         }
     }
+}
+
+#[cfg(unix)]
+fn sync_parent_directory(parent: &Path) -> Result<()> {
+    fs::File::open(parent)
+        .with_context(|| format!("failed to open parent directory {}", parent.display()))?
+        .sync_all()
+        .with_context(|| format!("failed to flush parent directory {}", parent.display()))
+}
+
+#[cfg(not(unix))]
+fn sync_parent_directory(_parent: &Path) -> Result<()> {
+    Ok(())
 }
 
 #[cfg(not(windows))]
