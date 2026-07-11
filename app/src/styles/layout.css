@@ -1198,8 +1198,11 @@ body {
 }
 
 .help-body {
+  min-height: 0;
+  overflow-y: auto;
   display: grid;
   gap: 10px;
+  align-content: start;
   color: var(--np-text);
   font-size: 13px;
   line-height: 1.6;
@@ -1221,7 +1224,9 @@ body {
 
 .input-dialog {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(430px, 100%);
+  max-height: calc(100dvh - 40px);
   overflow: hidden;
   color: var(--np-text);
   background: var(--np-surface);
