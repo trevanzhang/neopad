@@ -1289,7 +1289,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       <section class="input-dialog help-panel" role="dialog" aria-modal="true" :aria-label="helpContent.title">
         <header class="input-dialog-header">
           <strong>{{ helpContent.title }}</strong>
-          <button type="button" :aria-label="t.settings.close" :title="t.settings.close" @click="closeHelp()">&times;</button>
+          <button type="button" :aria-label="t.settings.close" :title="t.settings.close" @click="closeHelp()"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg></button>
         </header>
         <div class="input-dialog-body help-body">
           <p v-for="line in helpContent.lines" :key="line">{{ line }}</p>

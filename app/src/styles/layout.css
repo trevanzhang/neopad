@@ -1252,12 +1252,10 @@ body {
 .input-dialog-header button {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   color: var(--np-muted);
-  font-size: 15px;
-  line-height: 1;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 3px;
@@ -1267,6 +1265,15 @@ body {
 .input-dialog-header button:focus-visible {
   color: var(--np-text);
   background: var(--np-hover);
+}
+
+.input-dialog-header button svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
 }
 
 .input-dialog-body {
@@ -1465,9 +1472,30 @@ body {
 }
 
 .settings-close {
-  width: 30px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  font-size: 16px;
+  color: var(--np-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.settings-close:hover,
+.settings-close:focus-visible {
+  color: var(--np-text);
+  background: var(--np-hover);
+}
+
+.settings-close svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
 }
 
 .settings-tabs {

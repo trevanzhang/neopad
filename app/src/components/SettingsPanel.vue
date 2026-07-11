@@ -139,9 +139,7 @@ function deleteCustomText(current: string[]) {
   <aside class="settings-panel settings-dialog" :aria-label="messages.title">
     <header class="settings-header">
       <strong>{{ messages.title }}</strong>
-      <button type="button" class="settings-close" :aria-label="messages.close" :title="messages.close" @click="$emit('close')">
-        X
-      </button>
+      <button type="button" class="settings-close" :aria-label="messages.close" :title="messages.close" @click="$emit('close')"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg></button>
     </header>
 
     <div class="settings-tabs" role="tablist">

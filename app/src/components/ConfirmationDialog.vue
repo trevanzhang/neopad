@@ -56,9 +56,7 @@ function handleTab(event: KeyboardEvent) {
           :aria-label="cancelLabel"
           :title="cancelLabel"
           @click="emit('cancel')"
-        >
-          &times;
-        </button>
+        ><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg></button>
       </header>
       <div class="input-dialog-body">
         <p class="confirmation-dialog-message">{{ message }}</p>
