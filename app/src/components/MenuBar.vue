@@ -6,7 +6,6 @@ import type { NoteTab } from '../types/note'
 
 const props = defineProps<{
   previewMode: EditorMode
-  tabBarOrientation: 'horizontal' | 'vertical'
   wordWrap: boolean
   alwaysOnTop: boolean
   pageActionsEnabled: boolean
@@ -43,7 +42,7 @@ const emit = defineEmits<{
   search: []
   settings: []
   togglePin: []
-  updateTabBarOrientation: [orientation: 'horizontal' | 'vertical']
+  toggleNoteLibrary: []
   formatFont: []
   formatBackground: []
   toggleWordWrap: []
@@ -302,28 +301,10 @@ function handleMenuKeydown(event: KeyboardEvent) {
           </div>
         </div>
         <div class="menu-separator" role="separator" />
-        <div class="menu-subroot">
-          <button type="button" class="menu-command">
-            <span>{{ messages.tabBarDisplay }}</span>
-            <span class="menu-arrow">&rsaquo;</span>
-          </button>
-          <div class="menu-popover menu-subpopover menu-view-subpopover">
-            <button
-              type="button"
-              :class="{ checked: tabBarOrientation === 'horizontal' }"
-              @click="$emit('updateTabBarOrientation', 'horizontal')"
-            >
-              {{ messages.horizontal }}
-            </button>
-            <button
-              type="button"
-              :class="{ checked: tabBarOrientation === 'vertical' }"
-              @click="$emit('updateTabBarOrientation', 'vertical')"
-            >
-              {{ messages.vertical }}
-            </button>
-          </div>
-        </div>
+        <button type="button" class="menu-command" @click="$emit('toggleNoteLibrary')">
+          <span>{{ messages.noteLibrary }}</span>
+          <span class="menu-shortcut">{{ messages.f10 }}</span>
+        </button>
       </div>
     </div>
 

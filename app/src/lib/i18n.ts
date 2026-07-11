@@ -13,6 +13,7 @@ export type AppMessages = {
     defaultColor: string
     previous: string
     next: string
+    library: string
     f2: string
     altDel: string
     f12: string
@@ -65,9 +66,8 @@ export type AppMessages = {
     altDel: string
     f12: string
     ctrlO: string
-    tabBarDisplay: string
-    horizontal: string
-    vertical: string
+    noteLibrary: string
+    f10: string
     font: string
     backgroundColor: string
     togglePreviewTheme: string
@@ -291,6 +291,16 @@ export type AppMessages = {
     empty: string
     restore: string
   }
+  library: {
+    title: string
+    notes: string
+    archive: string
+    emptyNotes: string
+    emptyArchive: string
+    newNote: string
+    refresh: string
+    restore: string
+  }
   status: {
     editMode: string
     hybridMode: string
@@ -343,6 +353,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       defaultColor: 'Default',
       previous: 'Previous tab',
       next: 'Next tab',
+      library: 'Show or hide note library',
       f2: 'F2',
       altDel: 'Alt+Del',
       f12: 'F12',
@@ -395,9 +406,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       altDel: 'Alt+Del',
       f12: 'F12',
       ctrlO: 'Ctrl+O',
-      tabBarDisplay: 'Tab Bar Position(F10)',
-      horizontal: 'Top(H)',
-      vertical: 'Left(V)',
+      noteLibrary: 'Note Library',
+      f10: 'F10',
       font: 'Font(F)...',
       backgroundColor: 'Background Color(B)...',
       togglePreviewTheme: 'Toggle Preview Theme',
@@ -621,6 +631,16 @@ export const messages: Record<AppLanguage, AppMessages> = {
       empty: 'No archived pages',
       restore: 'Restore',
     },
+    library: {
+      title: 'FILES',
+      notes: 'Notes',
+      archive: 'Archive',
+      emptyNotes: 'No notes yet',
+      emptyArchive: 'No archived notes',
+      newNote: 'New note',
+      refresh: 'Refresh library',
+      restore: 'Restore note',
+    },
     status: {
       editMode: 'Edit mode',
       hybridMode: 'Hybrid mode',
@@ -671,6 +691,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       defaultColor: '\u9ed8\u8ba4\u989c\u8272',
       previous: '\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875',
       next: '\u4e0b\u4e00\u4e2a\u6807\u7b7e\u9875',
+      library: '\u663e\u793a\u6216\u9690\u85cf\u7b14\u8bb0\u5e93',
       f2: 'F2',
       altDel: 'Alt+Del',
       f12: 'F12',
@@ -723,9 +744,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       altDel: 'Alt+Del',
       f12: 'F12',
       ctrlO: 'Ctrl+O',
-      tabBarDisplay: '\u6807\u7b7e\u680f\u4f4d\u7f6e(F10)',
-      horizontal: '\u9876\u90e8(H)',
-      vertical: '\u5de6\u4fa7(V)',
+      noteLibrary: '\u7b14\u8bb0\u5e93',
+      f10: 'F10',
       font: '\u5b57\u4f53(F)...',
       backgroundColor: '\u80cc\u666f\u8272(B)...',
       togglePreviewTheme: '\u5207\u6362\u9884\u89c8\u4e3b\u9898',
@@ -948,6 +968,16 @@ export const messages: Record<AppLanguage, AppMessages> = {
       refresh: '\u5237\u65b0',
       empty: '\u6682\u65e0\u5b58\u6863\u9875\u9762',
       restore: '\u6062\u590d',
+    },
+    library: {
+      title: '\u6587\u4ef6',
+      notes: '\u7b14\u8bb0',
+      archive: '\u5b58\u6863',
+      emptyNotes: '\u6682\u65e0\u7b14\u8bb0',
+      emptyArchive: '\u6682\u65e0\u5b58\u6863\u7b14\u8bb0',
+      newNote: '\u65b0\u5efa\u7b14\u8bb0',
+      refresh: '\u5237\u65b0\u7b14\u8bb0\u5e93',
+      restore: '\u6062\u590d\u7b14\u8bb0',
     },
     status: {
       editMode: '\u7f16\u8f91\u6a21\u5f0f',

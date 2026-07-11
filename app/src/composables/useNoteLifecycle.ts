@@ -36,6 +36,7 @@ interface NoteLifecycleOptions {
   focusEditor: () => void
   refreshRecentNotes: () => Promise<void>
   refreshArchivedNotes: () => Promise<void>
+  refreshLibrary: () => Promise<void>
   upsertTab: (tab: NoteTab) => void
 }
 
@@ -118,6 +119,7 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
       } catch { fail(); return } finally { deletingTabIds.delete(tab.id) }
     }
     o.tabs.value = o.tabs.value.filter((item) => item.id !== tab.id)
+    await o.refreshLibrary()
     if (o.activeTabId.value === tab.id) {
       o.activeTabId.value = nextId ?? o.tabs.value[0]?.id ?? 'inbox'
       await o.loadActiveNote()
@@ -138,6 +140,7 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
       o.tabs.value = o.tabs.value.filter((item) => item.id !== tab.id)
       if (wasActive) { o.activeTabId.value = nextId; await o.loadActiveNote(); o.focusEditor() }
       await o.refreshRecentNotes()
+      await o.refreshLibrary()
     } catch { fail() }
   }
 
@@ -175,6 +178,7 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
       o.tabs.value = o.tabs.value.filter((item) => item.id !== tab.id)
       if (wasActive) { o.activeTabId.value = nextId; await o.loadActiveNote(); o.focusEditor() }
       await o.refreshRecentNotes()
+      await o.refreshLibrary()
     } catch { fail() }
   }
 
@@ -185,6 +189,7 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
       o.activeTabId.value = restored.id
       await o.loadActiveNote()
       await o.refreshRecentNotes()
+      await o.refreshLibrary()
       if (o.archiveListOpen.value) await o.refreshArchivedNotes()
       else o.focusEditor()
     } catch { fail() }
@@ -204,6 +209,7 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
         o.setContentFromLoad(note.content)
         o.saveState.value = 'Saved'
         o.focusEditor()
+        await o.refreshLibrary()
         return
       } catch {
         fail()
@@ -217,6 +223,7 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
     o.activeTabId.value = tab.id
     o.content.value = `# ${tab.title}\n\n`
     o.focusEditor()
+    await o.refreshLibrary()
   }
 
   async function saveCurrentClipboard() {

@@ -57,7 +57,7 @@ export interface KeyboardActions {
   findNext: () => void
   calculateExpression: () => void
   hideMainWindow: () => void | Promise<void>
-  toggleTabBarOrientation: () => void
+  toggleNoteLibrary: () => void
   togglePin: () => void | Promise<void>
   openSettings: () => void
   insertDateTimeSeparator: () => void
@@ -189,7 +189,7 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
     if (plainKey(event, 'F3')) { consume(event, actions.findNext); return }
     if (event.key === 'Enter' && event.ctrlKey) { consume(event, actions.calculateExpression); return }
     if (event.key === 'Escape' && state.nativeRuntime()) { event.preventDefault(); void actions.hideMainWindow() }
-    if (event.key === 'F10') { event.preventDefault(); actions.toggleTabBarOrientation() }
+    if (event.key === 'F10') { event.preventDefault(); actions.toggleNoteLibrary() }
     if (event.key === 'F6') { event.preventDefault(); void actions.togglePin() }
     if (event.key === 'F8') { event.preventDefault(); actions.openSettings() }
     if (event.code === 'Minus' && event.ctrlKey && event.shiftKey) { event.preventDefault(); actions.insertDateTimeSeparator() }

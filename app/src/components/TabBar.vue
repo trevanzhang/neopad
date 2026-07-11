@@ -19,7 +19,7 @@ const emit = defineEmits<{
   unarchiveTab: [tabId: string]
   updateTabColor: [tabId: string, color: string | null]
   newTab: []
-  toggleOrientation: []
+  toggleLibrary: []
   previousTab: []
   nextTab: []
 }>()
@@ -124,9 +124,9 @@ function updateColor(color: string | null) {
     <button
       class="tab-menu"
       type="button"
-      title="Toggle tab bar display"
-      aria-label="Toggle tab bar display"
-      @click="$emit('toggleOrientation')"
+      :title="messages.library"
+      :aria-label="messages.library"
+      @click="$emit('toggleLibrary')"
     >
       ≡
     </button>

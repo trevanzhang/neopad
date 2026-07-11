@@ -41,7 +41,7 @@ export function getHelpContent(topic: HelpTopic | null, language: AppLanguage, c
         `F9 - ${zh ? '切换日间/夜间模式' : 'Toggle day/night mode'}`,
         `F11 - ${zh ? '切换沉浸式全屏' : 'Toggle immersive fullscreen'}`,
         `F12 - ${zh ? '归档当前标签页' : 'Archive current tab'}`,
-        `F10 - ${zh ? '切换标签栏方向' : 'Toggle tab bar orientation'}`,
+        `F10 - ${zh ? '显示或隐藏笔记库' : 'Show or hide note library'}`,
         `Esc - ${zh ? '隐藏窗口' : 'Hide window'}`,
       ],
     }

@@ -50,6 +50,7 @@ function createHarness(forceSave = vi.fn(async () => true)) {
     focusEditor: vi.fn(),
     refreshRecentNotes: vi.fn(async () => undefined),
     refreshArchivedNotes: vi.fn(async () => undefined),
+    refreshLibrary: vi.fn(async () => undefined),
     upsertTab: (tab) => tabs.value.push(tab),
   })
   return { lifecycle, tabs, activeTabId }

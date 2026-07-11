@@ -226,7 +226,7 @@ F5              Open or close the reminder list
 F7              Cycle preview theme
 F8              Open settings
 F9              Toggle day/night mode
-F10             Toggle tab bar orientation
+F10             Show or hide the note library
 F11             Toggle immersive fullscreen
 F12             Archive the current page
 Alt+Enter       Maximize or restore the main window

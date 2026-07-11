@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, r
 import AppShell from './components/AppShell.vue'
 import EditorPane from './components/EditorPane.vue'
 import MenuBar from './components/MenuBar.vue'
+import NoteLibrary from './components/NoteLibrary.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import TabBar from './components/TabBar.vue'
@@ -13,6 +14,7 @@ import {
   getAppVersion,
   getShortcutWarnings,
   getWorkspace,
+  listLibraryNotes,
   listNotes,
   listRecentNotes,
   openTrash,
@@ -128,7 +130,7 @@ const preferenceState = usePreferenceState({
 })
 const {
   previewMode, defaultEditorMode, editorModeShortcut, theme, language, vimMode,
-  vimUseCtrlShortcuts, vimInsertExitKey, tabBarOrientation, wordWrap, editorFontFamily,
+  vimUseCtrlShortcuts, vimInsertExitKey, wordWrap, editorFontFamily,
   editorFontSize, editorBackgroundColor, previewTheme, previewFontFamily, previewFontSize,
   previewLineHeight, previewContentWidth, windowOpacity, runAtStartup, startHidden,
   closeToMinimize, snapToEdges, transparencyEnabled, titleDoubleClickAction,
@@ -141,6 +143,9 @@ const backgroundColorInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
 const searchPanel = ref<InstanceType<typeof SearchPanel> | null>(null)
 const workspacePath = ref('~/.neopad')
+const noteLibraryOpen = ref(false)
+const libraryNotes = ref<NoteTab[]>([])
+const libraryLoading = ref(false)
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
 const t = computed(() => messages[language.value])
 const {
@@ -261,7 +266,7 @@ const {
   titleDoubleClickAction, archiveListOpen, text: () => t.value, forceSave,
   nextNoteLoadGeneration, isCurrentNoteLoad, loadActiveNote, setContentFromLoad,
   requestInput, requestConfirmation, focusEditor: focusEditorAfterPageAction,
-  refreshRecentNotes, refreshArchivedNotes, upsertTab,
+  refreshRecentNotes, refreshArchivedNotes, refreshLibrary: refreshNoteLibrary, upsertTab,
 })
 const {
   registerNativeEventListeners,
@@ -336,7 +341,7 @@ const handleKeydown = createKeyboardHandler({
     findNext: findNextMatch,
     calculateExpression: calculateCurrentLineExpression,
     hideMainWindow,
-    toggleTabBarOrientation,
+    toggleNoteLibrary,
     togglePin,
     openSettings,
     insertDateTimeSeparator,
@@ -597,8 +602,51 @@ function openReplacePanel() {
   editorPane.value?.openEditorReplace()
 }
 
-function toggleTabBarOrientation() {
-  tabBarOrientation.value = tabBarOrientation.value === 'horizontal' ? 'vertical' : 'horizontal'
+function toggleNoteLibrary() {
+  noteLibraryOpen.value = !noteLibraryOpen.value
+  if (noteLibraryOpen.value) void refreshNoteLibrary()
+}
+
+async function refreshNoteLibrary() {
+  libraryLoading.value = true
+  try {
+    if (isTauriRuntime()) {
+      const [notes] = await Promise.all([listLibraryNotes(), refreshArchivedNotes()])
+      libraryNotes.value = notes
+    } else {
+      libraryNotes.value = tabs.value.filter((tab) => !tab.archived && !tab.deleted && !tab.external)
+      archivedNotes.value = tabs.value.filter((tab) => tab.archived && !tab.deleted && !tab.external)
+    }
+  } catch {
+    saveState.value = 'Failed'
+  } finally {
+    libraryLoading.value = false
+  }
+}
+
+async function selectLibraryNote(noteId: string) {
+  if (noteId === activeTabId.value) {
+    focusEditorAfterPageAction()
+    return
+  }
+  const generation = nextNoteLoadGeneration()
+  if (!(await forceSave()) || !isCurrentNoteLoad(generation)) return
+  try {
+    const opened = isTauriRuntime() ? await openNote(noteId) : libraryNotes.value.find((tab) => tab.id === noteId)
+    if (!opened || !isCurrentNoteLoad(generation)) return
+    upsertTab(opened)
+    activeTabId.value = opened.id
+    await loadActiveNote(generation)
+    await refreshRecentNotes()
+    focusEditorAfterPageAction()
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function restoreLibraryNote(tab: NoteTab) {
+  await unarchiveTab(tab)
+  await refreshNoteLibrary()
 }
 
 function promptEditorFont() {
@@ -1014,7 +1062,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
 
 <template>
   <AppShell
-    :tab-orientation="tabBarOrientation"
+    :library-open="noteLibraryOpen"
     :data-ready="appReady ? 'true' : 'false'"
     :theme="theme"
     :immersive="immersiveMode"
@@ -1022,7 +1070,6 @@ function createLocalTabFromContent(title: string, nextContent: string) {
     <template #title>
       <MenuBar
         :preview-mode="previewMode"
-        :tab-bar-orientation="tabBarOrientation"
         :word-wrap="wordWrap"
         :always-on-top="alwaysOnTop"
         :page-actions-enabled="Boolean(activeTab && activeTab.id !== 'inbox' && activeTab.id !== 'clipboard')"
@@ -1056,7 +1103,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @search="showSearchPlaceholder"
         @settings="showSettingsPlaceholder"
         @toggle-pin="togglePin"
-        @update-tab-bar-orientation="tabBarOrientation = $event"
+        @toggle-note-library="toggleNoteLibrary"
         @format-font="promptEditorFont"
         @format-background="openBackgroundColorPicker"
         @toggle-word-wrap="toggleWordWrap"
@@ -1089,9 +1136,24 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @unarchive-tab="unarchiveTab(tabs.find((tab) => tab.id === $event)!)"
         @update-tab-color="updateTabColor"
         @new-tab="createLocalTab"
-        @toggle-orientation="toggleTabBarOrientation"
+        @toggle-library="toggleNoteLibrary"
         @previous-tab="cycleTab(-1)"
         @next-tab="cycleTab(1)"
+      />
+    </template>
+
+    <template #library>
+      <NoteLibrary
+        v-if="noteLibraryOpen"
+        :notes="libraryNotes"
+        :archived-notes="archivedNotes"
+        :active-note-id="activeTabId"
+        :loading="libraryLoading"
+        :messages="t.library"
+        @select="selectLibraryNote"
+        @restore="restoreLibraryNote"
+        @new-note="createLocalTab"
+        @refresh="refreshNoteLibrary"
       />
     </template>
 
