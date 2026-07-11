@@ -439,9 +439,7 @@ body {
 }
 
 .app-shell.tab-vertical .search-panel,
-.app-shell.tab-vertical .settings-panel,
-.app-shell.tab-vertical .archive-list-panel,
-.app-shell.tab-vertical .help-panel {
+.app-shell.tab-vertical .archive-list-panel {
   top: 84px;
 }
 
@@ -1169,13 +1167,13 @@ body {
 .settings-panel,
 .help-panel {
   position: absolute;
-  top: 116px;
-  right: 12px;
-  bottom: 38px;
+  inset: 0;
   z-index: 12;
   display: grid;
   grid-auto-rows: max-content;
-  width: min(460px, calc(100% - 24px));
+  width: min(460px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  margin: auto;
   overflow: auto;
   background: var(--np-menu);
   border: 1px solid var(--np-border);
@@ -1415,18 +1413,12 @@ body {
 }
 
 .settings-dialog {
-  top: clamp(12px, 8vh, 86px);
-  right: auto;
-  bottom: 38px;
-  left: 50%;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   grid-auto-rows: unset;
-  width: min(458px, calc(100% - 28px));
+  width: min(458px, calc(100% - 32px));
   min-height: 0;
-  max-height: 640px;
+  max-height: min(640px, calc(100% - 32px));
   overflow: hidden;
-  transform: translateX(-50%);
-  border-radius: 3px;
 }
 
 .settings-close {
