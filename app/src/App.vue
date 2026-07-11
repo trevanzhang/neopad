@@ -15,7 +15,6 @@ import {
   exportAllNotesZip,
   getAppVersion,
   getShortcutWarnings,
-  getMcpStatus,
   getUiConfig,
   getWorkspace,
   hideWindow,
@@ -35,7 +34,6 @@ import {
   readExternalMarkdown,
   setAutostart,
   setCloseToMinimize,
-  setMcpEnabled,
   setSnapToEdges,
   setStartHidden,
   setWindowOpacity,
@@ -45,14 +43,14 @@ import {
   updateToggleShortcut,
   updateClipboardShortcut,
   writeNote,
-  regenerateMcpToken,
 } from './lib/invoke'
-import type { AppTheme, McpStatus } from './lib/invoke'
+import type { AppTheme } from './lib/invoke'
 import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
 import { useDocumentSession } from './composables/useDocumentSession'
 import { useSearchState } from './composables/useSearchState'
 import { useReminderState } from './composables/useReminderState'
+import { useMcpService } from './composables/useMcpService'
 import { editorBackgroundForTheme } from './lib/theme'
 import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
 import {
@@ -65,6 +63,7 @@ import {
   toFullWidth,
   toHalfWidth,
 } from './lib/document-utils'
+import { simplifiedToTraditionalMap, traditionalToSimplifiedMap } from './lib/chinese-maps'
 import {
   defaultDateTimeSeparatorTemplate,
   initialBooleanSetting,
@@ -200,8 +199,6 @@ const backgroundColorInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
 const searchPanel = ref<InstanceType<typeof SearchPanel> | null>(null)
 const workspacePath = ref('~/.neopad')
-const mcpStatus = ref<McpStatus | null>(null)
-const mcpUiError = ref<string | null>(null)
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
 const t = computed(() => messages[language.value])
 const {
@@ -250,6 +247,25 @@ const {
   forceSave,
   loadActiveNote,
   notificationTitle: () => t.value.reminders.notificationTitle,
+  onError: () => {
+    saveState.value = 'Failed'
+  },
+})
+const {
+  mcpStatus,
+  mcpUiError,
+  loadMcpStatus,
+  updateMcpEnabled,
+  refreshMcpToken,
+  copyMcpConfig,
+} = useMcpService({
+  stoppedLabel: () => t.value.settings.stopped,
+  onUpdated: () => {
+    statusMessage.value = t.value.status.mcpUpdated
+  },
+  onCopied: () => {
+    statusMessage.value = t.value.status.mcpConfigCopied
+  },
   onError: () => {
     saveState.value = 'Failed'
   },
@@ -1518,81 +1534,6 @@ async function transformText(action: string, text: string) {
   }
 }
 
-async function copyMcpConfig() {
-  if (!mcpStatus.value) {
-    await loadMcpStatus()
-  }
-  const status = mcpStatus.value
-  if (!status) {
-    saveState.value = 'Failed'
-    return
-  }
-  const config = {
-    mcpServers: {
-      neopad: {
-        url: status.url,
-        headers: {
-          Authorization: `Bearer ${status.token}`,
-        },
-      },
-    },
-  }
-
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(config, null, 2))
-    statusMessage.value = t.value.status.mcpConfigCopied
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function loadMcpStatus() {
-  if (!isTauriRuntime()) {
-    mcpStatus.value = {
-      enabled: false,
-      running: false,
-      status: t.value.settings.stopped,
-      url: 'http://127.0.0.1:8765/mcp',
-      host: '127.0.0.1',
-      port: 8765,
-      token: '',
-      lastError: null,
-    }
-    return
-  }
-
-  try {
-    mcpUiError.value = null
-    mcpStatus.value = await getMcpStatus()
-  } catch (error) {
-    mcpUiError.value = error instanceof Error ? error.message : String(error)
-    saveState.value = 'Failed'
-  }
-}
-
-async function updateMcpEnabled(enabled: boolean) {
-  try {
-    mcpUiError.value = null
-    mcpStatus.value = await setMcpEnabled(enabled)
-    statusMessage.value = t.value.status.mcpUpdated
-  } catch (error) {
-    mcpUiError.value = error instanceof Error ? error.message : String(error)
-    await loadMcpStatus()
-    saveState.value = 'Failed'
-  }
-}
-
-async function refreshMcpToken() {
-  try {
-    mcpUiError.value = null
-    mcpStatus.value = await regenerateMcpToken()
-    statusMessage.value = t.value.status.mcpUpdated
-  } catch (error) {
-    mcpUiError.value = error instanceof Error ? error.message : String(error)
-    saveState.value = 'Failed'
-  }
-}
-
 async function loadInitialNotes() {
   try {
     const loadedTabs = await listNotes()
@@ -2442,123 +2383,6 @@ function md5Hex(value: number) {
   }
   return output
 }
-
-const simplifiedToTraditionalMap: Record<string, string> = {
-  '\u4e07': '\u842c',
-  '\u4e0e': '\u8207',
-  '\u4e13': '\u5c08',
-  '\u4e1a': '\u696d',
-  '\u4e1c': '\u6771',
-  '\u4e24': '\u5169',
-  '\u4e25': '\u56b4',
-  '\u4e2a': '\u500b',
-  '\u4e3a': '\u70ba',
-  '\u4e49': '\u7fa9',
-  '\u4e50': '\u6a02',
-  '\u4e60': '\u7fd2',
-  '\u4e66': '\u66f8',
-  '\u4e70': '\u8cb7',
-  '\u4e89': '\u722d',
-  '\u4e8e': '\u65bc',
-  '\u4e91': '\u96f2',
-  '\u4ea7': '\u7522',
-  '\u4eb2': '\u89aa',
-  '\u4ebf': '\u5104',
-  '\u4ec5': '\u50c5',
-  '\u4ece': '\u5f9e',
-  '\u4ed3': '\u5009',
-  '\u4eea': '\u5100',
-  '\u4eec': '\u5011',
-  '\u4ef7': '\u50f9',
-  '\u4f17': '\u773e',
-  '\u4f18': '\u512a',
-  '\u4f1a': '\u6703',
-  '\u4f20': '\u50b3',
-  '\u4f24': '\u50b7',
-  '\u4f53': '\u9ad4',
-  '\u513f': '\u5152',
-  '\u515a': '\u9ee8',
-  '\u5170': '\u862d',
-  '\u5173': '\u95dc',
-  '\u5174': '\u8208',
-  '\u5199': '\u5beb',
-  '\u519b': '\u8ecd',
-  '\u519c': '\u8fb2',
-  '\u51b2': '\u885d',
-  '\u51b3': '\u6c7a',
-  '\u51c6': '\u6e96',
-  '\u51e0': '\u5e7e',
-  '\u5219': '\u5247',
-  '\u521a': '\u525b',
-  '\u521b': '\u5275',
-  '\u5220': '\u522a',
-  '\u522b': '\u5225',
-  '\u5267': '\u5287',
-  '\u529e': '\u8fa6',
-  '\u52a1': '\u52d9',
-  '\u52a8': '\u52d5',
-  '\u533a': '\u5340',
-  '\u533b': '\u91ab',
-  '\u534e': '\u83ef',
-  '\u5355': '\u55ae',
-  '\u5356': '\u8ce3',
-  '\u536b': '\u885b',
-  '\u53d1': '\u767c',
-  '\u53d8': '\u8b8a',
-  '\u53f7': '\u865f',
-  '\u540e': '\u5f8c',
-  '\u542c': '\u807d',
-  '\u542f': '\u555f',
-  '\u5458': '\u54e1',
-  '\u56fd': '\u570b',
-  '\u56fe': '\u5716',
-  '\u5706': '\u5713',
-  '\u575a': '\u5805',
-  '\u575b': '\u58c7',
-  '\u5757': '\u584a',
-  '\u58f0': '\u8072',
-  '\u5907': '\u5099',
-  '\u590d': '\u5fa9',
-  '\u5934': '\u982d',
-  '\u593a': '\u596a',
-  '\u594b': '\u596e',
-  '\u5956': '\u734e',
-  '\u5987': '\u5a66',
-  '\u5988': '\u5abd',
-  '\u5a31': '\u5a1b',
-  '\u5b59': '\u5b6b',
-  '\u5b66': '\u5b78',
-  '\u5b81': '\u5be7',
-  '\u5b9d': '\u5bf6',
-  '\u5b9e': '\u5be6',
-  '\u5bf9': '\u5c0d',
-  '\u5bfc': '\u5c0e',
-  '\u5c14': '\u723e',
-  '\u5c3d': '\u76e1',
-  '\u5c42': '\u5c64',
-  '\u5c5e': '\u5c6c',
-  '\u5c81': '\u6b72',
-  '\u5c9b': '\u5cf6',
-  '\u5e01': '\u5e63',
-  '\u5e08': '\u5e2b',
-  '\u5e26': '\u5e36',
-  '\u5e2e': '\u5e6b',
-  '\u5e7f': '\u5ee3',
-  '\u5e86': '\u6176',
-  '\u5e93': '\u5eab',
-  '\u5e94': '\u61c9',
-  '\u5f00': '\u958b',
-  '\u5f20': '\u5f35',
-  '\u5f52': '\u6b78',
-  '\u5f53': '\u7576',
-  '\u5f55': '\u9304',
-  '\u5fc6': '\u61b6',
-  '\u6001': '\u614b',
-  '\u603b': '\u7e3d',
-  '\u604b': '\u6200'
-}
-
-const traditionalToSimplifiedMap = Object.fromEntries(Object.entries(simplifiedToTraditionalMap).map(([key, value]) => [value, key]))
 
 function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
   const zh = currentLanguage === 'zh'
