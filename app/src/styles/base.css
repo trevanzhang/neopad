@@ -10,6 +10,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+::selection {
+  background: var(--np-accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -22,7 +37,18 @@ body,
   margin: 0;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--np-border) transparent;
+}
+
 button,
 textarea {
   font: inherit;
+}
+
+button,
+select,
+input {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }

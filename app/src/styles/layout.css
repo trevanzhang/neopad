@@ -277,6 +277,12 @@ body {
   background: var(--np-hover);
 }
 
+.tab-item:focus-visible,
+.tab-add:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--np-accent-soft);
+}
+
 .tab-label {
   min-width: 0;
   overflow: hidden;
@@ -760,6 +766,11 @@ body {
   color: var(--np-text);
   background: var(--np-surface);
   border-color: var(--np-border);
+}
+
+.mode-switch button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--np-accent-soft);
 }
 
 .search-panel {
@@ -1543,6 +1554,11 @@ body {
   background: var(--np-hover);
 }
 
+.settings-tabs button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--np-accent-soft);
+}
+
 .settings-tabs button.active {
   color: var(--np-text);
   background: var(--np-surface);
@@ -1772,6 +1788,13 @@ body {
 .settings-custom-actions button:hover,
 .settings-footer button:hover {
   background: var(--np-hover);
+}
+
+.settings-custom-actions button:focus-visible,
+.settings-footer button:focus-visible,
+.settings-actions button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--np-accent-soft);
 }
 
 .settings-custom-actions button:last-child {
