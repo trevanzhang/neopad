@@ -1,8 +1,8 @@
 use anyhow::{bail, Context, Result};
 use neopad_core::{
     append_to_clipboard_note, append_to_note, create_note, delete_note_to_trash, list_notes,
-    lock_workspace_for_write, path::note_file_path, read_note, search_notes, write_note_atomic,
-    write_note_atomic_checked, Workspace,
+    lock_workspace_for_write, path::note_file_path, read_note, reconcile_note_metadata,
+    search_notes, write_note_atomic, write_note_atomic_checked, Workspace,
 };
 use serde_json::{json, Value};
 
@@ -183,12 +183,16 @@ impl Tools {
                     required_i64(&arguments, "expectedUpdatedAt")?
                 )?))
             }),
-            "list_pages" => self.list_pages(),
-            "read_page" => self.read_page(required_string(&arguments, "pageId")?),
-            "search_pages" => self.search_pages(
-                required_string(&arguments, "query")?,
-                optional_usize(&arguments, "limit").unwrap_or(20),
-            ),
+            "list_pages" => self.reconciled(|| self.list_pages()),
+            "read_page" => {
+                self.reconciled(|| self.read_page(required_string(&arguments, "pageId")?))
+            }
+            "search_pages" => self.reconciled(|| {
+                self.search_pages(
+                    required_string(&arguments, "query")?,
+                    optional_usize(&arguments, "limit").unwrap_or(20),
+                )
+            }),
             "trash_page" => self.write(|| {
                 Ok(json!(delete_note_to_trash(
                     &self.workspace,
@@ -243,6 +247,16 @@ impl Tools {
         F: FnOnce() -> Result<Value>,
     {
         let _lock = lock_workspace_for_write(&self.workspace)?;
+        reconcile_note_metadata(&self.workspace)?;
+        operation()
+    }
+
+    fn reconciled<F>(&self, operation: F) -> Result<Value>
+    where
+        F: FnOnce() -> Result<Value>,
+    {
+        let _lock = lock_workspace_for_write(&self.workspace)?;
+        reconcile_note_metadata(&self.workspace)?;
         operation()
     }
 }

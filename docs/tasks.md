@@ -61,8 +61,8 @@ This file tracks the implemented MVP relative to the original task plan.
 
 ## Recommended Next Tasks
 
-1. Expand frontend coverage to search, settings validation, and editor
-   transformations.
+1. Expand frontend coverage for settings validation and DOM interaction in the
+   custom editor search panel.
 2. Add Windows-native automation for tray menus, global shortcuts, and MSI
    install/uninstall behavior.
 3. Review the custom WiX template for portability before moving the repository

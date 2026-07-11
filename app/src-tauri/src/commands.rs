@@ -2,11 +2,12 @@ use neopad_core::{
     append_to_clipboard_note, archive_note, claim_due_reminders, close_note,
     complete_due_reminders, complete_reminder, create_note, delete_note_to_trash, export_note_file,
     list_archived_notes, list_open_notes, list_recent_notes, list_reminders, list_searchable_notes,
-    load_config, lock_workspace_for_write, read_note, rename_note, reopen_reminder, save_config,
-    search_notes, write_note_atomic_checked, NoteContent, NoteTab, PreviewMode, Reminder,
-    SearchResult, Theme, UiConfig, Workspace,
+    load_config, lock_workspace_for_write, read_note, reconcile_note_metadata, rename_note,
+    reopen_reminder, save_config, search_notes, write_note_atomic_checked, NoteContent, NoteTab,
+    PreviewMode, Reminder, SearchResult, Theme, UiConfig, Workspace,
 };
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -112,11 +113,15 @@ fn shortcut_label(base_key: &str, modifiers: &[String]) -> String {
 
 #[tauri::command]
 pub fn list_notes_command(state: State<'_, AppState>) -> Result<Vec<NoteTab>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reconcile_note_metadata(&state.workspace).map_err(display_error)?;
     list_open_notes(&state.workspace).map_err(display_error)
 }
 
 #[tauri::command]
 pub fn list_archived_notes_command(state: State<'_, AppState>) -> Result<Vec<NoteTab>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reconcile_note_metadata(&state.workspace).map_err(display_error)?;
     list_archived_notes(&state.workspace).map_err(display_error)
 }
 
@@ -128,10 +133,13 @@ pub struct ExternalDocument {
     pub file_name: String,
     pub content: String,
     pub updated_at: i64,
+    pub revision: String,
 }
 
 #[tauri::command]
 pub fn list_recent_notes_command(state: State<'_, AppState>) -> Result<Vec<NoteTab>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reconcile_note_metadata(&state.workspace).map_err(display_error)?;
     list_recent_notes(&state.workspace, 20).map_err(display_error)
 }
 
@@ -140,6 +148,8 @@ pub fn read_note_command(
     state: State<'_, AppState>,
     note_id: String,
 ) -> Result<NoteContent, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reconcile_note_metadata(&state.workspace).map_err(display_error)?;
     read_note(&state.workspace, &note_id).map_err(display_error)
 }
 
@@ -160,6 +170,7 @@ pub fn write_note_command(
     expected_updated_at: i64,
 ) -> Result<NoteContent, String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reconcile_note_metadata(&state.workspace).map_err(display_error)?;
     write_note_atomic_checked(&state.workspace, &note_id, &content, expected_updated_at)
         .map_err(display_error)
 }
@@ -226,16 +237,22 @@ pub fn search_notes_command(
     query: String,
     limit: Option<usize>,
 ) -> Result<Vec<SearchResult>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reconcile_note_metadata(&state.workspace).map_err(display_error)?;
     search_notes(&state.workspace, &query, limit.unwrap_or(100)).map_err(display_error)
 }
 
 #[tauri::command]
 pub fn list_reminders_command(state: State<'_, AppState>) -> Result<Vec<Reminder>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reconcile_note_metadata(&state.workspace).map_err(display_error)?;
     list_reminders(&state.workspace).map_err(display_error)
 }
 
 #[tauri::command]
 pub fn claim_due_reminders_command(state: State<'_, AppState>) -> Result<Vec<Reminder>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reconcile_note_metadata(&state.workspace).map_err(display_error)?;
     claim_due_reminders(&state.workspace).map_err(display_error)
 }
 
@@ -295,6 +312,7 @@ pub async fn save_markdown_file_command(
 #[tauri::command]
 pub async fn open_external_markdown_command(
     window: tauri::WebviewWindow,
+    state: State<'_, AppState>,
 ) -> Result<Option<ExternalDocument>, String> {
     let result = tauri::async_runtime::spawn_blocking(move || {
         let path = rfd::FileDialog::new()
@@ -306,25 +324,38 @@ pub async fn open_external_markdown_command(
     })
     .await
     .map_err(|error| error.to_string())?;
-    result.map_err(display_error)
+    let document = result.map_err(display_error)?;
+    if let Some(document) = &document {
+        let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+        approve_external_markdown_path(&state.workspace, std::path::Path::new(&document.path))
+            .map_err(display_error)?;
+    }
+    Ok(document)
 }
 
 #[tauri::command]
-pub fn read_external_markdown_command(path: String) -> Result<ExternalDocument, String> {
-    read_external_document(std::path::Path::new(&path)).map_err(display_error)
+pub fn read_external_markdown_command(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<ExternalDocument, String> {
+    let path = approved_external_markdown_path(&state.workspace, std::path::Path::new(&path))
+        .map_err(display_error)?;
+    read_external_document(&path).map_err(display_error)
 }
 
 #[tauri::command]
 pub fn write_external_markdown_command(
+    state: State<'_, AppState>,
     path: String,
     content: String,
-    expected_updated_at: i64,
+    expected_revision: String,
 ) -> Result<ExternalDocument, String> {
-    let path =
-        validate_external_markdown_path(std::path::Path::new(&path)).map_err(display_error)?;
-    let current_updated_at = external_updated_at(&path).map_err(display_error)?;
-    if current_updated_at != expected_updated_at {
-        return Err(format!("external file was modified: expected updated_at {expected_updated_at}, current updated_at {current_updated_at}"));
+    let path = approved_external_markdown_path(&state.workspace, std::path::Path::new(&path))
+        .map_err(display_error)?;
+    let current_content = fs::read_to_string(&path).map_err(|error| error.to_string())?;
+    let current_revision = external_revision(&current_content);
+    if current_revision != expected_revision {
+        return Err("external file was modified after it was opened".to_owned());
     }
     export_note_file(&path, &content).map_err(display_error)?;
     read_external_document(&path).map_err(display_error)
@@ -348,6 +379,8 @@ pub async fn export_all_notes_zip_command(
             return Ok(false);
         };
 
+        let _lock = lock_workspace_for_write(&workspace).map_err(display_error)?;
+        reconcile_note_metadata(&workspace).map_err(display_error)?;
         let file = File::create(&path).map_err(|error| error.to_string())?;
         let mut archive = zip::ZipWriter::new(file);
         let options = zip::write::SimpleFileOptions::default()
@@ -458,6 +491,20 @@ pub fn open_trash_command(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn open_external_url_command(url: String) -> Result<(), String> {
+    let parsed = validate_external_url(&url).map_err(display_error)?;
+    open_target(parsed.as_str()).map_err(|error| error.to_string())
+}
+
+fn validate_external_url(url: &str) -> anyhow::Result<url::Url> {
+    let parsed = url::Url::parse(url)?;
+    if !matches!(parsed.scheme(), "http" | "https") {
+        anyhow::bail!("only HTTP and HTTPS links can be opened");
+    }
+    Ok(parsed)
+}
+
+#[tauri::command]
 pub fn quit_app_command(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     set_quitting(&state);
     crate::mcp::stop_owned_process(&state).map_err(display_error)?;
@@ -534,6 +581,7 @@ fn path_to_string(path: &std::path::Path) -> String {
 fn read_external_document(path: &std::path::Path) -> anyhow::Result<ExternalDocument> {
     let path = validate_external_markdown_path(path)?;
     let content = fs::read_to_string(&path)?;
+    let revision = external_revision(&content);
     let file_name = path
         .file_name()
         .and_then(|name| name.to_str())
@@ -550,7 +598,42 @@ fn read_external_document(path: &std::path::Path) -> anyhow::Result<ExternalDocu
         file_name,
         content,
         updated_at: external_updated_at(&path)?,
+        revision,
     })
+}
+
+fn external_revision(content: &str) -> String {
+    format!("{:x}", Sha256::digest(content.as_bytes()))
+}
+
+fn approve_external_markdown_path(
+    workspace: &Workspace,
+    path: &std::path::Path,
+) -> anyhow::Result<()> {
+    let path = validate_external_markdown_path(path)?;
+    let path = path.to_string_lossy().to_string();
+    let mut config = load_config(workspace)?;
+    config
+        .approved_external_markdown_paths
+        .retain(|existing| existing != &path);
+    config.approved_external_markdown_paths.insert(0, path);
+    config.approved_external_markdown_paths.truncate(50);
+    save_config(workspace, &config)
+}
+
+fn approved_external_markdown_path(
+    workspace: &Workspace,
+    path: &std::path::Path,
+) -> anyhow::Result<std::path::PathBuf> {
+    let path = validate_external_markdown_path(path)?;
+    let approved = load_config(workspace)?
+        .approved_external_markdown_paths
+        .into_iter()
+        .any(|existing| std::path::Path::new(&existing) == path);
+    if !approved {
+        anyhow::bail!("external Markdown path has not been approved with the file picker");
+    }
+    Ok(path)
 }
 
 fn validate_external_markdown_path(path: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
@@ -580,24 +663,28 @@ fn external_updated_at(path: &std::path::Path) -> anyhow::Result<i64> {
 }
 
 fn open_path(path: &std::path::Path) -> anyhow::Result<()> {
+    open_target(path.as_os_str())
+}
+
+fn open_target(target: impl AsRef<std::ffi::OsStr>) -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]
     let mut command = {
         let mut command = Command::new("explorer");
-        command.arg(path);
+        command.arg(target.as_ref());
         command
     };
 
     #[cfg(target_os = "macos")]
     let mut command = {
         let mut command = Command::new("open");
-        command.arg(path);
+        command.arg(target.as_ref());
         command
     };
 
     #[cfg(all(unix, not(target_os = "macos")))]
     let mut command = {
         let mut command = Command::new("xdg-open");
-        command.arg(path);
+        command.arg(target.as_ref());
         command
     };
 
@@ -656,8 +743,12 @@ pub(crate) fn display_error(error: anyhow::Error) -> String {
 #[cfg(test)]
 #[cfg(target_os = "windows")]
 mod tests {
-    use super::autostart_command_value;
-    use std::path::Path;
+    use super::{
+        approve_external_markdown_path, approved_external_markdown_path, autostart_command_value,
+        external_revision, validate_external_url,
+    };
+    use neopad_core::{init_workspace, lock_workspace_for_write};
+    use std::{fs, path::Path};
 
     #[test]
     fn autostart_command_quotes_exe_without_escape_slashes() {
@@ -676,5 +767,38 @@ mod tests {
             command,
             r#""C:\Program Files\neopad\neopad-app.exe" --hidden"#
         );
+    }
+
+    #[test]
+    fn external_revision_changes_with_content() {
+        assert_eq!(external_revision("same"), external_revision("same"));
+        assert_ne!(external_revision("before"), external_revision("after"));
+    }
+
+    #[test]
+    fn external_url_validation_rejects_non_web_protocols() {
+        assert!(validate_external_url("https://example.com").is_ok());
+        assert!(validate_external_url("http://127.0.0.1/docs").is_ok());
+        assert!(validate_external_url("javascript:alert(1)").is_err());
+        assert!(validate_external_url("file:///C:/secret.txt").is_err());
+    }
+
+    #[test]
+    fn external_files_must_be_approved_by_the_picker_path() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp.path().join("workspace"))).expect("workspace");
+        let approved = temp.path().join("approved.md");
+        let unapproved = temp.path().join("unapproved.md");
+        fs::write(&approved, "approved").expect("approved file");
+        fs::write(&unapproved, "unapproved").expect("unapproved file");
+
+        let _lock = lock_workspace_for_write(&workspace).expect("lock");
+        approve_external_markdown_path(&workspace, &approved).expect("approve");
+
+        assert_eq!(
+            approved_external_markdown_path(&workspace, &approved).expect("approved path"),
+            approved.canonicalize().expect("canonical approved path")
+        );
+        assert!(approved_external_markdown_path(&workspace, &unapproved).is_err());
     }
 }

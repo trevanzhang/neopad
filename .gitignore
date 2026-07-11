@@ -3,9 +3,11 @@ app/node_modules/
 app/dist/
 .pnpm-store/
 target/
-.cargo/
+.cargo/*
+!.cargo/audit.toml
 .rustup/
 rustup-init.exe
 *.log
 .vite-dev*.log
 .DS_Store
+.zcode/

@@ -1,99 +1,65 @@
 ﻿<script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppShell from './components/AppShell.vue'
-import ArchiveList from './components/ArchiveList.vue'
-import ConfirmationDialog from './components/ConfirmationDialog.vue'
 import EditorPane from './components/EditorPane.vue'
-import FontDialog from './components/FontDialog.vue'
-import InputDialog from './components/InputDialog.vue'
 import MenuBar from './components/MenuBar.vue'
-import PreviewPane from './components/PreviewPane.vue'
-import ReminderDialog from './components/ReminderDialog.vue'
-import ReminderList from './components/ReminderList.vue'
 import SearchPanel from './components/SearchPanel.vue'
-import SettingsPanel from './components/SettingsPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import TabBar from './components/TabBar.vue'
 import {
-  archiveNote,
-  closeNote,
   createNote,
   completeStartup,
-  deleteNote,
   exportAllNotesZip,
   getAppVersion,
   getShortcutWarnings,
-  getMcpStatus,
-  getUiConfig,
   getWorkspace,
-  hideWindow,
-  claimDueReminders,
-  completeDueReminders,
-  completeReminder,
   listNotes,
-  listArchivedNotes,
   listRecentNotes,
-  listReminders,
   openTrash,
   openNote,
   openExternalMarkdown,
-  quitApp,
-  readNote,
-  renameNote,
-  reopenReminder,
-  saveClipboard,
   saveMarkdownFile,
-  saveUiConfig,
-  searchNotes,
-  setNoteColor,
-  unarchiveNote,
   readExternalMarkdown,
-  setAutostart,
-  setCloseToMinimize,
-  setMcpEnabled,
-  setSnapToEdges,
-  setStartHidden,
-  setWindowOpacity,
   toggleMainWindowMaximize,
-  setTrayLanguage,
   toggleAlwaysOnTop,
-  updateToggleShortcut,
-  updateClipboardShortcut,
   writeNote,
-  writeExternalMarkdown,
-  regenerateMcpToken,
 } from './lib/invoke'
-import type { AppTheme, McpStatus } from './lib/invoke'
-import { messages, type AppLanguage } from './lib/i18n'
+import { messages } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
-import { AutosaveCoordinator } from './lib/autosave'
+import { useDocumentSession } from './composables/useDocumentSession'
+import { useSearchState } from './composables/useSearchState'
+import { useReminderState } from './composables/useReminderState'
+import { useMcpService } from './composables/useMcpService'
+import { useDialogs } from './composables/useDialogs'
+import { useArchiveState } from './composables/useArchiveState'
+import { usePreferenceState } from './composables/usePreferenceState'
+import { useNativeSettings } from './composables/useNativeSettings'
+import { useNoteLifecycle } from './composables/useNoteLifecycle'
+import { useWindowLifecycle } from './composables/useWindowLifecycle'
 import { editorBackgroundForTheme } from './lib/theme'
-import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
+import { normalizeShortcutInput } from './lib/shortcut'
+import { downloadText, renderInsertTemplate, safeFileName, titleFromFileName } from './lib/document-utils'
+import { transformText } from './lib/text-transform'
+import { getHelpContent, type HelpTopic } from './lib/help-content'
+import { createKeyboardHandler, isEditableElement } from './lib/keyboard-shortcuts'
+import { initialJsonSetting } from './lib/preferences'
 import type { NoteTab, Reminder, SearchResult } from './types/note'
 import {
-  isEditorMode,
-  isPreviewContentWidth,
-  isPreviewFontFamily,
-  isPreviewLineHeight,
-  isPreviewTheme,
   nextEditorMode,
   previewThemes,
   type EditorMode,
-  type PreviewContentWidth,
-  type PreviewFontFamily,
-  type PreviewLineHeight,
-  type PreviewTheme,
 } from './types/editor'
-import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification'
 
-type TabBarOrientation = 'horizontal' | 'vertical'
-type HelpTopic = 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about'
-type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
-type InputDialogState = { title: string; initialValue: string }
-type ConfirmationDialogState = { title: string; message: string; confirmLabel: string; danger: boolean }
+
+const ArchiveList = defineAsyncComponent(() => import('./components/ArchiveList.vue'))
+const ConfirmationDialog = defineAsyncComponent(() => import('./components/ConfirmationDialog.vue'))
+const FontDialog = defineAsyncComponent(() => import('./components/FontDialog.vue'))
+const InputDialog = defineAsyncComponent(() => import('./components/InputDialog.vue'))
+const PreviewPane = defineAsyncComponent(() => import('./components/PreviewPane.vue'))
+const ReminderDialog = defineAsyncComponent(() => import('./components/ReminderDialog.vue'))
+const ReminderList = defineAsyncComponent(() => import('./components/ReminderList.vue'))
+const SettingsPanel = defineAsyncComponent(() => import('./components/SettingsPanel.vue'))
 
 const now = Date.now()
 const tabs = ref<NoteTab[]>([
@@ -125,79 +91,261 @@ const tabs = ref<NoteTab[]>([
 const activeTabId = ref('inbox')
 const recentNotes = ref<NoteTab[]>([])
 const externalRecentNotes = ref<NoteTab[]>(initialJsonSetting<NoteTab[]>('neopad.externalRecentNotes', []))
-const content = ref('# Inbox\n\nStart typing...')
-const saveState = ref<'Saved' | 'Saving' | 'Failed'>('Saved')
 const appReady = ref(false)
-const isLoadingNote = ref(false)
 const statusMessage = ref('Markdown')
-const previewMode = ref<EditorMode>('edit')
-const defaultEditorMode = ref<EditorMode>('edit')
-const editorModeShortcut = ref('F4' as const)
-const searchOpen = ref(false)
-const reminderDialogOpen = ref(false)
-const reminderListOpen = ref(false)
-const reminders = ref<Reminder[]>([])
-const remindersLoading = ref(false)
-const archiveListOpen = ref(false)
-const archivedNotes = ref<NoteTab[]>([])
-const archiveLoading = ref(false)
 const settingsOpen = ref(false)
 const helpTopic = ref<HelpTopic | null>(null)
 const appVersion = ref('')
 const fontDialogOpen = ref(false)
-const inputDialog = ref<InputDialogState | null>(null)
-let resolveInputDialog: ((value: string | null) => void) | null = null
-const confirmationDialog = ref<ConfirmationDialogState | null>(null)
-let resolveConfirmationDialog: ((confirmed: boolean) => void) | null = null
+const {
+  inputDialog,
+  confirmationDialog,
+  requestInput,
+  finishInputDialog,
+  requestConfirmation,
+  finishConfirmationDialog,
+} = useDialogs()
 const immersiveMode = ref(false)
-const searchQuery = ref('')
-const searchResults = ref<SearchResult[]>([])
-const searching = ref(false)
-const searchResultLimit = ref(100)
-const searchHasMore = ref(false)
 const alwaysOnTop = ref(false)
-const theme = ref<AppTheme>(initialTheme())
-const language = ref<AppLanguage>(initialLanguage())
-const vimMode = ref(initialBooleanSetting('neopad.vimMode', false))
-const vimUseCtrlShortcuts = ref(initialBooleanSetting('neopad.vimUseCtrlShortcuts', true))
-const vimInsertExitKey = ref(initialStringSetting('neopad.vimInsertExitKey', 'jj'))
 const activeVimMode = ref('')
-const tabBarOrientation = ref<TabBarOrientation>(initialTabBarOrientation())
-const wordWrap = ref(initialBooleanSetting('neopad.wordWrap', true))
-const editorFontFamily = ref(initialStringSetting('neopad.editorFontFamily', '"Segoe UI", Arial, sans-serif'))
-const editorFontSize = ref(initialNumberSetting('neopad.editorFontSize', 14, 12, 22))
-const editorBackgroundColor = ref(initialStringSetting('neopad.editorBackgroundColor', '#ffffff'))
-const previewTheme = ref<PreviewTheme>(initialPreviewTheme())
-const previewFontFamily = ref<PreviewFontFamily>(initialPreviewFontFamily())
-const previewFontSize = ref(initialNumberSetting('neopad.previewFontSize', 14, 12, 22))
-const previewLineHeight = ref<PreviewLineHeight>(initialPreviewLineHeight())
-const previewContentWidth = ref<PreviewContentWidth>(initialPreviewContentWidth())
-const windowOpacity = ref(Number(initialStringSetting('neopad.windowOpacity', '1')))
-const runAtStartup = ref(initialBooleanSetting('neopad.runAtStartup', false))
-const startHidden = ref(initialBooleanSetting('neopad.startHidden', false))
-const closeToMinimize = ref(initialBooleanSetting('neopad.closeToMinimize', true))
-const snapToEdges = ref(initialBooleanSetting('neopad.snapToEdges', false))
-const transparencyEnabled = ref(initialBooleanSetting('neopad.transparencyEnabled', true))
-const titleDoubleClickAction = ref<TitleDoubleClickAction>(initialTitleDoubleClickAction())
-const shortcutBaseKey = ref(normalizeStoredShortcutKey(initialStringSetting('neopad.shortcutBaseKey', 'Z'), 'Z'))
-const shortcutModifiers = ref<string[]>(initialJsonSetting('neopad.shortcutModifiers', ['Alt']))
-const clipboardShortcutBaseKey = ref(normalizeStoredShortcutKey(initialStringSetting('neopad.clipboardShortcutBaseKey', 'V'), 'V'))
-const clipboardShortcutModifiers = ref<string[]>(initialJsonSetting('neopad.clipboardShortcutModifiers', ['Ctrl', 'Shift']))
-const insertSeparatorTemplate = ref(initialStringSetting('neopad.insertSeparatorTemplate', "crlf() + chars('-', 80) + crlf()"))
-const insertDateTimeTemplate = ref(initialStringSetting('neopad.insertDateTimeTemplate', "date() + ' ' + time()"))
-const legacyDateTimeSeparatorTemplate = "crlf() + chars('-', 29) + ' ' + date() + ' ' + time()"
-const defaultDateTimeSeparatorTemplate = "crlf() + chars('-', 29) + ' ' + date() + ' ' + time() + ' ' + chars('-', 29) + crlf()"
-const insertDateTimeSeparatorTemplate = ref(initialDateTimeSeparatorTemplate())
-const customInsertTexts = ref<string[]>(initialJsonSetting('neopad.customInsertTexts', []))
+const preferenceState = usePreferenceState({
+  onLanguageChanged: () => {
+    if (isTauriRuntime()) void syncTrayLanguage()
+    statusMessage.value = settingsOpen.value
+      ? t.value.status.settings
+      : searchOpen.value ? t.value.status.search : t.value.status.markdown
+  },
+  onWindowOpacityChanged: () => void syncWindowOpacity(),
+  onAutostartChanged: () => void syncAutostart(),
+  onStartHiddenChanged: () => void syncStartHidden(),
+  onCloseToMinimizeChanged: () => void syncCloseToMinimize(),
+  onSnapToEdgesChanged: () => void syncSnapToEdges(),
+  onToggleShortcutChanged: () => void syncToggleShortcut(),
+  onClipboardShortcutChanged: () => void syncClipboardShortcut(),
+  onPersistRequested: () => {
+    if (uiConfigLoaded.value && isTauriRuntime()) void persistUiConfig()
+  },
+})
+const {
+  previewMode, defaultEditorMode, editorModeShortcut, theme, language, vimMode,
+  vimUseCtrlShortcuts, vimInsertExitKey, tabBarOrientation, wordWrap, editorFontFamily,
+  editorFontSize, editorBackgroundColor, previewTheme, previewFontFamily, previewFontSize,
+  previewLineHeight, previewContentWidth, windowOpacity, runAtStartup, startHidden,
+  closeToMinimize, snapToEdges, transparencyEnabled, titleDoubleClickAction,
+  shortcutBaseKey, shortcutModifiers, clipboardShortcutBaseKey, clipboardShortcutModifiers,
+  insertSeparatorTemplate, insertDateTimeTemplate, insertDateTimeSeparatorTemplate,
+  customInsertTexts,
+} = preferenceState
 const fileInput = ref<HTMLInputElement | null>(null)
 const backgroundColorInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
 const searchPanel = ref<InstanceType<typeof SearchPanel> | null>(null)
 const workspacePath = ref('~/.neopad')
-const mcpStatus = ref<McpStatus | null>(null)
-const mcpUiError = ref<string | null>(null)
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
 const t = computed(() => messages[language.value])
+const {
+  content,
+  saveState,
+  nextNoteLoadGeneration,
+  isCurrentNoteLoad,
+  loadActiveNote,
+  setContentFromLoad,
+  forceSave,
+  disposeDocumentSession,
+} = useDocumentSession({
+  tabs,
+  activeTabId,
+  activeTab,
+  statusMessage,
+  failedMessage: () => t.value.status.failed,
+  rememberExternalDocument,
+})
+const {
+  searchOpen,
+  searchQuery,
+  searchResults,
+  searching,
+  searchHasMore,
+  scheduleSearch,
+  loadMoreSearchResults,
+  clearSearch,
+  disposeSearchState,
+} = useSearchState(() => {
+  saveState.value = 'Failed'
+})
+const {
+  reminderDialogOpen,
+  reminderListOpen,
+  reminders,
+  remindersLoading,
+  refreshReminders,
+  completeReminderItem,
+  reopenReminderItem,
+  completeAllDueReminders,
+  startReminderPolling,
+  disposeReminderState,
+} = useReminderState({
+  activeTabId,
+  forceSave,
+  loadActiveNote,
+  notificationTitle: () => t.value.reminders.notificationTitle,
+  onError: () => {
+    saveState.value = 'Failed'
+  },
+})
+const {
+  mcpStatus,
+  mcpUiError,
+  loadMcpStatus,
+  updateMcpEnabled,
+  refreshMcpToken,
+  copyMcpConfig,
+} = useMcpService({
+  stoppedLabel: () => t.value.settings.stopped,
+  onUpdated: () => {
+    statusMessage.value = t.value.status.mcpUpdated
+  },
+  onCopied: () => {
+    statusMessage.value = t.value.status.mcpConfigCopied
+  },
+  onError: () => {
+    saveState.value = 'Failed'
+  },
+})
+const {
+  archiveListOpen,
+  archivedNotes,
+  archiveLoading,
+  refreshArchivedNotes,
+} = useArchiveState(forceSave, () => {
+  saveState.value = 'Failed'
+})
+const {
+  uiConfigLoaded,
+  loadNativeUiConfig,
+  persistUiConfig,
+  syncTrayLanguage,
+  syncAutostart,
+  syncStartHidden,
+  syncCloseToMinimize,
+  syncSnapToEdges,
+  syncWindowOpacity,
+  syncToggleShortcut,
+  syncClipboardShortcut,
+  scheduleNativeSettingsSync,
+  disposeNativeSettings,
+} = useNativeSettings({
+  preferences: preferenceState,
+  onError: () => { saveState.value = 'Failed' },
+  onOpacityUpdated: () => { statusMessage.value = t.value.status.opacityUpdated },
+})
+const {
+  selectTab,
+  cycleTab,
+  handleTabTitleDoubleClick,
+  renameActivePage,
+  deleteActivePage,
+  closeActivePage,
+  archiveActivePage,
+  unarchiveActivePage,
+  renamePageById,
+  deletePageById,
+  closePageById,
+  archivePageById,
+  updateTabColor,
+  unarchiveTab,
+  createLocalTab,
+  saveCurrentClipboard,
+} = useNoteLifecycle({
+  tabs, activeTabId, activeTab, content, saveState, statusMessage, language,
+  titleDoubleClickAction, archiveListOpen, text: () => t.value, forceSave,
+  nextNoteLoadGeneration, isCurrentNoteLoad, loadActiveNote, setContentFromLoad,
+  requestInput, requestConfirmation, focusEditor: focusEditorAfterPageAction,
+  refreshRecentNotes, refreshArchivedNotes, upsertTab,
+})
+const {
+  registerNativeEventListeners,
+  resetWebviewZoom,
+  hideMainWindow,
+  exitApp,
+  disposeWindowLifecycle,
+} = useWindowLifecycle({
+  closeToMinimize,
+  createLocalTab,
+  saveCurrentClipboard,
+  openSettings,
+  saveBeforeWindowAction,
+  onError: () => { saveState.value = 'Failed' },
+})
+const handleKeydown = createKeyboardHandler({
+  state: {
+    modalOpen: () => Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value),
+    reminderDialogOpen: () => reminderDialogOpen.value,
+    reminderListOpen: () => reminderListOpen.value,
+    archiveListOpen: () => archiveListOpen.value,
+    confirmationOpen: () => Boolean(confirmationDialog.value),
+    inputOpen: () => Boolean(inputDialog.value),
+    fontDialogOpen: () => fontDialogOpen.value,
+    immersiveMode: () => immersiveMode.value,
+    settingsOpen: () => settingsOpen.value,
+    helpOpen: () => Boolean(helpTopic.value),
+    searchOpen: () => searchOpen.value,
+    vimMode: () => vimMode.value,
+    vimUseCtrlShortcuts: () => vimUseCtrlShortcuts.value,
+    vimNormalMode: () => activeVimMode.value === 'normal',
+    editorFocused: () => Boolean(editorPane.value?.isEditorFocused()),
+    editableTarget: isEditableElement,
+    menuOrContextOpen: () => Boolean(document.querySelector('.menu-root:focus-within, .tab-context-menu')),
+    tabContextOpen: () => Boolean(document.querySelector('.tab-context-menu')),
+    findPanelOpen: () => Boolean(document.querySelector('.np-find-panel')),
+    nativeRuntime: isTauriRuntime,
+  },
+  actions: {
+    openShortcutHelp: () => openHelpTopic('shortcuts'),
+    cycleTab,
+    toggleTheme,
+    togglePreviewTheme,
+    openReminderList,
+    closeReminderList,
+    toggleImmersiveMode,
+    archiveActivePage,
+    deleteActivePage,
+    closeReminderDialog,
+    closeArchiveList,
+    cancelConfirmation: () => finishConfirmationDialog(false),
+    cancelInput: () => finishInputDialog(null),
+    closeFontDialog,
+    exitImmersiveMode: () => setImmersiveMode(false),
+    closeSettings,
+    closeHelp,
+    closeSearch,
+    closeEditorFind: () => editorPane.value?.closeEditorFind(),
+    cycleEditorMode,
+    renameActivePage,
+    toggleMainWindowMaximize,
+    createLocalTab,
+    closeActivePage,
+    triggerLoadFile,
+    showSearch: showSearchPlaceholder,
+    openFind: openFindPanel,
+    openReplace: openReplacePanel,
+    copy: copyEditorSelection,
+    cut: cutEditorSelection,
+    paste: pasteIntoEditor,
+    selectAll: selectAllEditorText,
+    findNext: findNextMatch,
+    calculateExpression: calculateCurrentLineExpression,
+    hideMainWindow,
+    toggleTabBarOrientation,
+    togglePin,
+    openSettings,
+    insertDateTimeSeparator,
+    insertSeparator,
+    insertDateTime,
+    insertReminder,
+    saveCurrentClipboard,
+  },
+})
 const displayTabs = computed(() => tabs.value.map((tab) => ({
   ...tab,
   title: tab.id === 'inbox'
@@ -217,7 +365,13 @@ const localizedSaveState = computed(() => {
   }
   return t.value.status.saved
 })
-const helpContent = computed(() => getHelpContent(helpTopic.value, language.value))
+const helpContent = computed(() => getHelpContent(helpTopic.value, language.value, {
+  appVersion: appVersion.value,
+  shortcutBaseKey: shortcutBaseKey.value,
+  shortcutModifiers: shortcutModifiers.value,
+  clipboardShortcutBaseKey: clipboardShortcutBaseKey.value,
+  clipboardShortcutModifiers: clipboardShortcutModifiers.value,
+}))
 const editorModeLabel = computed(() => {
   if (previewMode.value === 'preview') return t.value.status.previewMode
   if (previewMode.value === 'split') return t.value.status.hybridMode
@@ -225,34 +379,6 @@ const editorModeLabel = computed(() => {
 })
 const effectiveEditorBackground = computed(() => editorBackgroundForTheme(theme.value, editorBackgroundColor.value))
 const themeToggleLabel = computed(() => theme.value === 'dark' ? t.value.status.switchToLight : t.value.status.switchToDark)
-let searchTimer: number | null = null
-let uiConfigTimer: number | null = null
-let nativeSettingsTimer: number | null = null
-let reminderPollTimer: number | null = null
-let unlistenNewNoteRequested: UnlistenFn | null = null
-let unlistenSaveClipboardRequested: UnlistenFn | null = null
-let unlistenOpenSettings: UnlistenFn | null = null
-let unlistenCloseRequested: UnlistenFn | null = null
-let unlistenHideRequested: UnlistenFn | null = null
-let unlistenQuitRequested: UnlistenFn | null = null
-let suppressedLoadedContent: string | null = null
-let uiConfigLoaded = false
-let notificationPermissionDenied = false
-let noteLoadGeneration = 0
-let loadingNoteGeneration: number | null = null
-const deletingTabIds = new Set<string>()
-const autosave = new AutosaveCoordinator({
-  delayMs: 500,
-  save: ({ noteId, content: nextContent, expectedUpdatedAt }: { noteId: string; content: string; expectedUpdatedAt: number }) =>
-    saveDocument(noteId, nextContent, expectedUpdatedAt),
-  onSaved: ({ noteId }, saved) => {
-    const tab = tabs.value.find((item) => item.id === noteId)
-    if (tab) tab.updatedAt = saved.updatedAt
-  },
-  onStateChange: (state) => {
-    saveState.value = state
-  },
-})
 
 onMounted(async () => {
   if (!isTauriRuntime()) {
@@ -278,755 +404,13 @@ onMounted(async () => {
   await completeStartup().catch(() => {
     saveState.value = 'Failed'
   })
-  nativeSettingsTimer = window.setTimeout(() => {
-    nativeSettingsTimer = null
-    void syncNativeSettings()
-  }, 5000)
-  await checkDueReminders()
-  reminderPollTimer = window.setInterval(() => void checkDueReminders(), 30_000)
+  scheduleNativeSettingsSync()
+  await startReminderPolling()
 })
-
-async function registerNativeEventListeners() {
-  try {
-    const [
-      newNote,
-      saveClipboardRequest,
-      openSettingsRequest,
-      closeRequest,
-      hideRequest,
-      quitRequest,
-    ] = await Promise.all([
-      listen('neopad://new-note-requested', () => {
-        void createLocalTab()
-      }),
-      listen('neopad://save-clipboard-requested', () => {
-        void saveCurrentClipboard()
-      }),
-      listen('neopad://open-settings', () => {
-        openSettings()
-      }),
-      listen('neopad://close-requested', () => {
-        void handleCloseRequested()
-      }),
-      listen('neopad://hide-requested', () => {
-        void handleHideRequested()
-      }),
-      listen('neopad://quit-requested', () => {
-        void handleQuitRequested()
-      }),
-    ])
-    unlistenNewNoteRequested = newNote
-    unlistenSaveClipboardRequested = saveClipboardRequest
-    unlistenOpenSettings = openSettingsRequest
-    unlistenCloseRequested = closeRequest
-    unlistenHideRequested = hideRequest
-    unlistenQuitRequested = quitRequest
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function resetWebviewZoom() {
-  try {
-    await getCurrentWebview().setZoom(1)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-onBeforeUnmount(() => {
-  autosave.dispose()
-  clearSearchTimer()
-  if (uiConfigTimer) window.clearTimeout(uiConfigTimer)
-  if (nativeSettingsTimer) window.clearTimeout(nativeSettingsTimer)
-  if (reminderPollTimer) window.clearInterval(reminderPollTimer)
-  void unlistenNewNoteRequested?.()
-  void unlistenSaveClipboardRequested?.()
-  void unlistenOpenSettings?.()
-  void unlistenCloseRequested?.()
-  void unlistenHideRequested?.()
-  void unlistenQuitRequested?.()
-  window.removeEventListener('keydown', handleKeydown, { capture: true })
-  window.removeEventListener('beforeunload', forceSaveOnExit)
-  document.removeEventListener('visibilitychange', forceSaveOnHide)
-})
-
-watch(content, (nextContent) => {
-  if (suppressedLoadedContent === nextContent) {
-    suppressedLoadedContent = null
-    return
-  }
-  if (isLoadingNote.value || !isTauriRuntime()) {
-    return
-  }
-
-  const tab = activeTab.value
-  if (tab) {
-    autosave.markChanged({ noteId: tab.id, content: content.value, expectedUpdatedAt: tab.updatedAt })
-  }
-})
-
-watch(searchQuery, () => {
-  searchResultLimit.value = 100
-  searchHasMore.value = false
-  if (!searchOpen.value || !isTauriRuntime()) {
-    searchResults.value = []
-    return
-  }
-
-  scheduleSearch()
-})
-
-watch(language, () => {
-  window.localStorage.setItem('neopad.language', language.value)
-  if (isTauriRuntime()) {
-    void syncTrayLanguage()
-  }
-  if (settingsOpen.value) {
-    statusMessage.value = t.value.status.settings
-  } else if (searchOpen.value) {
-    statusMessage.value = t.value.status.search
-  } else {
-    statusMessage.value = t.value.status.markdown
-  }
-})
-
-watch(tabBarOrientation, () => {
-  window.localStorage.setItem('neopad.tabBarOrientation', tabBarOrientation.value)
-})
-
-watch(wordWrap, () => {
-  window.localStorage.setItem('neopad.wordWrap', String(wordWrap.value))
-})
-
-watch(editorFontFamily, () => {
-  window.localStorage.setItem('neopad.editorFontFamily', editorFontFamily.value)
-})
-
-watch(editorFontSize, () => {
-  window.localStorage.setItem('neopad.editorFontSize', String(editorFontSize.value))
-})
-
-watch(editorBackgroundColor, () => {
-  window.localStorage.setItem('neopad.editorBackgroundColor', editorBackgroundColor.value)
-})
-
-watch(previewTheme, () => {
-  window.localStorage.setItem('neopad.previewTheme', previewTheme.value)
-})
-
-watch(previewFontFamily, () => {
-  window.localStorage.setItem('neopad.previewFontFamily', previewFontFamily.value)
-})
-
-watch(previewFontSize, () => {
-  window.localStorage.setItem('neopad.previewFontSize', String(previewFontSize.value))
-})
-
-watch(previewLineHeight, () => {
-  window.localStorage.setItem('neopad.previewLineHeight', previewLineHeight.value)
-})
-
-watch(previewContentWidth, () => {
-  window.localStorage.setItem('neopad.previewContentWidth', previewContentWidth.value)
-})
-
-watch(theme, () => {
-  window.localStorage.setItem('neopad.theme', theme.value)
-})
-
-watch(windowOpacity, () => {
-  window.localStorage.setItem('neopad.windowOpacity', String(windowOpacity.value))
-  void syncWindowOpacity()
-})
-
-watch(runAtStartup, () => {
-  window.localStorage.setItem('neopad.runAtStartup', String(runAtStartup.value))
-  void syncAutostart()
-})
-
-watch(startHidden, () => {
-  window.localStorage.setItem('neopad.startHidden', String(startHidden.value))
-  void syncAutostart()
-  if (uiConfigLoaded && isTauriRuntime()) {
-    void setStartHidden(startHidden.value).catch(() => {
-      saveState.value = 'Failed'
-    })
-  }
-})
-
-watch(closeToMinimize, () => {
-  window.localStorage.setItem('neopad.closeToMinimize', String(closeToMinimize.value))
-  void syncCloseToMinimize()
-})
-
-watch(snapToEdges, () => {
-  window.localStorage.setItem('neopad.snapToEdges', String(snapToEdges.value))
-  void syncSnapToEdges()
-})
-
-watch(transparencyEnabled, () => {
-  window.localStorage.setItem('neopad.transparencyEnabled', String(transparencyEnabled.value))
-  void syncWindowOpacity()
-})
-
-watch(titleDoubleClickAction, () => {
-  window.localStorage.setItem('neopad.titleDoubleClickAction', titleDoubleClickAction.value)
-})
-
-watch(shortcutBaseKey, () => {
-  window.localStorage.setItem('neopad.shortcutBaseKey', shortcutBaseKey.value)
-  void syncToggleShortcut()
-})
-
-watch(shortcutModifiers, () => {
-  window.localStorage.setItem('neopad.shortcutModifiers', JSON.stringify(shortcutModifiers.value))
-  void syncToggleShortcut()
-}, { deep: true })
-
-watch(clipboardShortcutBaseKey, () => {
-  window.localStorage.setItem('neopad.clipboardShortcutBaseKey', clipboardShortcutBaseKey.value)
-  void syncClipboardShortcut()
-})
-
-watch(clipboardShortcutModifiers, () => {
-  window.localStorage.setItem('neopad.clipboardShortcutModifiers', JSON.stringify(clipboardShortcutModifiers.value))
-  void syncClipboardShortcut()
-}, { deep: true })
-
-watch(insertSeparatorTemplate, () => {
-  window.localStorage.setItem('neopad.insertSeparatorTemplate', insertSeparatorTemplate.value)
-})
-
-watch(insertDateTimeTemplate, () => {
-  window.localStorage.setItem('neopad.insertDateTimeTemplate', insertDateTimeTemplate.value)
-})
-
-watch(insertDateTimeSeparatorTemplate, () => {
-  window.localStorage.setItem('neopad.insertDateTimeSeparatorTemplate', insertDateTimeSeparatorTemplate.value)
-})
-
-watch(customInsertTexts, () => {
-  window.localStorage.setItem('neopad.customInsertTexts', JSON.stringify(customInsertTexts.value))
-}, { deep: true })
-
-watch(vimMode, () => {
-  window.localStorage.setItem('neopad.vimMode', String(vimMode.value))
-})
-
-watch(vimUseCtrlShortcuts, () => {
-  window.localStorage.setItem('neopad.vimUseCtrlShortcuts', String(vimUseCtrlShortcuts.value))
-})
-
-watch(vimInsertExitKey, () => {
-  window.localStorage.setItem('neopad.vimInsertExitKey', vimInsertExitKey.value)
-})
-
-watch(
-  [
-    language,
-    vimMode,
-    vimUseCtrlShortcuts,
-    vimInsertExitKey,
-    tabBarOrientation,
-    wordWrap,
-    editorFontFamily,
-    editorFontSize,
-    editorBackgroundColor,
-    previewTheme,
-    previewFontFamily,
-    previewFontSize,
-    previewLineHeight,
-    previewContentWidth,
-    theme,
-    windowOpacity,
-    runAtStartup,
-    startHidden,
-    closeToMinimize,
-    snapToEdges,
-    transparencyEnabled,
-    titleDoubleClickAction,
-    shortcutBaseKey,
-    shortcutModifiers,
-    clipboardShortcutBaseKey,
-    clipboardShortcutModifiers,
-    insertSeparatorTemplate,
-    insertDateTimeTemplate,
-    insertDateTimeSeparatorTemplate,
-    customInsertTexts,
-    defaultEditorMode,
-  ],
-  () => {
-    if (uiConfigLoaded && isTauriRuntime()) {
-      void persistUiConfig()
-    }
-  },
-  { deep: true },
-)
-
-function initialLanguage(): AppLanguage {
-  if (typeof window === 'undefined') {
-    return 'en'
-  }
-
-  return window.localStorage.getItem('neopad.language') === 'zh' ? 'zh' : 'en'
-}
-
-function initialTheme(): AppTheme {
-  if (typeof window === 'undefined') return 'light'
-  const stored = window.localStorage.getItem('neopad.theme')
-  if (stored === 'light' || stored === 'dark') return stored
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-}
-
-function initialPreviewTheme(): PreviewTheme {
-  return normalizePreviewTheme(initialStringSetting('neopad.previewTheme', 'light'))
-}
-
-function normalizePreviewTheme(value: string): PreviewTheme {
-  if (isPreviewTheme(value)) return value
-  if (value === 'neopad' || value === 'paper' || value === 'solomd') return 'light'
-  if (value === 'github') return 'githubLight'
-  return 'light'
-}
-
-function initialPreviewFontFamily(): PreviewFontFamily {
-  const stored = initialStringSetting('neopad.previewFontFamily', 'editor')
-  return isPreviewFontFamily(stored) ? stored : 'editor'
-}
-
-function initialPreviewLineHeight(): PreviewLineHeight {
-  const stored = initialStringSetting('neopad.previewLineHeight', 'standard')
-  return isPreviewLineHeight(stored) ? stored : 'standard'
-}
-
-function initialPreviewContentWidth(): PreviewContentWidth {
-  const stored = initialStringSetting('neopad.previewContentWidth', 'standard')
-  return isPreviewContentWidth(stored) ? stored : 'standard'
-}
-
-function initialTabBarOrientation(): TabBarOrientation {
-  if (typeof window === 'undefined') {
-    return 'horizontal'
-  }
-
-  return window.localStorage.getItem('neopad.tabBarOrientation') === 'vertical' ? 'vertical' : 'horizontal'
-}
-
-function initialBooleanSetting(key: string, fallback: boolean) {
-  if (typeof window === 'undefined') {
-    return fallback
-  }
-
-  const value = window.localStorage.getItem(key)
-  return value === null ? fallback : value === 'true'
-}
-
-function initialStringSetting(key: string, fallback: string) {
-  if (typeof window === 'undefined') {
-    return fallback
-  }
-
-  return window.localStorage.getItem(key) || fallback
-}
-
-function initialNumberSetting(key: string, fallback: number, min: number, max: number) {
-  if (typeof window === 'undefined') {
-    return fallback
-  }
-
-  const value = Number(window.localStorage.getItem(key))
-  return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback
-}
-
-function initialJsonSetting<T>(key: string, fallback: T) {
-  if (typeof window === 'undefined') {
-    return fallback
-  }
-
-  try {
-    const stored = window.localStorage.getItem(key)
-    return stored ? JSON.parse(stored) as T : fallback
-  } catch {
-    return fallback
-  }
-}
-
-function initialTitleDoubleClickAction(): TitleDoubleClickAction {
-  const value = initialStringSetting('neopad.titleDoubleClickAction', 'rename')
-  return value === 'none' || value === 'delete' || value === 'rename' ? value : 'rename'
-}
-
-function initialDateTimeSeparatorTemplate() {
-  const value = initialStringSetting('neopad.insertDateTimeSeparatorTemplate', defaultDateTimeSeparatorTemplate)
-  return value === legacyDateTimeSeparatorTemplate ? defaultDateTimeSeparatorTemplate : value
-}
 
 function focusEditorAfterPageAction() {
   if (previewMode.value === 'preview') return
   void nextTick(() => editorPane.value?.focusEditor())
-}
-
-async function selectTab(tabId: string) {
-  if (tabId === activeTabId.value) {
-    return
-  }
-
-  const generation = nextNoteLoadGeneration()
-  await forceSave()
-  if (!isCurrentNoteLoad(generation)) return
-  activeTabId.value = tabId
-  if (await loadActiveNote(generation)) {
-    focusEditorAfterPageAction()
-  }
-}
-
-function cycleTab(offset: -1 | 1) {
-  const currentIndex = tabs.value.findIndex((tab) => tab.id === activeTabId.value)
-  if (currentIndex < 0 || tabs.value.length < 2) return
-  const nextIndex = (currentIndex + offset + tabs.value.length) % tabs.value.length
-  const nextTab = tabs.value[nextIndex]
-  if (nextTab) void selectTab(nextTab.id)
-}
-
-async function handleTabTitleDoubleClick(tabId: string) {
-  if (titleDoubleClickAction.value === 'none') {
-    return
-  }
-
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (!tab) {
-    return
-  }
-
-  if (titleDoubleClickAction.value === 'rename') {
-    await renameTab(tab)
-    return
-  }
-
-  if (titleDoubleClickAction.value === 'delete') {
-    await deleteTab(tab)
-  }
-}
-
-async function renameActivePage() {
-  if (activeTab.value) await renameTab(activeTab.value)
-}
-
-async function deleteActivePage() {
-  if (activeTab.value) await deleteTab(activeTab.value)
-}
-
-async function closeActivePage() {
-  if (activeTab.value) await closeTab(activeTab.value)
-}
-
-async function archiveActivePage() {
-  if (activeTab.value) await archiveTab(activeTab.value)
-}
-
-async function unarchiveActivePage() {
-  if (activeTab.value) await unarchiveTab(activeTab.value)
-}
-
-async function renamePageById(tabId: string) {
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (tab) await renameTab(tab)
-}
-
-async function deletePageById(tabId: string) {
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (tab) await deleteTab(tab)
-}
-
-async function closePageById(tabId: string) {
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (tab) await closeTab(tab)
-}
-
-async function archivePageById(tabId: string) {
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (tab) await archiveTab(tab)
-}
-
-async function updateTabColor(tabId: string, color: string | null) {
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (!tab) return
-  if (isTauriRuntime()) {
-    try {
-      const updated = await setNoteColor(tabId, color)
-      tab.color = updated.color
-      tab.updatedAt = updated.updatedAt
-    } catch {
-      saveState.value = 'Failed'
-    }
-  } else {
-    tab.color = color ?? undefined
-  }
-}
-
-async function renameTab(tab: NoteTab) {
-  if (tab.id === 'inbox' || tab.id === 'clipboard' || tab.external) return
-  const nextTitle = (await requestInput(t.value.settings.renameTitle, tab.title))?.trim()
-  if (!nextTitle) {
-    if (tab.id === activeTabId.value) focusEditorAfterPageAction()
-    return
-  }
-  const previousTitle = tab.title
-
-  if (isTauriRuntime()) {
-    try {
-      if (tab.id === activeTabId.value && !(await forceSave())) return
-      const renamed = await renameNote(tab.id, nextTitle)
-      tab.title = renamed.title
-      tab.updatedAt = renamed.updatedAt
-      tab.systemTitle = renamed.systemTitle
-      if (tab.id === activeTabId.value && await loadActiveNote()) {
-        focusEditorAfterPageAction()
-      }
-    } catch {
-      saveState.value = 'Failed'
-    }
-  } else {
-    tab.title = nextTitle
-    const shouldUpdateDefaultHeading = tab.systemTitle && tab.id === activeTabId.value
-    tab.systemTitle = false
-    tab.updatedAt = Date.now()
-    if (shouldUpdateDefaultHeading) {
-      const defaultHeading = `# ${previousTitle}`
-      if (content.value === defaultHeading || content.value.startsWith(`${defaultHeading}\n`)) {
-        setContentFromLoad(`# ${nextTitle}${content.value.slice(defaultHeading.length)}`)
-      }
-    }
-    if (tab.id === activeTabId.value) focusEditorAfterPageAction()
-  }
-}
-
-function adjacentTabIdAfterRemoval(tabId: string) {
-  const index = tabs.value.findIndex((item) => item.id === tabId)
-  if (index < 0) return tabs.value[0]?.id ?? 'inbox'
-  return tabs.value[index - 1]?.id ?? tabs.value[index + 1]?.id ?? 'inbox'
-}
-
-async function deleteTab(tab: NoteTab) {
-  if (tab.id === 'inbox' || tab.id === 'clipboard' || tab.external) return
-  if (deletingTabIds.has(tab.id)) return
-  const wasActiveTab = activeTabId.value === tab.id
-  const nextActiveTabId = wasActiveTab
-    ? adjacentTabIdAfterRemoval(tab.id)
-    : activeTabId.value
-  const confirmed = await requestConfirmation(
-    t.value.tabs.confirmDeleteTitle,
-    t.value.tabs.confirmDeleteMessage.replace('{title}', tab.title),
-    t.value.tabs.delete,
-    true,
-  )
-  if (!confirmed) {
-    if (wasActiveTab) focusEditorAfterPageAction()
-    return
-  }
-
-  deletingTabIds.add(tab.id)
-  if (isTauriRuntime()) {
-    try {
-      if (!(await forceSave())) {
-        saveState.value = 'Failed'
-        return
-      }
-      if (wasActiveTab) {
-        activeTabId.value = nextActiveTabId ?? 'inbox'
-        await loadActiveNote()
-      }
-      await deleteNote(tab.id)
-    } catch {
-      saveState.value = 'Failed'
-      return
-    } finally {
-      deletingTabIds.delete(tab.id)
-    }
-  }
-  tabs.value = tabs.value.filter((item) => item.id !== tab.id)
-  if (activeTabId.value === tab.id) {
-    activeTabId.value = nextActiveTabId ?? tabs.value[0]?.id ?? 'inbox'
-    await loadActiveNote()
-  }
-  if (wasActiveTab) focusEditorAfterPageAction()
-  deletingTabIds.delete(tab.id)
-}
-
-async function closeTab(tab: NoteTab) {
-  if (tab.id === 'inbox' || tab.id === 'clipboard') return
-  const wasActive = activeTabId.value === tab.id
-  const nextTabId = wasActive ? adjacentTabIdAfterRemoval(tab.id) : activeTabId.value
-  try {
-    if (isTauriRuntime() && !tab.external) {
-      if (!(await forceSave())) return
-      await closeNote(tab.id)
-    }
-    tabs.value = tabs.value.filter((item) => item.id !== tab.id)
-    if (wasActive) {
-      activeTabId.value = nextTabId
-      await loadActiveNote()
-      focusEditorAfterPageAction()
-    }
-    await refreshRecentNotes()
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function archiveTab(tab: NoteTab) {
-  if (tab.id === 'inbox' || tab.id === 'clipboard') return
-  if (tab.external) {
-    const confirmed = await requestConfirmation(
-      t.value.tabs.archive,
-      language.value === 'zh'
-        ? `将“${tab.title}”复制到 NeoPad 存档。原始文件不会移动或删除。`
-        : `Copy "${tab.title}" into the NeoPad archive? The original file will not be moved or deleted.`,
-      t.value.tabs.archive,
-    )
-    if (!confirmed) {
-      if (activeTabId.value === tab.id) focusEditorAfterPageAction()
-      return
-    }
-    try {
-      if (!(await forceSave())) return
-      const created = await createNote(tab.title)
-      const saved = await writeNote(created.id, content.value, created.updatedAt)
-      await archiveNote(saved.id)
-      await closeTab(tab)
-    } catch {
-      saveState.value = 'Failed'
-    }
-    return
-  }
-  if (tab.archived) {
-    await unarchiveTab(tab)
-    return
-  }
-  const wasActive = activeTabId.value === tab.id
-  const nextTabId = wasActive ? adjacentTabIdAfterRemoval(tab.id) : activeTabId.value
-  const confirmed = await requestConfirmation(
-    t.value.tabs.archive,
-    t.value.tabs.confirmArchiveMessage.replace('{title}', tab.title),
-    t.value.tabs.archive,
-  )
-  if (!confirmed) {
-    if (wasActive) focusEditorAfterPageAction()
-    return
-  }
-  try {
-    if (isTauriRuntime()) {
-      if (!(await forceSave())) return
-      await archiveNote(tab.id)
-    }
-    tabs.value = tabs.value.filter((item) => item.id !== tab.id)
-    if (wasActive) {
-      activeTabId.value = nextTabId
-      await loadActiveNote()
-      focusEditorAfterPageAction()
-    }
-    await refreshRecentNotes()
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function unarchiveTab(tab: NoteTab) {
-  try {
-    const restored = isTauriRuntime() ? await unarchiveNote(tab.id) : { ...tab, archived: false, open: true }
-    upsertTab(restored)
-    activeTabId.value = restored.id
-    await loadActiveNote()
-    await refreshRecentNotes()
-    if (archiveListOpen.value) await refreshArchivedNotes()
-    else focusEditorAfterPageAction()
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function createLocalTab() {
-  const generation = nextNoteLoadGeneration()
-  if (isTauriRuntime()) {
-    await forceSave()
-    if (!isCurrentNoteLoad(generation)) return
-    try {
-      const note = await createNote()
-      if (!isCurrentNoteLoad(generation)) return
-      upsertTab({
-        id: note.id,
-        title: note.title,
-        fileName: note.fileName,
-        createdAt: note.updatedAt,
-        updatedAt: note.updatedAt,
-        pinned: false,
-        deleted: false,
-        archived: false,
-        open: true,
-        systemTitle: true,
-      })
-      activeTabId.value = note.id
-      setContentFromLoad(note.content)
-      saveState.value = 'Saved'
-      focusEditorAfterPageAction()
-      return
-    } catch {
-      saveState.value = 'Failed'
-    }
-  }
-
-  const createdAt = Date.now()
-  const tab: NoteTab = {
-    id: `draft-${createdAt}`,
-    title: 'Untitled',
-    fileName: `page-${createdAt}.md`,
-    createdAt,
-    updatedAt: createdAt,
-    pinned: false,
-    deleted: false,
-    archived: false,
-    open: true,
-    systemTitle: true,
-  }
-
-  tabs.value.push(tab)
-  activeTabId.value = tab.id
-  content.value = `# ${tab.title}\n\n`
-  focusEditorAfterPageAction()
-}
-
-async function saveCurrentClipboard() {
-  if (!isTauriRuntime()) {
-    statusMessage.value = t.value.status.clipboard
-    return
-  }
-
-  const generation = nextNoteLoadGeneration()
-  try {
-    await forceSave()
-    if (!isCurrentNoteLoad(generation)) return
-    const note = await saveClipboard()
-    if (!isCurrentNoteLoad(generation)) return
-    upsertTab({
-      id: note.id,
-      title: note.title,
-      fileName: note.fileName,
-      createdAt: note.updatedAt,
-      updatedAt: note.updatedAt,
-      pinned: true,
-      deleted: false,
-      archived: false,
-      open: true,
-      systemTitle: false,
-    })
-    activeTabId.value = note.id
-    setContentFromLoad(note.content)
-    statusMessage.value = t.value.status.clipboardSaved
-    focusEditorAfterPageAction()
-  } catch {
-    saveState.value = 'Failed'
-  }
 }
 
 function triggerLoadFile() {
@@ -1066,6 +450,7 @@ async function openExternalDocumentPath(path: string, loaded?: import('./types/n
       systemTitle: false,
       external: true,
       externalPath: document.path,
+      externalRevision: document.revision,
     }
     upsertTab(tab)
     activeTabId.value = tab.id
@@ -1090,7 +475,7 @@ async function loadFileFromInput(event: Event) {
 
   const generation = nextNoteLoadGeneration()
   try {
-    await forceSave()
+    if (!(await forceSave())) return
     if (!isCurrentNoteLoad(generation)) return
     const fileContent = await file.text()
     if (!isCurrentNoteLoad(generation)) return
@@ -1128,7 +513,7 @@ async function loadFileFromInput(event: Event) {
 }
 
 async function saveAsFile() {
-  await forceSave()
+  if (!(await forceSave())) return
   const title = activeTab.value?.title || 'Untitled'
   const fileName = `${safeFileName(title)}.md`
 
@@ -1146,7 +531,7 @@ async function saveAsFile() {
 }
 
 async function exportAllNotes() {
-  await forceSave()
+  if (!(await forceSave())) return
 
   try {
     if (isTauriRuntime()) {
@@ -1177,43 +562,6 @@ async function openTrashFolder() {
     statusMessage.value = t.value.status.trashOpened
   } catch {
     saveState.value = 'Failed'
-  }
-}
-
-async function hideMainWindow() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  if (!(await saveBeforeWindowAction())) return
-  await hideWindow()
-}
-
-async function exitApp() {
-  if (!(await saveBeforeWindowAction())) return
-  if (isTauriRuntime()) {
-    await quitApp()
-  }
-}
-
-async function handleCloseRequested() {
-  if (closeToMinimize.value) {
-    await handleHideRequested()
-  } else {
-    await handleQuitRequested()
-  }
-}
-
-async function handleHideRequested() {
-  if (!isTauriRuntime()) return
-  if (!(await saveBeforeWindowAction())) return
-  await hideWindow()
-}
-
-async function handleQuitRequested() {
-  if (!(await saveBeforeWindowAction())) return
-  if (isTauriRuntime()) {
-    await quitApp()
   }
 }
 
@@ -1268,36 +616,6 @@ function confirmEditorFont(nextFont: { fontFamily: string; fontSize: number }) {
 function closeFontDialog() {
   fontDialogOpen.value = false
   focusEditorAfterPageAction()
-}
-
-function requestInput(title: string, initialValue: string) {
-  resolveInputDialog?.(null)
-  inputDialog.value = { title, initialValue }
-  return new Promise<string | null>((resolve) => {
-    resolveInputDialog = resolve
-  })
-}
-
-function finishInputDialog(value: string | null) {
-  const resolve = resolveInputDialog
-  resolveInputDialog = null
-  inputDialog.value = null
-  resolve?.(value)
-}
-
-function requestConfirmation(title: string, message: string, confirmLabel: string, danger = false) {
-  resolveConfirmationDialog?.(false)
-  confirmationDialog.value = { title, message, confirmLabel, danger }
-  return new Promise<boolean>((resolve) => {
-    resolveConfirmationDialog = resolve
-  })
-}
-
-function finishConfirmationDialog(confirmed: boolean) {
-  const resolve = resolveConfirmationDialog
-  resolveConfirmationDialog = null
-  confirmationDialog.value = null
-  resolve?.(confirmed)
 }
 
 async function editCustomInsertText(index: number) {
@@ -1412,15 +730,13 @@ function showSettingsPlaceholder() {
 
 function closeSearch(returnFocusToEditor = true) {
   searchOpen.value = false
-  searchResults.value = []
-  searchHasMore.value = false
-  clearSearchTimer()
+  clearSearch()
   if (returnFocusToEditor) focusEditorAfterPageAction()
 }
 
 async function selectSearchResult(result: SearchResult) {
   const generation = nextNoteLoadGeneration()
-  await forceSave()
+  if (!(await forceSave())) return
   if (!isCurrentNoteLoad(generation)) return
   try {
     const opened = isTauriRuntime() ? await openNote(result.noteId) : tabs.value.find((tab) => tab.id === result.noteId)
@@ -1503,19 +819,6 @@ function closeArchiveList(returnFocusToEditor = true) {
   if (returnFocusToEditor) focusEditorAfterPageAction()
 }
 
-async function refreshArchivedNotes() {
-  if (!isTauriRuntime()) return
-  archiveLoading.value = true
-  try {
-    if (!(await forceSave())) return
-    archivedNotes.value = await listArchivedNotes()
-  } catch {
-    saveState.value = 'Failed'
-  } finally {
-    archiveLoading.value = false
-  }
-}
-
 async function restoreArchivedNote(tab: NoteTab) {
   await unarchiveTab(tab)
 }
@@ -1525,22 +828,9 @@ function closeReminderList(returnFocusToEditor = true) {
   if (returnFocusToEditor) focusEditorAfterPageAction()
 }
 
-async function refreshReminders() {
-  if (!isTauriRuntime()) return
-  remindersLoading.value = true
-  try {
-    await forceSave()
-    reminders.value = await listReminders()
-  } catch {
-    saveState.value = 'Failed'
-  } finally {
-    remindersLoading.value = false
-  }
-}
-
 async function selectReminder(reminder: Reminder) {
   const generation = nextNoteLoadGeneration()
-  await forceSave()
+  if (!(await forceSave())) return
   if (!isCurrentNoteLoad(generation)) return
   activeTabId.value = reminder.noteId
   await loadActiveNote(generation)
@@ -1550,203 +840,13 @@ async function selectReminder(reminder: Reminder) {
   editorPane.value?.goToLine(reminder.lineNumber)
 }
 
-async function completeReminderItem(reminder: Reminder) {
-  try {
-    await forceSave()
-    await completeReminder(reminder)
-    if (reminder.noteId === activeTabId.value) await loadActiveNote()
-    await refreshReminders()
-  } catch {
-    saveState.value = 'Failed'
-    await refreshReminders()
-  }
-}
-
-async function reopenReminderItem(reminder: Reminder) {
-  try {
-    await forceSave()
-    await reopenReminder(reminder)
-    if (reminder.noteId === activeTabId.value) await loadActiveNote()
-    await refreshReminders()
-  } catch {
-    saveState.value = 'Failed'
-    await refreshReminders()
-  }
-}
-
-async function completeAllDueReminders() {
-  try {
-    await forceSave()
-    await completeDueReminders()
-    await loadActiveNote()
-    await refreshReminders()
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function checkDueReminders() {
-  if (!isTauriRuntime() || notificationPermissionDenied) return
-  try {
-    const current = await listReminders()
-    if (!current.some((reminder) => reminder.status === 'due')) return
-    let granted = await isPermissionGranted()
-    if (!granted) granted = (await requestPermission()) === 'granted'
-    if (!granted) {
-      notificationPermissionDenied = true
-      return
-    }
-
-    const due = await claimDueReminders()
-    for (const reminder of due) {
-      sendNotification({ title: t.value.reminders.notificationTitle, body: reminder.content })
-    }
-    if (reminderListOpen.value && due.length > 0) await refreshReminders()
-  } catch {
-    // Notification failures must not interrupt note editing.
-  }
-}
-
 async function processEditorText(action: string) {
   try {
-    const processed = await editorPane.value?.transformText((text) => transformText(action, text))
+    const processed = await editorPane.value?.transformText((text) => transformText(action, text, t.value.status.unsupportedHash))
     if (processed) {
       statusMessage.value = t.value.status.textProcessed
     }
   } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function transformText(action: string, text: string) {
-  switch (action) {
-    case 'uppercase':
-      return text.toUpperCase()
-    case 'lowercase':
-      return text.toLowerCase()
-    case 'removeExtraSpaces':
-      return text.replace(/[ \t]+/g, ' ')
-    case 'trimLeadingSpaces':
-      return text
-        .split('\n')
-        .map((line) => line.trim())
-        .join('\n')
-    case 'removeEmptyLines':
-      return text
-        .split('\n')
-        .filter((line) => line.trim() !== '')
-        .join('\n')
-    case 'removeDuplicateEmptyLines':
-      return text.replace(/(\n\s*){3,}/g, '\n\n')
-    case 'sortLines':
-      return text.split('\n').sort((a, b) => a.localeCompare(b)).join('\n')
-    case 'uniqueLines':
-      return Array.from(new Set(text.split('\n'))).join('\n')
-    case 'toSimplified':
-      return convertChinese(text, traditionalToSimplifiedMap)
-    case 'toTraditional':
-      return convertChinese(text, simplifiedToTraditionalMap)
-    case 'toHalfWidth':
-      return toHalfWidth(text)
-    case 'toFullWidth':
-      return toFullWidth(text)
-    case 'addLineNumbers':
-      return text
-        .split('\n')
-        .map((line, index) => `${index + 1}. ${line}`)
-        .join('\n')
-    case 'removeLineNumbers':
-      return text.replace(/^\s*\d+[\).\u3001]\s*/gm, '')
-    case 'urlEncode':
-      return encodeURIComponent(text)
-    case 'urlDecode':
-      return decodeURIComponent(text)
-    case 'base64Encode':
-      return btoa(unescape(encodeURIComponent(text)))
-    case 'base64Decode':
-      return decodeURIComponent(escape(atob(text)))
-    case 'md5Hash':
-      return md5(text)
-    case 'sha1Hash':
-      return digestText('SHA-1', text)
-    case 'sha256Hash':
-      return digestText('SHA-256', text)
-    default:
-      return text
-  }
-}
-
-async function copyMcpConfig() {
-  if (!mcpStatus.value) {
-    await loadMcpStatus()
-  }
-  const status = mcpStatus.value
-  if (!status) {
-    saveState.value = 'Failed'
-    return
-  }
-  const config = {
-    mcpServers: {
-      neopad: {
-        url: status.url,
-        headers: {
-          Authorization: `Bearer ${status.token}`,
-        },
-      },
-    },
-  }
-
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(config, null, 2))
-    statusMessage.value = t.value.status.mcpConfigCopied
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function loadMcpStatus() {
-  if (!isTauriRuntime()) {
-    mcpStatus.value = {
-      enabled: false,
-      running: false,
-      status: t.value.settings.stopped,
-      url: 'http://127.0.0.1:8765/mcp',
-      host: '127.0.0.1',
-      port: 8765,
-      token: '',
-      lastError: null,
-    }
-    return
-  }
-
-  try {
-    mcpUiError.value = null
-    mcpStatus.value = await getMcpStatus()
-  } catch (error) {
-    mcpUiError.value = error instanceof Error ? error.message : String(error)
-    saveState.value = 'Failed'
-  }
-}
-
-async function updateMcpEnabled(enabled: boolean) {
-  try {
-    mcpUiError.value = null
-    mcpStatus.value = await setMcpEnabled(enabled)
-    statusMessage.value = t.value.status.mcpUpdated
-  } catch (error) {
-    mcpUiError.value = error instanceof Error ? error.message : String(error)
-    await loadMcpStatus()
-    saveState.value = 'Failed'
-  }
-}
-
-async function refreshMcpToken() {
-  try {
-    mcpUiError.value = null
-    mcpStatus.value = await regenerateMcpToken()
-    statusMessage.value = t.value.status.mcpUpdated
-  } catch (error) {
-    mcpUiError.value = error instanceof Error ? error.message : String(error)
     saveState.value = 'Failed'
   }
 }
@@ -1830,296 +930,6 @@ async function loadWorkspacePath() {
   }
 }
 
-async function loadNativeUiConfig() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    const stored = await getUiConfig()
-    if (!stored.initialized) {
-      uiConfigLoaded = true
-      persistUiConfig()
-      return
-    }
-    const ui = stored.ui
-    theme.value = stored.theme === 'dark'
-      ? 'dark'
-      : stored.theme === 'light'
-        ? 'light'
-        : window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    const storedMode = isEditorMode(stored.previewMode) ? stored.previewMode : 'edit'
-    previewMode.value = 'edit'
-    defaultEditorMode.value = 'edit'
-    language.value = ui.language === 'zh' ? 'zh' : 'en'
-    vimMode.value = ui.vimMode
-    vimUseCtrlShortcuts.value = ui.vimUseCtrlShortcuts
-    vimInsertExitKey.value = ui.vimInsertExitKey
-    tabBarOrientation.value = ui.tabBarOrientation === 'vertical' ? 'vertical' : 'horizontal'
-    wordWrap.value = ui.wordWrap
-    editorFontFamily.value = ui.editorFontFamily
-    editorFontSize.value = Math.min(22, Math.max(12, Number(ui.editorFontSize) || 14))
-    editorBackgroundColor.value = ui.editorBackgroundColor
-    previewTheme.value = normalizePreviewTheme(ui.previewTheme)
-    previewFontFamily.value = isPreviewFontFamily(ui.previewFontFamily) ? ui.previewFontFamily : 'editor'
-    previewFontSize.value = Math.min(22, Math.max(12, Number(ui.previewFontSize) || 14))
-    previewLineHeight.value = isPreviewLineHeight(ui.previewLineHeight) ? ui.previewLineHeight : 'standard'
-    previewContentWidth.value = isPreviewContentWidth(ui.previewContentWidth) ? ui.previewContentWidth : 'standard'
-    windowOpacity.value = Math.min(1, Math.max(0.2, ui.windowOpacity))
-    runAtStartup.value = ui.runAtStartup
-    startHidden.value = ui.startHidden
-    closeToMinimize.value = ui.closeToMinimize
-    snapToEdges.value = ui.snapToEdges
-    transparencyEnabled.value = ui.transparencyEnabled
-    titleDoubleClickAction.value =
-      ui.titleDoubleClickAction === 'none' || ui.titleDoubleClickAction === 'delete'
-        ? ui.titleDoubleClickAction
-        : 'rename'
-    shortcutBaseKey.value = normalizeStoredShortcutKey(ui.shortcutBaseKey, 'Z')
-    shortcutModifiers.value = ui.shortcutModifiers
-    clipboardShortcutBaseKey.value = normalizeStoredShortcutKey(ui.clipboardShortcutBaseKey, 'V')
-    clipboardShortcutModifiers.value = ui.clipboardShortcutModifiers
-    insertSeparatorTemplate.value = ui.insertSeparatorTemplate
-    insertDateTimeTemplate.value = ui.insertDateTimeTemplate
-    insertDateTimeSeparatorTemplate.value = ui.insertDateTimeSeparatorTemplate === legacyDateTimeSeparatorTemplate
-      ? defaultDateTimeSeparatorTemplate
-      : ui.insertDateTimeSeparatorTemplate
-    customInsertTexts.value = ui.customInsertTexts
-    const shouldMigrateEditorShortcut = (ui.editorModeShortcut as string) !== 'F4'
-    editorModeShortcut.value = 'F4'
-    uiConfigLoaded = true
-    if (storedMode !== 'edit' || shouldMigrateEditorShortcut) {
-      persistUiConfig()
-    }
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-function persistUiConfig() {
-  if (uiConfigTimer) {
-    window.clearTimeout(uiConfigTimer)
-  }
-  uiConfigTimer = window.setTimeout(async () => {
-    uiConfigTimer = null
-    try {
-      await saveUiConfig({
-        language: language.value,
-        vimMode: vimMode.value,
-        vimUseCtrlShortcuts: vimUseCtrlShortcuts.value,
-        vimInsertExitKey: vimInsertExitKey.value,
-        tabBarOrientation: tabBarOrientation.value,
-        wordWrap: wordWrap.value,
-        editorFontFamily: editorFontFamily.value,
-        editorFontSize: editorFontSize.value,
-        editorBackgroundColor: editorBackgroundColor.value,
-        previewTheme: previewTheme.value,
-        previewFontFamily: previewFontFamily.value,
-        previewFontSize: previewFontSize.value,
-        previewLineHeight: previewLineHeight.value,
-        previewContentWidth: previewContentWidth.value,
-        windowOpacity: windowOpacity.value,
-        runAtStartup: runAtStartup.value,
-        startHidden: startHidden.value,
-        closeToMinimize: closeToMinimize.value,
-        snapToEdges: snapToEdges.value,
-        transparencyEnabled: transparencyEnabled.value,
-        titleDoubleClickAction: titleDoubleClickAction.value,
-        shortcutBaseKey: shortcutBaseKey.value,
-        shortcutModifiers: shortcutModifiers.value,
-        clipboardShortcutBaseKey: clipboardShortcutBaseKey.value,
-        clipboardShortcutModifiers: clipboardShortcutModifiers.value,
-        insertSeparatorTemplate: insertSeparatorTemplate.value,
-        insertDateTimeTemplate: insertDateTimeTemplate.value,
-        insertDateTimeSeparatorTemplate: insertDateTimeSeparatorTemplate.value,
-        customInsertTexts: customInsertTexts.value,
-        editorModeShortcut: editorModeShortcut.value,
-      }, defaultEditorMode.value, theme.value)
-    } catch {
-      saveState.value = 'Failed'
-    }
-  }, 150)
-}
-
-async function syncNativeSettings() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  await Promise.allSettled([
-    syncAutostart(),
-    syncCloseToMinimize(),
-    syncSnapToEdges(),
-    syncWindowOpacity(),
-    syncTrayLanguage(),
-    syncToggleShortcut(),
-    syncClipboardShortcut(),
-  ])
-}
-
-async function syncTrayLanguage() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await setTrayLanguage(language.value)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncAutostart() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await setAutostart(runAtStartup.value, startHidden.value)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncCloseToMinimize() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await setCloseToMinimize(closeToMinimize.value)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncSnapToEdges() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await setSnapToEdges(snapToEdges.value)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncWindowOpacity() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await setWindowOpacity(transparencyEnabled.value ? windowOpacity.value : 1)
-    statusMessage.value = t.value.status.opacityUpdated
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncToggleShortcut() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await updateToggleShortcut(shortcutBaseKey.value, shortcutModifiers.value)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncClipboardShortcut() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await updateClipboardShortcut(clipboardShortcutBaseKey.value, clipboardShortcutModifiers.value)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-function nextNoteLoadGeneration() {
-  noteLoadGeneration += 1
-  return noteLoadGeneration
-}
-
-function isCurrentNoteLoad(generation: number) {
-  return generation === noteLoadGeneration
-}
-
-async function loadActiveNote(generation = nextNoteLoadGeneration()) {
-  const tab = activeTab.value
-  if (!tab) {
-    return false
-  }
-  const tabId = tab.id
-
-  isLoadingNote.value = true
-  loadingNoteGeneration = generation
-  try {
-    const note = tab.external && tab.externalPath
-      ? await readExternalMarkdown(tab.externalPath)
-      : await readNote(tabId)
-    if (!isCurrentNoteLoad(generation) || activeTabId.value !== tabId) {
-      return false
-    }
-    const loadedTab = tabs.value.find((item) => item.id === tabId)
-    if (loadedTab) {
-      loadedTab.updatedAt = note.updatedAt
-    }
-    setContentFromLoad(note.content)
-    saveState.value = 'Saved'
-    return true
-  } catch {
-    if (isCurrentNoteLoad(generation)) {
-      saveState.value = 'Failed'
-    }
-    return false
-  } finally {
-    if (loadingNoteGeneration === generation) {
-      isLoadingNote.value = false
-      loadingNoteGeneration = null
-    }
-  }
-}
-
-function setContentFromLoad(nextContent: string) {
-  if (content.value !== nextContent) {
-    suppressedLoadedContent = nextContent
-  }
-  content.value = nextContent
-  autosave.markLoaded()
-}
-
-async function forceSave() {
-  if (!isTauriRuntime()) {
-    saveState.value = 'Saved'
-    return true
-  }
-  return autosave.flush()
-}
-
-async function saveDocument(noteId: string, nextContent: string, expectedUpdatedAt: number) {
-  const tab = tabs.value.find((item) => item.id === noteId)
-  if (tab?.external && tab.externalPath) {
-    const saved = await writeExternalMarkdown(tab.externalPath, nextContent, expectedUpdatedAt)
-    tab.updatedAt = saved.updatedAt
-    rememberExternalDocument(tab)
-    return {
-      id: noteId,
-      title: tab.title,
-      fileName: tab.fileName,
-      content: saved.content,
-      updatedAt: saved.updatedAt,
-    }
-  }
-  return writeNote(noteId, nextContent, expectedUpdatedAt)
-}
-
 async function saveBeforeWindowAction() {
   const saved = await forceSave()
   if (!saved) {
@@ -2154,374 +964,6 @@ function cycleEditorMode() {
   setEditorMode(nextEditorMode(previewMode.value))
 }
 
-function matchesEditorModeShortcut(event: KeyboardEvent) {
-  return event.key === 'F4' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
-}
-
-function matchesDeletePageShortcut(event: KeyboardEvent) {
-  return event.key === 'Delete' && event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey
-}
-
-function isEditableElement(element: EventTarget | null) {
-  if (!(element instanceof HTMLElement)) return false
-  return (
-    element instanceof HTMLInputElement ||
-    element instanceof HTMLTextAreaElement ||
-    element instanceof HTMLSelectElement ||
-    element.isContentEditable
-  )
-}
-
-function handleKeydown(event: KeyboardEvent) {
-  const modalOpen = Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value)
-  if (modalOpen && event.key !== 'Escape') {
-    const key = event.key.toLowerCase()
-    const isCtrlShortcut =
-      event.ctrlKey && !event.altKey && !event.metaKey && (key === 'tab' || key === 'n' || key === 'w' || key === 'o')
-    const isFunctionShortcut =
-      !event.ctrlKey &&
-      !event.altKey &&
-      !event.shiftKey &&
-      !event.metaKey &&
-      (event.key === 'F4' || event.key === 'F5' || event.key === 'F7' || event.key === 'F9' || event.key === 'F11' || event.key === 'F12')
-    const isDeletePageShortcut = matchesDeletePageShortcut(event)
-    const isEditorModeShortcut = matchesEditorModeShortcut(event)
-    if (isCtrlShortcut || isFunctionShortcut || isDeletePageShortcut || isEditorModeShortcut) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
-    return
-  }
-
-  if (
-    event.key === 'F1' &&
-    !event.ctrlKey &&
-    !event.altKey &&
-    !event.shiftKey &&
-    !event.metaKey &&
-    (!isEditableElement(event.target) || Boolean(editorPane.value?.isEditorFocused())) &&
-    !document.querySelector('.menu-root:focus-within, .tab-context-menu')
-  ) {
-    event.preventDefault()
-    event.stopPropagation()
-    openHelpTopic('shortcuts')
-    return
-  }
-
-  if (event.key === 'Tab' && event.ctrlKey && !event.altKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    cycleTab(event.shiftKey ? -1 : 1)
-    return
-  }
-
-  if (event.key === 'F9' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    toggleTheme()
-    return
-  }
-
-  if (event.key === 'F7' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    togglePreviewTheme()
-    return
-  }
-
-  if (event.key === 'F5' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    if (reminderListOpen.value) closeReminderList()
-    else void openReminderList()
-    return
-  }
-
-  if (event.key === 'F11' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    toggleImmersiveMode()
-    return
-  }
-
-  if (
-    event.key === 'F12' &&
-    !event.ctrlKey &&
-    !event.altKey &&
-    !event.shiftKey &&
-    !event.metaKey &&
-    !reminderListOpen.value &&
-    !archiveListOpen.value &&
-    !settingsOpen.value &&
-    !helpTopic.value &&
-    !searchOpen.value &&
-    !document.querySelector('.menu-root:focus-within, .tab-context-menu')
-  ) {
-    event.preventDefault()
-    event.stopPropagation()
-    void archiveActivePage()
-    return
-  }
-
-  if (
-    matchesDeletePageShortcut(event) &&
-    !reminderListOpen.value &&
-    !archiveListOpen.value &&
-    !settingsOpen.value &&
-    !helpTopic.value &&
-    !searchOpen.value &&
-    !document.querySelector('.tab-context-menu')
-  ) {
-    event.preventDefault()
-    event.stopPropagation()
-    void deleteActivePage()
-    return
-  }
-
-  if (event.key === 'Escape') {
-    if (reminderDialogOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeReminderDialog()
-      return
-    }
-
-    if (reminderListOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeReminderList()
-      return
-    }
-
-    if (archiveListOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeArchiveList()
-      return
-    }
-
-    if (confirmationDialog.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      finishConfirmationDialog(false)
-      return
-    }
-
-    if (inputDialog.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      finishInputDialog(null)
-      return
-    }
-
-    if (fontDialogOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeFontDialog()
-      return
-    }
-
-    if (immersiveMode.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      void setImmersiveMode(false)
-      return
-    }
-
-    if (settingsOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeSettings()
-      return
-    }
-
-    if (helpTopic.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeHelp()
-      return
-    }
-
-    if (searchOpen.value) {
-      event.preventDefault()
-      event.stopPropagation()
-      closeSearch()
-      return
-    }
-
-    if (document.querySelector('.np-find-panel')) {
-      event.preventDefault()
-      event.stopPropagation()
-      editorPane.value?.closeEditorFind()
-      return
-    }
-
-    // Menus and tab context menus own Escape while they are open. Their
-    // component listeners close the surface later in the same event dispatch.
-    if (document.querySelector('.menu-root:focus-within, .tab-context-menu')) return
-  }
-
-  if (matchesEditorModeShortcut(event)) {
-    event.preventDefault()
-    event.stopPropagation()
-    cycleEditorMode()
-    return
-  }
-
-  if (
-    event.key === 'F2' &&
-    !event.ctrlKey &&
-    !event.altKey &&
-    !event.shiftKey &&
-    !event.metaKey &&
-    !reminderListOpen.value &&
-    !archiveListOpen.value &&
-    !settingsOpen.value &&
-    !helpTopic.value &&
-    !searchOpen.value &&
-    !document.querySelector('.menu-root:focus-within, .tab-context-menu')
-  ) {
-    event.preventDefault()
-    event.stopPropagation()
-    void renameActivePage()
-    return
-  }
-
-  if (event.key === 'Enter' && event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    if (isTauriRuntime()) {
-      void toggleMainWindowMaximize()
-    }
-    return
-  }
-
-  if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    const key = event.key.toLowerCase()
-    if (key === 'n') {
-      event.preventDefault()
-      event.stopPropagation()
-      void createLocalTab()
-      return
-    }
-    if (key === 'w') {
-      if (document.querySelector('.tab-context-menu')) return
-      event.preventDefault()
-      event.stopPropagation()
-      void closeActivePage()
-      return
-    }
-    if (key === 'o') {
-      event.preventDefault()
-      event.stopPropagation()
-      triggerLoadFile()
-      return
-    }
-  }
-
-  if (vimMode.value && editorPane.value?.isEditorFocused()) {
-    const isApplicationFunctionKey = event.key === 'F3' || event.key === 'F6' || event.key === 'F8' || event.key === 'F10'
-    const shouldHideFromNormalMode = event.key === 'Escape' && activeVimMode.value === 'normal'
-    const isPreservedCtrlShortcut = vimUseCtrlShortcuts.value && (event.ctrlKey || event.metaKey)
-    if (!isApplicationFunctionKey && !shouldHideFromNormalMode && !isPreservedCtrlShortcut) {
-      return
-    }
-  }
-
-  if (vimMode.value && vimUseCtrlShortcuts.value && editorPane.value?.isEditorFocused() && event.ctrlKey && !event.altKey) {
-    const key = event.key.toLowerCase()
-    if (key === 'f') {
-      event.preventDefault()
-      event.stopPropagation()
-      if (event.shiftKey) showSearchPlaceholder()
-      else openFindPanel()
-      return
-    }
-    if (key === 'r' && !event.shiftKey) {
-      event.preventDefault()
-      event.stopPropagation()
-      openReplacePanel()
-      return
-    }
-    if (key === 'c') { event.preventDefault(); void copyEditorSelection(); return }
-    if (key === 'x') { event.preventDefault(); void cutEditorSelection(); return }
-    if (key === 'v' && !event.shiftKey) { event.preventDefault(); void pasteIntoEditor(); return }
-    if (key === 'a') { event.preventDefault(); selectAllEditorText(); return }
-  }
-
-  if (!vimMode.value && event.key.toLowerCase() === 'f' && event.ctrlKey && !event.altKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.shiftKey) showSearchPlaceholder()
-    else openFindPanel()
-    return
-  }
-
-  if (!vimMode.value && event.key.toLowerCase() === 'r' && event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    openReplacePanel()
-    return
-  }
-
-  if (event.key === 'F3' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    findNextMatch()
-    return
-  }
-
-  if (event.key === 'Enter' && event.ctrlKey) {
-    event.preventDefault()
-    event.stopPropagation()
-    calculateCurrentLineExpression()
-    return
-  }
-
-  if (event.key === 'Escape' && isTauriRuntime()) {
-    event.preventDefault()
-    void hideMainWindow()
-  }
-
-  if (event.key === 'F10') {
-    event.preventDefault()
-    toggleTabBarOrientation()
-  }
-
-  if (event.key === 'F6') {
-    event.preventDefault()
-    void togglePin()
-  }
-
-  if (event.key === 'F8') {
-    event.preventDefault()
-    openSettings()
-  }
-
-  if (event.code === 'Minus' && event.ctrlKey && event.shiftKey) {
-    event.preventDefault()
-    insertDateTimeSeparator()
-  } else if (event.code === 'Minus' && event.ctrlKey) {
-    event.preventDefault()
-    insertSeparator()
-  }
-
-  if (event.key.toLowerCase() === 'd' && event.ctrlKey) {
-    event.preventDefault()
-    insertDateTime()
-  }
-
-  if (event.key.toLowerCase() === 'e' && event.ctrlKey) {
-    event.preventDefault()
-    insertReminder()
-  }
-
-  if (event.key.toLowerCase() === 'v' && event.ctrlKey && event.shiftKey) {
-    event.preventDefault()
-    void saveCurrentClipboard()
-  }
-}
-
 function setVimInsertExitKey(key: string) {
   vimInsertExitKey.value = Array.from(key)
     .filter((character) => character.length === 1 && !/\s/.test(character))
@@ -2535,48 +977,6 @@ function setShortcutBaseKey(value: string) {
 
 function setClipboardShortcutBaseKey(value: string) {
   clipboardShortcutBaseKey.value = normalizeShortcutInput(value)
-}
-
-function scheduleSearch() {
-  clearSearchTimer()
-  searching.value = true
-  searchTimer = window.setTimeout(() => {
-    void runSearch()
-  }, 200)
-}
-
-async function runSearch() {
-  clearSearchTimer()
-  const query = searchQuery.value.trim()
-  if (!query) {
-    searchResults.value = []
-    searchHasMore.value = false
-    searching.value = false
-    return
-  }
-
-  try {
-    const results = await searchNotes(query, searchResultLimit.value)
-    searchResults.value = results
-    searchHasMore.value = results.length === searchResultLimit.value
-  } catch {
-    saveState.value = 'Failed'
-  } finally {
-    searching.value = false
-  }
-}
-
-function loadMoreSearchResults() {
-  if (searching.value || !searchQuery.value.trim()) return
-  searchResultLimit.value += 100
-  void runSearch()
-}
-
-function clearSearchTimer() {
-  if (searchTimer) {
-    window.clearTimeout(searchTimer)
-    searchTimer = null
-  }
 }
 
 function upsertTab(tab: NoteTab) {
@@ -2608,435 +1008,6 @@ function createLocalTabFromContent(title: string, nextContent: string) {
   activeTabId.value = tab.id
   content.value = nextContent
   focusEditorAfterPageAction()
-}
-
-function titleFromFileName(fileName: string) {
-  const withoutExtension = fileName.replace(/\.[^/.]+$/, '')
-  return withoutExtension.trim() || 'Untitled'
-}
-
-function safeFileName(title: string) {
-  return title.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').replace(/\s+/g, ' ') || 'Untitled'
-}
-
-function downloadText(fileName: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }))
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  link.click()
-  URL.revokeObjectURL(url)
-}
-
-function renderInsertTemplate(template: string) {
-  const now = new Date()
-  const parts = template.split(/\s*\+\s*/g)
-  return parts.map((part) => renderInsertTemplatePart(part.trim(), now)).join('')
-}
-
-function renderInsertTemplatePart(part: string, date: Date) {
-  if (part === 'crlf()') {
-    return '\n'
-  }
-  if (part === 'date()') {
-    return formatDate(date)
-  }
-  if (part === 'time()') {
-    return formatTime(date)
-  }
-
-  const charsMatch = part.match(/^chars\(['"](.+)['"],\s*(\d+)\)$/)
-  if (charsMatch) {
-    return charsMatch[1].repeat(Number(charsMatch[2]))
-  }
-
-  const quotedMatch = part.match(/^['"](.*)['"]$/)
-  if (quotedMatch) {
-    return quotedMatch[1]
-  }
-
-  return part
-}
-
-function formatDate(date: Date) {
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-function formatTime(date: Date) {
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
-function toHalfWidth(text: string) {
-  return text.replace(/[\uff01-\uff5e]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0)).replace(/\u3000/g, ' ')
-}
-
-function toFullWidth(text: string) {
-  return text.replace(/[!-~]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0xfee0)).replace(/ /g, '\u3000')
-}
-
-function convertChinese(text: string, map: Record<string, string>) {
-  return text.replace(/./g, (char) => map[char] ?? char)
-}
-
-async function digestText(algorithm: AlgorithmIdentifier, text: string) {
-  if (!crypto.subtle) {
-    throw new Error(t.value.status.unsupportedHash)
-  }
-
-  const hash = await crypto.subtle.digest(algorithm, new TextEncoder().encode(text))
-  return Array.from(new Uint8Array(hash))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-}
-
-function md5(text: string) {
-  const rotateLeft = (value: number, shift: number) => (value << shift) | (value >>> (32 - shift))
-  const add = (left: number, right: number) => (left + right) & 0xffffffff
-  const cmn = (q: number, a: number, b: number, x: number, s: number, t: number) => add(rotateLeft(add(add(a, q), add(x, t)), s), b)
-  const ff = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn((b & c) | (~b & d), a, b, x, s, t)
-  const gg = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn((b & d) | (c & ~d), a, b, x, s, t)
-  const hh = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn(b ^ c ^ d, a, b, x, s, t)
-  const ii = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) => cmn(c ^ (b | ~d), a, b, x, s, t)
-  const words = md5Words(text)
-  let a = 1732584193
-  let b = -271733879
-  let c = -1732584194
-  let d = 271733878
-
-  for (let i = 0; i < words.length; i += 16) {
-    const aa = a
-    const bb = b
-    const cc = c
-    const dd = d
-    a = ff(a, b, c, d, words[i], 7, -680876936)
-    d = ff(d, a, b, c, words[i + 1], 12, -389564586)
-    c = ff(c, d, a, b, words[i + 2], 17, 606105819)
-    b = ff(b, c, d, a, words[i + 3], 22, -1044525330)
-    a = ff(a, b, c, d, words[i + 4], 7, -176418897)
-    d = ff(d, a, b, c, words[i + 5], 12, 1200080426)
-    c = ff(c, d, a, b, words[i + 6], 17, -1473231341)
-    b = ff(b, c, d, a, words[i + 7], 22, -45705983)
-    a = ff(a, b, c, d, words[i + 8], 7, 1770035416)
-    d = ff(d, a, b, c, words[i + 9], 12, -1958414417)
-    c = ff(c, d, a, b, words[i + 10], 17, -42063)
-    b = ff(b, c, d, a, words[i + 11], 22, -1990404162)
-    a = ff(a, b, c, d, words[i + 12], 7, 1804603682)
-    d = ff(d, a, b, c, words[i + 13], 12, -40341101)
-    c = ff(c, d, a, b, words[i + 14], 17, -1502002290)
-    b = ff(b, c, d, a, words[i + 15], 22, 1236535329)
-    a = gg(a, b, c, d, words[i + 1], 5, -165796510)
-    d = gg(d, a, b, c, words[i + 6], 9, -1069501632)
-    c = gg(c, d, a, b, words[i + 11], 14, 643717713)
-    b = gg(b, c, d, a, words[i], 20, -373897302)
-    a = gg(a, b, c, d, words[i + 5], 5, -701558691)
-    d = gg(d, a, b, c, words[i + 10], 9, 38016083)
-    c = gg(c, d, a, b, words[i + 15], 14, -660478335)
-    b = gg(b, c, d, a, words[i + 4], 20, -405537848)
-    a = gg(a, b, c, d, words[i + 9], 5, 568446438)
-    d = gg(d, a, b, c, words[i + 14], 9, -1019803690)
-    c = gg(c, d, a, b, words[i + 3], 14, -187363961)
-    b = gg(b, c, d, a, words[i + 8], 20, 1163531501)
-    a = gg(a, b, c, d, words[i + 13], 5, -1444681467)
-    d = gg(d, a, b, c, words[i + 2], 9, -51403784)
-    c = gg(c, d, a, b, words[i + 7], 14, 1735328473)
-    b = gg(b, c, d, a, words[i + 12], 20, -1926607734)
-    a = hh(a, b, c, d, words[i + 5], 4, -378558)
-    d = hh(d, a, b, c, words[i + 8], 11, -2022574463)
-    c = hh(c, d, a, b, words[i + 11], 16, 1839030562)
-    b = hh(b, c, d, a, words[i + 14], 23, -35309556)
-    a = hh(a, b, c, d, words[i + 1], 4, -1530992060)
-    d = hh(d, a, b, c, words[i + 4], 11, 1272893353)
-    c = hh(c, d, a, b, words[i + 7], 16, -155497632)
-    b = hh(b, c, d, a, words[i + 10], 23, -1094730640)
-    a = hh(a, b, c, d, words[i + 13], 4, 681279174)
-    d = hh(d, a, b, c, words[i], 11, -358537222)
-    c = hh(c, d, a, b, words[i + 3], 16, -722521979)
-    b = hh(b, c, d, a, words[i + 6], 23, 76029189)
-    a = hh(a, b, c, d, words[i + 9], 4, -640364487)
-    d = hh(d, a, b, c, words[i + 12], 11, -421815835)
-    c = hh(c, d, a, b, words[i + 15], 16, 530742520)
-    b = hh(b, c, d, a, words[i + 2], 23, -995338651)
-    a = ii(a, b, c, d, words[i], 6, -198630844)
-    d = ii(d, a, b, c, words[i + 7], 10, 1126891415)
-    c = ii(c, d, a, b, words[i + 14], 15, -1416354905)
-    b = ii(b, c, d, a, words[i + 5], 21, -57434055)
-    a = ii(a, b, c, d, words[i + 12], 6, 1700485571)
-    d = ii(d, a, b, c, words[i + 3], 10, -1894986606)
-    c = ii(c, d, a, b, words[i + 10], 15, -1051523)
-    b = ii(b, c, d, a, words[i + 1], 21, -2054922799)
-    a = ii(a, b, c, d, words[i + 8], 6, 1873313359)
-    d = ii(d, a, b, c, words[i + 15], 10, -30611744)
-    c = ii(c, d, a, b, words[i + 6], 15, -1560198380)
-    b = ii(b, c, d, a, words[i + 13], 21, 1309151649)
-    a = ii(a, b, c, d, words[i + 4], 6, -145523070)
-    d = ii(d, a, b, c, words[i + 11], 10, -1120210379)
-    c = ii(c, d, a, b, words[i + 2], 15, 718787259)
-    b = ii(b, c, d, a, words[i + 9], 21, -343485551)
-    a = add(a, aa)
-    b = add(b, bb)
-    c = add(c, cc)
-    d = add(d, dd)
-  }
-
-  return [a, b, c, d].map((value) => md5Hex(value)).join('')
-}
-
-function md5Words(text: string) {
-  const bytes = Array.from(new TextEncoder().encode(text))
-  const words: number[] = []
-  bytes.forEach((byte, index) => {
-    words[index >> 2] = (words[index >> 2] || 0) | (byte << ((index % 4) * 8))
-  })
-  words[bytes.length >> 2] = (words[bytes.length >> 2] || 0) | (0x80 << ((bytes.length % 4) * 8))
-  words[(((bytes.length + 8) >> 6) + 1) * 16 - 2] = bytes.length * 8
-  return words
-}
-
-function md5Hex(value: number) {
-  let output = ''
-  for (let i = 0; i < 4; i += 1) {
-    output += ((value >> (i * 8)) & 0xff).toString(16).padStart(2, '0')
-  }
-  return output
-}
-
-const simplifiedToTraditionalMap: Record<string, string> = {
-  '\u4e07': '\u842c',
-  '\u4e0e': '\u8207',
-  '\u4e13': '\u5c08',
-  '\u4e1a': '\u696d',
-  '\u4e1c': '\u6771',
-  '\u4e24': '\u5169',
-  '\u4e25': '\u56b4',
-  '\u4e2a': '\u500b',
-  '\u4e3a': '\u70ba',
-  '\u4e49': '\u7fa9',
-  '\u4e50': '\u6a02',
-  '\u4e60': '\u7fd2',
-  '\u4e66': '\u66f8',
-  '\u4e70': '\u8cb7',
-  '\u4e89': '\u722d',
-  '\u4e8e': '\u65bc',
-  '\u4e91': '\u96f2',
-  '\u4ea7': '\u7522',
-  '\u4eb2': '\u89aa',
-  '\u4ebf': '\u5104',
-  '\u4ec5': '\u50c5',
-  '\u4ece': '\u5f9e',
-  '\u4ed3': '\u5009',
-  '\u4eea': '\u5100',
-  '\u4eec': '\u5011',
-  '\u4ef7': '\u50f9',
-  '\u4f17': '\u773e',
-  '\u4f18': '\u512a',
-  '\u4f1a': '\u6703',
-  '\u4f20': '\u50b3',
-  '\u4f24': '\u50b7',
-  '\u4f53': '\u9ad4',
-  '\u513f': '\u5152',
-  '\u515a': '\u9ee8',
-  '\u5170': '\u862d',
-  '\u5173': '\u95dc',
-  '\u5174': '\u8208',
-  '\u5199': '\u5beb',
-  '\u519b': '\u8ecd',
-  '\u519c': '\u8fb2',
-  '\u51b2': '\u885d',
-  '\u51b3': '\u6c7a',
-  '\u51c6': '\u6e96',
-  '\u51e0': '\u5e7e',
-  '\u5219': '\u5247',
-  '\u521a': '\u525b',
-  '\u521b': '\u5275',
-  '\u5220': '\u522a',
-  '\u522b': '\u5225',
-  '\u5267': '\u5287',
-  '\u529e': '\u8fa6',
-  '\u52a1': '\u52d9',
-  '\u52a8': '\u52d5',
-  '\u533a': '\u5340',
-  '\u533b': '\u91ab',
-  '\u534e': '\u83ef',
-  '\u5355': '\u55ae',
-  '\u5356': '\u8ce3',
-  '\u536b': '\u885b',
-  '\u53d1': '\u767c',
-  '\u53d8': '\u8b8a',
-  '\u53f7': '\u865f',
-  '\u540e': '\u5f8c',
-  '\u542c': '\u807d',
-  '\u542f': '\u555f',
-  '\u5458': '\u54e1',
-  '\u56fd': '\u570b',
-  '\u56fe': '\u5716',
-  '\u5706': '\u5713',
-  '\u575a': '\u5805',
-  '\u575b': '\u58c7',
-  '\u5757': '\u584a',
-  '\u58f0': '\u8072',
-  '\u5907': '\u5099',
-  '\u590d': '\u5fa9',
-  '\u5934': '\u982d',
-  '\u593a': '\u596a',
-  '\u594b': '\u596e',
-  '\u5956': '\u734e',
-  '\u5987': '\u5a66',
-  '\u5988': '\u5abd',
-  '\u5a31': '\u5a1b',
-  '\u5b59': '\u5b6b',
-  '\u5b66': '\u5b78',
-  '\u5b81': '\u5be7',
-  '\u5b9d': '\u5bf6',
-  '\u5b9e': '\u5be6',
-  '\u5bf9': '\u5c0d',
-  '\u5bfc': '\u5c0e',
-  '\u5c14': '\u723e',
-  '\u5c3d': '\u76e1',
-  '\u5c42': '\u5c64',
-  '\u5c5e': '\u5c6c',
-  '\u5c81': '\u6b72',
-  '\u5c9b': '\u5cf6',
-  '\u5e01': '\u5e63',
-  '\u5e08': '\u5e2b',
-  '\u5e26': '\u5e36',
-  '\u5e2e': '\u5e6b',
-  '\u5e7f': '\u5ee3',
-  '\u5e86': '\u6176',
-  '\u5e93': '\u5eab',
-  '\u5e94': '\u61c9',
-  '\u5f00': '\u958b',
-  '\u5f20': '\u5f35',
-  '\u5f52': '\u6b78',
-  '\u5f53': '\u7576',
-  '\u5f55': '\u9304',
-  '\u5fc6': '\u61b6',
-  '\u6001': '\u614b',
-  '\u603b': '\u7e3d',
-  '\u604b': '\u6200'
-}
-
-const traditionalToSimplifiedMap = Object.fromEntries(Object.entries(simplifiedToTraditionalMap).map(([key, value]) => [value, key]))
-
-function getHelpContent(topic: HelpTopic | null, currentLanguage: AppLanguage) {
-  const zh = currentLanguage === 'zh'
-
-  if (topic === 'shortcuts') {
-    return {
-      title: zh ? '\u5feb\u6377\u952e\u5217\u8868' : 'Shortcut List',
-      lines: [
-        `${formatShortcutLabel(shortcutBaseKey.value, shortcutModifiers.value)} - ` + (zh ? '\u663e\u793a/\u9690\u85cf\u7a97\u53e3' : 'Show/hide window'),
-        `${formatShortcutLabel(clipboardShortcutBaseKey.value, clipboardShortcutModifiers.value)} - ` + (zh ? '\u4fdd\u5b58\u526a\u8d34\u677f' : 'Save clipboard'),
-        'F1 - ' + (zh ? '\u6253\u5f00\u5feb\u6377\u952e\u5e2e\u52a9' : 'Open shortcut help'),
-        'Alt+Enter - ' + (zh ? '\u6700\u5927\u5316/\u8fd8\u539f\u7a97\u53e3' : 'Maximize/restore window'),
-        'Ctrl+N - ' + (zh ? '\u65b0\u5efa\u6807\u7b7e\u9875' : 'New tab'),
-        'F2 - ' + (zh ? '\u91cd\u547d\u540d\u6807\u7b7e\u9875' : 'Rename tab'),
-        'Alt+Del - ' + (zh ? '\u5c06\u5f53\u524d\u6807\u7b7e\u9875\u79fb\u81f3\u56de\u6536\u7ad9' : 'Move current tab to Trash'),
-        'Ctrl+W - ' + (zh ? '\u5173\u95ed\u6807\u7b7e\u9875' : 'Close tab'),
-        'Ctrl+O - ' + (zh ? '\u4ece\u6587\u4ef6\u8f7d\u5165' : 'Load from file'),
-        'Ctrl+Tab / Ctrl+Shift+Tab - ' + (zh ? '\u5207\u6362\u4e0b\u4e00\u4e2a/\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875' : 'Switch next/previous tab'),
-        'Ctrl+F - ' + (zh ? '\u67e5\u627e' : 'Find'),
-        'Ctrl+Shift+F - ' + (zh ? '\u5168\u5c40\u641c\u7d22' : 'Global search'),
-        'Ctrl+D - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4' : 'Insert date time'),
-        'Ctrl+- - ' + (zh ? '\u63d2\u5165\u5206\u9694\u884c' : 'Insert separator'),
-        'Ctrl+Shift+- - ' + (zh ? '\u63d2\u5165\u65e5\u671f\u65f6\u95f4\u5206\u9694\u884c' : 'Insert date time separator'),
-        'Ctrl+E - ' + (zh ? '\u63d2\u5165\u63d0\u9192' : 'Insert reminder'),
-        'F4 - ' + (zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f' : 'Cycle editor mode'),
-        'F5 - ' + (zh ? '\u6253\u5f00/\u5173\u95ed\u63d0\u9192\u5217\u8868' : 'Open/close reminder list'),
-        'F6 - ' + (zh ? '\u5207\u6362\u7a97\u53e3\u7f6e\u9876' : 'Toggle window on top'),
-        'F7 - ' + (zh ? '\u5207\u6362\u9884\u89c8\u4e3b\u9898' : 'Toggle preview theme'),
-        'F8 - ' + (zh ? '\u6253\u5f00\u8bbe\u7f6e' : 'Open settings'),
-        'F9 - ' + (zh ? '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f' : 'Toggle day/night mode'),
-        'F11 - ' + (zh ? '\u5207\u6362\u6c89\u6d78\u5f0f\u5168\u5c4f' : 'Toggle immersive fullscreen'),
-        'F12 - ' + (zh ? '\u5f52\u6863\u5f53\u524d\u6807\u7b7e\u9875' : 'Archive current tab'),
-        'F10 - ' + (zh ? '\u5207\u6362\u6807\u7b7e\u680f\u65b9\u5411' : 'Toggle tab bar orientation'),
-        'Esc - ' + (zh ? '\u9690\u85cf\u7a97\u53e3' : 'Hide window'),
-      ],
-    }
-  }
-
-  if (topic === 'markdown') {
-    return {
-      title: zh ? 'Markdown 简明指南' : 'Markdown Quick Guide',
-      lines: zh
-        ? [
-            '# 一级标题；## 二级标题；### 三级标题',
-            '**粗体**；*斜体*；~~删除线~~',
-            '- 无序列表；1. 有序列表；- [ ] 待办；- [x] 已完成',
-            '[链接文字](https://example.com)；![图片说明](图片地址)',
-            '> 引用文字；`行内代码`；三个反引号包裹代码块',
-            '--- 单独一行可插入分隔线。段落之间空一行。',
-          ]
-        : [
-            '# Heading 1; ## Heading 2; ### Heading 3',
-            '**bold**; *italic*; ~~strikethrough~~',
-            '- Bulleted list; 1. numbered list; - [ ] task; - [x] done',
-            '[link text](https://example.com); ![image description](image-url)',
-            '> Quote; `inline code`; wrap code blocks in three backticks',
-            'Use --- on its own line for a divider. Leave a blank line between paragraphs.',
-          ],
-    }
-  }
-
-  if (topic === 'expression') {
-    return {
-      title: zh ? '\u8868\u8fbe\u5f0f\u8ba1\u7b97\u6307\u5357' : 'Expression Guide',
-      lines: zh
-        ? [
-            '\u5728\u7f16\u8f91\u6a21\u5f0f\u4e0b\uff0c\u8f93\u5165\u4e00\u884c\u6570\u5b66\u8868\u8fbe\u5f0f\u540e\u6309 Ctrl+Enter\uff0cNeoPad \u4f1a\u5728\u884c\u5c3e\u8ffd\u52a0\u8ba1\u7b97\u7ed3\u679c\u3002',
-            '\u652f\u6301 +, -, *, /, %, ^ \u548c\u62ec\u53f7\uff0c\u4e5f\u652f\u6301 \u00d7 \u548c \u00f7 \u7b26\u53f7\u3002',
-            '\u793a\u4f8b\uff1a899*565-451 \u6309 Ctrl+Enter \u540e\u53d8\u4e3a 899*565-451 = 507484\u3002',
-            '\u5982\u679c\u884c\u5185\u5305\u542b\u975e\u8868\u8fbe\u5f0f\u6587\u5b57\uff0c\u4f1a\u5c3d\u91cf\u8ba1\u7b97\u53ef\u8bc6\u522b\u7684\u524d\u7f00\u90e8\u5206\u3002',
-          ]
-        : [
-            'In edit mode, type a math expression on one line and press Ctrl+Enter. NeoPad appends the result to that line.',
-            'Supported operators: +, -, *, /, %, ^, parentheses, ×, and ÷.',
-            'Example: 899*565-451 becomes 899*565-451 = 507484.',
-            'If the line contains non-expression text, NeoPad tries to calculate the recognizable expression prefix.',
-          ],
-    }
-  }
-
-  if (topic === 'about') {
-    return {
-      title: zh ? '\u5173\u4e8e NeoPad' : 'About NeoPad',
-      lines: zh
-        ? [
-            'NeoPad - \u8f7b\u91cf\u3001\u672c\u5730\u4f18\u5148\u7684 Markdown \u684c\u9762\u4fbf\u7b7e\u3002',
-            ...(appVersion.value ? [`\u7248\u672c\uff1a${appVersion.value}`] : []),
-            '\u4f5c\u8005\uff1aTrevanZhang',
-            '\u5f00\u6e90\u9879\u76ee\uff1ahttps://github.com/trevanzhang/neopad',
-            '\u5f00\u6e90\u534f\u8bae\uff1aMIT License',
-            '\u6280\u672f\u6808\uff1aTauri 2, Vue 3, TypeScript, Rust',
-          ]
-        : [
-            'NeoPad - a lightweight, local-first Markdown desktop note pad.',
-            ...(appVersion.value ? [`Version: ${appVersion.value}`] : []),
-            'Author: TrevanZhang',
-            'Open source: https://github.com/trevanzhang/neopad',
-            'License: MIT License',
-            'Built with Tauri 2, Vue 3, TypeScript, and Rust.',
-          ],
-    }
-  }
-
-  return {
-    title: zh ? '\u8f6f\u4ef6\u8bf4\u660e' : 'Software Help',
-    lines: zh
-      ? [
-          'NeoPad \u662f\u4e00\u6b3e\u8f7b\u91cf\u7684\u672c\u5730\u4f18\u5148\u684c\u9762\u4fbf\u7b7e\uff0c\u4e13\u6ce8\u4e8e\u5feb\u901f\u8bb0\u5f55\u548c\u67e5\u627e\u3002',
-          '\u7b14\u8bb0\u4ee5 Markdown \u6587\u4ef6\u81ea\u52a8\u4fdd\u5b58\u5728\u672c\u5730\uff0c\u65e0\u9700\u8d26\u53f7\uff0c\u4e0d\u4f9d\u8d56\u4e91\u670d\u52a1\u3002',
-          '\u652f\u6301\u591a\u6807\u7b7e\u9875\u3001\u5168\u6587\u641c\u7d22\u3001\u526a\u8d34\u677f\u91c7\u96c6\u3001Markdown \u9884\u89c8\u3001Vim \u952e\u4f4d\u548c\u884c\u5185\u8ba1\u7b97\u3002',
-          '\u72ec\u7acb MCP \u670d\u52a1\u5668\u53ef\u4f9b\u672c\u5730 AI \u5de5\u5177\u8bbf\u95ee\u540c\u4e00\u7b14\u8bb0\u5de5\u4f5c\u533a\uff0c\u9ed8\u8ba4\u53ea\u8bfb\u3002',
-        ]
-      : [
-          'NeoPad is a lightweight, local-first desktop note pad focused on fast capture and retrieval.',
-          'Notes are autosaved locally as Markdown files. No account or cloud service is required.',
-          'It supports tabs, full-text search, clipboard capture, Markdown preview, Vim keys, and inline calculations.',
-          'A standalone, read-only-by-default MCP server lets local AI tools access the same note workspace.',
-        ],
-  }
 }
 
 </script>

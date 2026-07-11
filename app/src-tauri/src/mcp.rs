@@ -4,6 +4,7 @@ use neopad_core::{load_config, lock_workspace_for_write, save_config, McpConfig}
 use rand::{distributions::Alphanumeric, Rng};
 use serde::Serialize;
 use std::{
+    net::IpAddr,
     path::PathBuf,
     process::{Command, Stdio},
     sync::{Arc, Mutex},
@@ -149,7 +150,11 @@ fn ensure_configured(state: &AppState) -> Result<()> {
 }
 
 fn normalize_mcp_config(config: &mut McpConfig) {
-    if config.host.trim().is_empty() || config.host == "0.0.0.0" {
+    let host_is_loopback = config
+        .host
+        .parse::<IpAddr>()
+        .is_ok_and(|address| address.is_loopback());
+    if !host_is_loopback {
         config.host = "127.0.0.1".to_owned();
     }
     if config.port == 0 {
@@ -176,8 +181,7 @@ fn start_owned_process(state: &AppState, config: &McpConfig) -> Result<()> {
         .arg(&config.host)
         .arg("--port")
         .arg(config.port.to_string())
-        .arg("--token")
-        .arg(&config.token)
+        .env("NEOPAD_MCP_TOKEN", &config.token)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
@@ -287,4 +291,26 @@ fn set_error(state: &AppState, message: String) {
 
 fn current_error(state: &AppState) -> Option<String> {
     state.mcp_error.lock().ok().and_then(|error| error.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_mcp_config;
+    use neopad_core::McpConfig;
+
+    #[test]
+    fn managed_mcp_config_forces_loopback_and_generates_a_token() {
+        let mut config = McpConfig {
+            enabled: true,
+            host: "192.168.1.50".to_owned(),
+            port: 0,
+            token: String::new(),
+        };
+
+        normalize_mcp_config(&mut config);
+
+        assert_eq!(config.host, "127.0.0.1");
+        assert_eq!(config.port, 8765);
+        assert_eq!(config.token.len(), 48);
+    }
 }

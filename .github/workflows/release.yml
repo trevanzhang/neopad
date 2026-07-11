@@ -6,24 +6,69 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  preflight:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+        with:
+          components: clippy,rustfmt
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod
+      - run: pnpm check:versions
+      - run: pnpm check:release-tag
+      - run: cargo build -p neopad-mcp --release
+      - run: node scripts/prepare-mcp-sidecar.mjs
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: pnpm test:all
+      - run: pnpm build
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --version 0.22.2 --locked
+      - name: Audit Rust dependencies
+        run: cargo audit
+
   build:
+    needs: preflight
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: windows-latest
             args: ''
+            bundles: msi
+            files: |
+              target/release/bundle/msi/*.msi
+              target/SHA256SUMS-win32.txt
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
+            bundles: dmg
+            files: |
+              target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+              target/SHA256SUMS-darwin.txt
           - platform: ubuntu-22.04
             args: ''
+            bundles: deb,appimage
+            files: |
+              target/release/bundle/deb/*.deb
+              target/release/bundle/appimage/*.AppImage
+              target/SHA256SUMS-linux.txt
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install Linux system dependencies
         if: matrix.platform == 'ubuntu-22.04'
@@ -37,16 +82,16 @@ jobs:
             libssl-dev \
             libgtk-3-dev
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
         with:
           version: 9.15.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
 
@@ -62,14 +107,14 @@ jobs:
           CARGO_BUILD_TARGET: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
 
       - name: Build Tauri app
-        run: pnpm --filter neopad-app exec tauri build ${{ matrix.args }}
+        run: pnpm --filter neopad-app exec tauri build ${{ matrix.args }} --bundles ${{ matrix.bundles }}
+
+      - name: Verify artifacts and write checksums
+        run: node scripts/write-release-checksums.mjs
 
       - name: Upload release assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          fail_on_unmatched_files: false
-          files: |
-            target/release/bundle/msi/*.msi
-            target/*/release/bundle/dmg/*.dmg
-            target/release/bundle/deb/*.deb
-            target/release/bundle/appimage/*.AppImage
+          draft: true
+          fail_on_unmatched_files: true
+          files: ${{ matrix.files }}

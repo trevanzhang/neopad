@@ -127,8 +127,8 @@ export function readExternalMarkdown(path: string): Promise<ExternalDocument> {
   return invoke('read_external_markdown_command', { path })
 }
 
-export function writeExternalMarkdown(path: string, content: string, expectedUpdatedAt: number): Promise<ExternalDocument> {
-  return invoke('write_external_markdown_command', { path, content, expectedUpdatedAt })
+export function writeExternalMarkdown(path: string, content: string, expectedRevision: string): Promise<ExternalDocument> {
+  return invoke('write_external_markdown_command', { path, content, expectedRevision })
 }
 
 export function setNoteColor(noteId: string, color: string | null): Promise<NoteTab> {
@@ -221,6 +221,10 @@ export function toggleMainWindowMaximize(): Promise<void> {
 
 export function openTrash(): Promise<void> {
   return invoke('open_trash_command')
+}
+
+export function openExternalUrl(url: string): Promise<void> {
+  return invoke('open_external_url_command', { url })
 }
 
 export function quitApp(): Promise<void> {

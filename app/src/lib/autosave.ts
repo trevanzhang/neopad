@@ -5,6 +5,7 @@ export interface AutosaveOptions<TSnapshot, TResult> {
   save: (snapshot: TSnapshot) => Promise<TResult>
   onSaved?: (snapshot: TSnapshot, result: TResult) => void
   onStateChange?: (state: SaveState) => void
+  onError?: (error: unknown) => void
 }
 
 export class AutosaveCoordinator<TSnapshot, TResult> {
@@ -60,8 +61,9 @@ export class AutosaveCoordinator<TSnapshot, TResult> {
           }
           return true
         })
-        .catch(() => {
+        .catch((error: unknown) => {
           this.options.onStateChange?.('Failed')
+          this.options.onError?.(error)
           return false
         })
         .finally(() => {

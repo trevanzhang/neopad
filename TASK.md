@@ -97,7 +97,8 @@ Implemented MVP capabilities:
 
 ## Packaging Rules
 
-The current Windows packaging target is MSI only.
+Supported distributable targets are Windows MSI, macOS ARM64 DMG, and Linux
+DEB plus AppImage. Bundle types are selected explicitly; NSIS is not enabled.
 
 Installer-related files:
 

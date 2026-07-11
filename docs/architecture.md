@@ -20,6 +20,38 @@ neopad-mcp
 Both the desktop app and MCP server use `neopad-core` for workspace access. Do
 not duplicate note, search, path, or write logic outside the core crate.
 
+## Frontend Composition
+
+`App.vue` is the composition root rather than the owner of every application
+state machine. Domain behavior is split into focused Vue composables:
+
+- `useDocumentSession` owns loading, autosave, stale-load generations, and
+  external-document revisions.
+- `useNoteLifecycle` owns tab selection, create/rename/close/trash/archive,
+  clipboard capture, and the mandatory save barrier before navigation.
+- `usePreferenceState` and `useNativeSettings` separate browser persistence
+  from Tauri-native settings synchronization.
+- `useSearchState`, `useReminderState`, `useArchiveState`, and `useMcpService`
+  own their respective async state and failure boundaries.
+- `useDialogs` serializes input and confirmation requests.
+- `keyboard-shortcuts.ts` is a pure priority router with explicit state getters
+  and application actions; characterization tests protect modal blocking,
+  Escape precedence, tab cycling, and native window fallback.
+- `useWindowLifecycle` owns Tauri event listeners and save-before-hide/quit
+  behavior.
+- `text-transform.ts`, `help-content.ts`, and the document utility modules keep
+  pure text behavior and static presentation data outside the composition root.
+- `EditorPane.vue` owns the live CodeMirror instance and command surface only.
+  The custom search panel, editor themes, and line calculator live in focused
+  `editor-*` modules; pure match-count and expression behavior has regression
+  coverage independent of the desktop runtime.
+
+Keep dependencies explicit when adding a composable. Do not introduce a global
+store merely to reduce prop or line counts. New global shortcuts must extend
+the router tests whenever they interact with modal or overlay precedence.
+CodeMirror adapters should remain separate from pure editor behavior so the
+latter can be exercised in Vitest without WebView or DOM setup.
+
 ## Data Flow
 
 ```text
@@ -72,7 +104,8 @@ from previous versions do not block startup.
 - Note list, read, create, write, rename, append, close, archive, restore, and
   trash operations.
 - Atomic writes through temporary files and replace/rename behavior.
-- mtime-checked writes for MCP update conflict protection.
+- Strictly monotonic internal revisions and content-hash revisions for
+  external-file conflict protection.
 - Full-text search over active and archived Markdown note files.
 - Reminder parsing, ordering, and notification delivery-state persistence.
 - Config and tab metadata defaults.
@@ -145,8 +178,8 @@ console window.
 
 ## Packaging
 
-The Windows target currently builds an MSI package only. The Tauri config points
-to:
+The Windows target builds an MSI package only. Cross-platform build scripts
+select DMG on macOS and DEB plus AppImage on Linux. The Tauri config points to:
 
 ```text
 app/src-tauri/wix/main.wxs

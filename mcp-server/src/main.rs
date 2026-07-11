@@ -102,8 +102,13 @@ fn parse_serve_args(args: &mut impl Iterator<Item = String>) -> Result<http::Ser
     }
 
     let token = token
+        .or_else(|| std::env::var("NEOPAD_MCP_TOKEN").ok())
         .filter(|value: &String| !value.trim().is_empty())
-        .context("--token is required for HTTP MCP")?;
+        .context("--token or NEOPAD_MCP_TOKEN is required for HTTP MCP")?;
+
+    if !host.is_loopback() {
+        bail!("MCP HTTP host must be a loopback address");
+    }
 
     Ok(http::ServerOptions { host, port, token })
 }
@@ -124,4 +129,27 @@ fn print_help() {
     eprintln!(
         "Usage: neopad-mcp [--workspace <path>] serve [--host 127.0.0.1] [--port 8765] --token <token>"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serve_rejects_non_loopback_hosts() {
+        let args = ["serve", "--host", "0.0.0.0", "--token", "secret"]
+            .into_iter()
+            .map(str::to_owned);
+        assert!(parse_args(args).is_err());
+    }
+
+    #[test]
+    fn serve_accepts_ipv4_and_ipv6_loopback_hosts() {
+        for host in ["127.0.0.1", "::1"] {
+            let args = ["serve", "--host", host, "--token", "secret"]
+                .into_iter()
+                .map(str::to_owned);
+            assert!(parse_args(args).is_ok(), "{host} should be accepted");
+        }
+    }
 }

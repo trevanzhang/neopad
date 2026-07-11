@@ -160,8 +160,9 @@ pnpm tauri:build
 ```
 
 This command builds the release MCP server first, prepares the Tauri sidecar
-name, and then builds the platform-native bundle (.msi on Windows, .dmg on
-macOS, .deb and .AppImage on Linux).
+name, and then builds an explicit platform-native bundle set (`.msi` on
+Windows, `.dmg` on macOS, `.deb` plus `.AppImage` on Linux). It does not build
+NSIS.
 
 The Windows MSI is written to:
 
@@ -203,7 +204,8 @@ configuration uses the local URL and bearer token:
 ```
 
 The service is off by default. When enabled, local agents with the token can
-read and write NeoPad notes.
+read and write NeoPad notes. The HTTP server rejects non-loopback bind
+addresses.
 
 ## Keyboard Shortcuts
 

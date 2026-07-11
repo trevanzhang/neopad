@@ -11,14 +11,15 @@ use commands::{
     get_shortcut_warnings_command, get_ui_config_command, get_workspace_command,
     hide_window_command, list_archived_notes_command, list_notes_command,
     list_recent_notes_command, list_reminders_command, open_external_markdown_command,
-    open_note_command, open_trash_command, quit_app_command, read_external_markdown_command,
-    read_note_command, rename_note_command, reopen_reminder_command, save_clipboard_command,
-    save_markdown_file_command, save_ui_config_command, search_notes_command,
-    set_autostart_command, set_close_to_minimize_command, set_note_color_command,
-    set_snap_to_edges_command, set_start_hidden_command, set_window_opacity_command,
-    show_window_command, toggle_always_on_top_command, toggle_main_window_maximize_command,
-    toggle_window_command, unarchive_note_command, update_clipboard_shortcut_command,
-    update_toggle_shortcut_command, write_external_markdown_command, write_note_command, AppState,
+    open_external_url_command, open_note_command, open_trash_command, quit_app_command,
+    read_external_markdown_command, read_note_command, rename_note_command,
+    reopen_reminder_command, save_clipboard_command, save_markdown_file_command,
+    save_ui_config_command, search_notes_command, set_autostart_command,
+    set_close_to_minimize_command, set_note_color_command, set_snap_to_edges_command,
+    set_start_hidden_command, set_window_opacity_command, show_window_command,
+    toggle_always_on_top_command, toggle_main_window_maximize_command, toggle_window_command,
+    unarchive_note_command, update_clipboard_shortcut_command, update_toggle_shortcut_command,
+    write_external_markdown_command, write_note_command, AppState,
 };
 use neopad_core::{init_workspace, load_config};
 use std::sync::{atomic::AtomicBool, Arc, Mutex};
@@ -70,10 +71,14 @@ pub fn run() {
         }
     };
 
-    tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    let mut builder = tauri::Builder::default();
+    if std::env::var_os("NEOPAD_E2E").is_none() {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             let _ = window::show_main_window(app);
-        }))
+        }));
+    }
+
+    builder
         .plugin(
             tauri_plugin_window_state::Builder::new()
                 .with_state_flags(StateFlags::POSITION)
@@ -139,6 +144,7 @@ pub fn run() {
             update_clipboard_shortcut_command,
             toggle_main_window_maximize_command,
             open_trash_command,
+            open_external_url_command,
             quit_app_command,
             toggle_window_command,
             toggle_always_on_top_command,
