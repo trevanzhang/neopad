@@ -30,7 +30,6 @@ import {
   openNote,
   openExternalMarkdown,
   quitApp,
-  readNote,
   renameNote,
   reopenReminder,
   saveClipboard,
@@ -52,13 +51,12 @@ import {
   updateToggleShortcut,
   updateClipboardShortcut,
   writeNote,
-  writeExternalMarkdown,
   regenerateMcpToken,
 } from './lib/invoke'
 import type { AppTheme, McpStatus } from './lib/invoke'
 import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
-import { AutosaveCoordinator } from './lib/autosave'
+import { useDocumentSession } from './composables/useDocumentSession'
 import { editorBackgroundForTheme } from './lib/theme'
 import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
 import {
@@ -153,10 +151,7 @@ const tabs = ref<NoteTab[]>([
 const activeTabId = ref('inbox')
 const recentNotes = ref<NoteTab[]>([])
 const externalRecentNotes = ref<NoteTab[]>(initialJsonSetting<NoteTab[]>('neopad.externalRecentNotes', []))
-const content = ref('# Inbox\n\nStart typing...')
-const saveState = ref<'Saved' | 'Saving' | 'Failed'>('Saved')
 const appReady = ref(false)
-const isLoadingNote = ref(false)
 const statusMessage = ref('Markdown')
 const previewMode = ref<EditorMode>('edit')
 const defaultEditorMode = ref<EditorMode>('edit')
@@ -224,6 +219,23 @@ const mcpStatus = ref<McpStatus | null>(null)
 const mcpUiError = ref<string | null>(null)
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
 const t = computed(() => messages[language.value])
+const {
+  content,
+  saveState,
+  nextNoteLoadGeneration,
+  isCurrentNoteLoad,
+  loadActiveNote,
+  setContentFromLoad,
+  forceSave,
+  disposeDocumentSession,
+} = useDocumentSession({
+  tabs,
+  activeTabId,
+  activeTab,
+  statusMessage,
+  failedMessage: () => t.value.status.failed,
+  rememberExternalDocument,
+})
 const displayTabs = computed(() => tabs.value.map((tab) => ({
   ...tab,
   title: tab.id === 'inbox'
@@ -261,31 +273,9 @@ let unlistenOpenSettings: UnlistenFn | null = null
 let unlistenCloseRequested: UnlistenFn | null = null
 let unlistenHideRequested: UnlistenFn | null = null
 let unlistenQuitRequested: UnlistenFn | null = null
-let suppressedLoadedContent: string | null = null
 let uiConfigLoaded = false
 let notificationPermissionDenied = false
-let noteLoadGeneration = 0
-let loadingNoteGeneration: number | null = null
 const deletingTabIds = new Set<string>()
-const autosave = new AutosaveCoordinator({
-  delayMs: 500,
-  save: ({ noteId, content: nextContent }: { noteId: string; content: string }) =>
-    saveDocument(noteId, nextContent),
-  onSaved: ({ noteId }, saved) => {
-    const tab = tabs.value.find((item) => item.id === noteId)
-    if (tab) {
-      tab.updatedAt = saved.updatedAt
-      if ('revision' in saved) tab.externalRevision = saved.revision
-    }
-  },
-  onStateChange: (state) => {
-    saveState.value = state
-  },
-  onError: (error) => {
-    const message = error instanceof Error ? error.message : String(error)
-    statusMessage.value = message || t.value.status.failed
-  },
-})
 
 onMounted(async () => {
   if (!isTauriRuntime()) {
@@ -368,7 +358,7 @@ async function resetWebviewZoom() {
 }
 
 onBeforeUnmount(() => {
-  autosave.dispose()
+  disposeDocumentSession()
   clearSearchTimer()
   if (uiConfigTimer) window.clearTimeout(uiConfigTimer)
   if (nativeSettingsTimer) window.clearTimeout(nativeSettingsTimer)
@@ -382,21 +372,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown, { capture: true })
   window.removeEventListener('beforeunload', forceSaveOnExit)
   document.removeEventListener('visibilitychange', forceSaveOnHide)
-})
-
-watch(content, (nextContent) => {
-  if (suppressedLoadedContent === nextContent) {
-    suppressedLoadedContent = null
-    return
-  }
-  if (isLoadingNote.value || !isTauriRuntime()) {
-    return
-  }
-
-  const tab = activeTab.value
-  if (tab) {
-    autosave.markChanged({ noteId: tab.id, content: content.value })
-  }
 })
 
 watch(searchQuery, () => {
@@ -1976,88 +1951,6 @@ async function syncClipboardShortcut() {
   } catch {
     saveState.value = 'Failed'
   }
-}
-
-function nextNoteLoadGeneration() {
-  noteLoadGeneration += 1
-  return noteLoadGeneration
-}
-
-function isCurrentNoteLoad(generation: number) {
-  return generation === noteLoadGeneration
-}
-
-async function loadActiveNote(generation = nextNoteLoadGeneration()) {
-  const tab = activeTab.value
-  if (!tab) {
-    return false
-  }
-  const tabId = tab.id
-
-  isLoadingNote.value = true
-  loadingNoteGeneration = generation
-  try {
-    const note = tab.external && tab.externalPath
-      ? await readExternalMarkdown(tab.externalPath)
-      : await readNote(tabId)
-    if (!isCurrentNoteLoad(generation) || activeTabId.value !== tabId) {
-      return false
-    }
-    const loadedTab = tabs.value.find((item) => item.id === tabId)
-    if (loadedTab) {
-      loadedTab.updatedAt = note.updatedAt
-    }
-    setContentFromLoad(note.content)
-    saveState.value = 'Saved'
-    return true
-  } catch {
-    if (isCurrentNoteLoad(generation)) {
-      saveState.value = 'Failed'
-    }
-    return false
-  } finally {
-    if (loadingNoteGeneration === generation) {
-      isLoadingNote.value = false
-      loadingNoteGeneration = null
-    }
-  }
-}
-
-function setContentFromLoad(nextContent: string) {
-  if (content.value !== nextContent) {
-    suppressedLoadedContent = nextContent
-  }
-  content.value = nextContent
-  autosave.markLoaded()
-}
-
-async function forceSave() {
-  if (!isTauriRuntime()) {
-    saveState.value = 'Saved'
-    return true
-  }
-  return autosave.flush()
-}
-
-async function saveDocument(noteId: string, nextContent: string) {
-  const tab = tabs.value.find((item) => item.id === noteId)
-  if (tab?.external && tab.externalPath) {
-    if (!tab.externalRevision) throw new Error('external document revision is missing')
-    const saved = await writeExternalMarkdown(tab.externalPath, nextContent, tab.externalRevision)
-    tab.updatedAt = saved.updatedAt
-    tab.externalRevision = saved.revision
-    rememberExternalDocument(tab)
-    return {
-      id: noteId,
-      title: tab.title,
-      fileName: tab.fileName,
-      content: saved.content,
-      updatedAt: saved.updatedAt,
-      revision: saved.revision,
-    }
-  }
-  if (!tab) throw new Error(`note tab not found: ${noteId}`)
-  return writeNote(noteId, nextContent, tab.updatedAt)
 }
 
 async function saveBeforeWindowAction() {
