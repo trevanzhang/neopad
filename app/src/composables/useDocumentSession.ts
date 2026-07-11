@@ -99,7 +99,13 @@ export function useDocumentSession(options: DocumentSessionOptions) {
         : await readNote(tabId)
       if (!isCurrentNoteLoad(generation) || options.activeTabId.value !== tabId) return false
       const loadedTab = options.tabs.value.find((item) => item.id === tabId)
-      if (loadedTab) loadedTab.updatedAt = note.updatedAt
+      if (loadedTab) {
+        loadedTab.updatedAt = note.updatedAt
+        if ('revision' in note) {
+          loadedTab.externalRevision = note.revision
+          options.rememberExternalDocument(loadedTab)
+        }
+      }
       setContentFromLoad(note.content)
       saveState.value = 'Saved'
       return true

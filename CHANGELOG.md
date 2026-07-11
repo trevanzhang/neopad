@@ -45,6 +45,8 @@ patch versions are reserved for compatible fixes.
   preserving the pending editor snapshot for retry.
 - Preserved the newest queued edit when an in-flight autosave fails, with a
   regression test covering the explicit retry path.
+- Prevented failed native note creation from falling back to an unsavable
+  browser-only draft, and synchronized external-file revisions after reload.
 - Made note conflict versions strictly monotonic, including rapid writes in
   the same millisecond.
 - Removed implicit, unlocked metadata writes from note-list queries and added

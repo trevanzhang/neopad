@@ -1,8 +1,23 @@
 import { computed, ref } from 'vue'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { messages } from '../lib/i18n'
+import { createNote } from '../lib/invoke'
+import { isTauriRuntime } from '../lib/runtime'
 import type { NoteTab } from '../types/note'
 import { useNoteLifecycle } from './useNoteLifecycle'
+
+vi.mock('../lib/invoke', () => ({
+  archiveNote: vi.fn(),
+  closeNote: vi.fn(),
+  createNote: vi.fn(),
+  deleteNote: vi.fn(),
+  renameNote: vi.fn(),
+  saveClipboard: vi.fn(),
+  setNoteColor: vi.fn(),
+  unarchiveNote: vi.fn(),
+  writeNote: vi.fn(),
+}))
+vi.mock('../lib/runtime', () => ({ isTauriRuntime: vi.fn(() => false) }))
 
 function createHarness(forceSave = vi.fn(async () => true)) {
   const now = Date.now()
@@ -41,6 +56,11 @@ function createHarness(forceSave = vi.fn(async () => true)) {
 }
 
 describe('useNoteLifecycle', () => {
+  beforeEach(() => {
+    vi.mocked(isTauriRuntime).mockReturnValue(false)
+    vi.mocked(createNote).mockReset()
+  })
+
   it('does not switch tabs when the save barrier fails', async () => {
     const { lifecycle, activeTabId } = createHarness(vi.fn(async () => false))
     await lifecycle.selectTab('other')
@@ -53,5 +73,16 @@ describe('useNoteLifecycle', () => {
     expect(tabs.value).toHaveLength(3)
     expect(activeTabId.value).toMatch(/^draft-/)
     expect(tabs.value[0].id).toBe('inbox')
+  })
+
+  it('does not create an unsavable browser draft when native creation fails', async () => {
+    vi.mocked(isTauriRuntime).mockReturnValue(true)
+    vi.mocked(createNote).mockRejectedValue(new Error('disk full'))
+    const { lifecycle, tabs, activeTabId } = createHarness()
+
+    await lifecycle.createLocalTab()
+
+    expect(tabs.value).toHaveLength(2)
+    expect(activeTabId.value).toBe('inbox')
   })
 })

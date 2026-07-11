@@ -205,7 +205,10 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
         o.saveState.value = 'Saved'
         o.focusEditor()
         return
-      } catch { fail() }
+      } catch {
+        fail()
+        return
+      }
     }
     const createdAt = Date.now()
     const tab: NoteTab = { id: `draft-${createdAt}`, title: 'Untitled', fileName: `page-${createdAt}.md`,
