@@ -19,7 +19,6 @@ import {
   getWorkspace,
   hideWindow,
   listNotes,
-  listArchivedNotes,
   listRecentNotes,
   openTrash,
   openNote,
@@ -51,6 +50,8 @@ import { useDocumentSession } from './composables/useDocumentSession'
 import { useSearchState } from './composables/useSearchState'
 import { useReminderState } from './composables/useReminderState'
 import { useMcpService } from './composables/useMcpService'
+import { useDialogs } from './composables/useDialogs'
+import { useArchiveState } from './composables/useArchiveState'
 import { editorBackgroundForTheme } from './lib/theme'
 import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
 import {
@@ -103,8 +104,6 @@ import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
 type HelpTopic = 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about'
-type InputDialogState = { title: string; initialValue: string }
-type ConfirmationDialogState = { title: string; message: string; confirmLabel: string; danger: boolean }
 
 const ArchiveList = defineAsyncComponent(() => import('./components/ArchiveList.vue'))
 const ConfirmationDialog = defineAsyncComponent(() => import('./components/ConfirmationDialog.vue'))
@@ -150,17 +149,18 @@ const statusMessage = ref('Markdown')
 const previewMode = ref<EditorMode>('edit')
 const defaultEditorMode = ref<EditorMode>('edit')
 const editorModeShortcut = ref('F4' as const)
-const archiveListOpen = ref(false)
-const archivedNotes = ref<NoteTab[]>([])
-const archiveLoading = ref(false)
 const settingsOpen = ref(false)
 const helpTopic = ref<HelpTopic | null>(null)
 const appVersion = ref('')
 const fontDialogOpen = ref(false)
-const inputDialog = ref<InputDialogState | null>(null)
-let resolveInputDialog: ((value: string | null) => void) | null = null
-const confirmationDialog = ref<ConfirmationDialogState | null>(null)
-let resolveConfirmationDialog: ((confirmed: boolean) => void) | null = null
+const {
+  inputDialog,
+  confirmationDialog,
+  requestInput,
+  finishInputDialog,
+  requestConfirmation,
+  finishConfirmationDialog,
+} = useDialogs()
 const immersiveMode = ref(false)
 const alwaysOnTop = ref(false)
 const theme = ref<AppTheme>(initialTheme())
@@ -269,6 +269,14 @@ const {
   onError: () => {
     saveState.value = 'Failed'
   },
+})
+const {
+  archiveListOpen,
+  archivedNotes,
+  archiveLoading,
+  refreshArchivedNotes,
+} = useArchiveState(forceSave, () => {
+  saveState.value = 'Failed'
 })
 const displayTabs = computed(() => tabs.value.map((tab) => ({
   ...tab,
@@ -1200,36 +1208,6 @@ function closeFontDialog() {
   focusEditorAfterPageAction()
 }
 
-function requestInput(title: string, initialValue: string) {
-  resolveInputDialog?.(null)
-  inputDialog.value = { title, initialValue }
-  return new Promise<string | null>((resolve) => {
-    resolveInputDialog = resolve
-  })
-}
-
-function finishInputDialog(value: string | null) {
-  const resolve = resolveInputDialog
-  resolveInputDialog = null
-  inputDialog.value = null
-  resolve?.(value)
-}
-
-function requestConfirmation(title: string, message: string, confirmLabel: string, danger = false) {
-  resolveConfirmationDialog?.(false)
-  confirmationDialog.value = { title, message, confirmLabel, danger }
-  return new Promise<boolean>((resolve) => {
-    resolveConfirmationDialog = resolve
-  })
-}
-
-function finishConfirmationDialog(confirmed: boolean) {
-  const resolve = resolveConfirmationDialog
-  resolveConfirmationDialog = null
-  confirmationDialog.value = null
-  resolve?.(confirmed)
-}
-
 async function editCustomInsertText(index: number) {
   const value = await requestInput(t.value.settings.custom, customInsertTexts.value[index] ?? '')
   if (value === null) return
@@ -1429,19 +1407,6 @@ async function openArchiveList() {
 function closeArchiveList(returnFocusToEditor = true) {
   archiveListOpen.value = false
   if (returnFocusToEditor) focusEditorAfterPageAction()
-}
-
-async function refreshArchivedNotes() {
-  if (!isTauriRuntime()) return
-  archiveLoading.value = true
-  try {
-    if (!(await forceSave())) return
-    archivedNotes.value = await listArchivedNotes()
-  } catch {
-    saveState.value = 'Failed'
-  } finally {
-    archiveLoading.value = false
-  }
 }
 
 async function restoreArchivedNote(tab: NoteTab) {
