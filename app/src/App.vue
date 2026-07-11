@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppShell from './components/AppShell.vue'
 import EditorPane from './components/EditorPane.vue'
 import MenuBar from './components/MenuBar.vue'
@@ -43,7 +43,6 @@ import {
   updateClipboardShortcut,
   writeNote,
 } from './lib/invoke'
-import type { AppTheme } from './lib/invoke'
 import { messages, type AppLanguage } from './lib/i18n'
 import { isTauriRuntime } from './lib/runtime'
 import { useDocumentSession } from './composables/useDocumentSession'
@@ -52,6 +51,7 @@ import { useReminderState } from './composables/useReminderState'
 import { useMcpService } from './composables/useMcpService'
 import { useDialogs } from './composables/useDialogs'
 import { useArchiveState } from './composables/useArchiveState'
+import { usePreferenceState } from './composables/usePreferenceState'
 import { editorBackgroundForTheme } from './lib/theme'
 import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
 import {
@@ -67,23 +67,9 @@ import {
 import { simplifiedToTraditionalMap, traditionalToSimplifiedMap } from './lib/chinese-maps'
 import {
   defaultDateTimeSeparatorTemplate,
-  initialBooleanSetting,
-  initialDateTimeSeparatorTemplate,
   initialJsonSetting,
-  initialLanguage,
-  initialNumberSetting,
-  initialPreviewContentWidth,
-  initialPreviewFontFamily,
-  initialPreviewLineHeight,
-  initialPreviewTheme,
-  initialStringSetting,
-  initialTabBarOrientation,
-  initialTheme,
-  initialTitleDoubleClickAction,
   legacyDateTimeSeparatorTemplate,
   normalizePreviewTheme,
-  type TabBarOrientation,
-  type TitleDoubleClickAction,
 } from './lib/preferences'
 import type { NoteTab, Reminder, SearchResult } from './types/note'
 import {
@@ -94,10 +80,6 @@ import {
   nextEditorMode,
   previewThemes,
   type EditorMode,
-  type PreviewContentWidth,
-  type PreviewFontFamily,
-  type PreviewLineHeight,
-  type PreviewTheme,
 } from './types/editor'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
@@ -146,9 +128,6 @@ const recentNotes = ref<NoteTab[]>([])
 const externalRecentNotes = ref<NoteTab[]>(initialJsonSetting<NoteTab[]>('neopad.externalRecentNotes', []))
 const appReady = ref(false)
 const statusMessage = ref('Markdown')
-const previewMode = ref<EditorMode>('edit')
-const defaultEditorMode = ref<EditorMode>('edit')
-const editorModeShortcut = ref('F4' as const)
 const settingsOpen = ref(false)
 const helpTopic = ref<HelpTopic | null>(null)
 const appVersion = ref('')
@@ -163,37 +142,38 @@ const {
 } = useDialogs()
 const immersiveMode = ref(false)
 const alwaysOnTop = ref(false)
-const theme = ref<AppTheme>(initialTheme())
-const language = ref<AppLanguage>(initialLanguage())
-const vimMode = ref(initialBooleanSetting('neopad.vimMode', false))
-const vimUseCtrlShortcuts = ref(initialBooleanSetting('neopad.vimUseCtrlShortcuts', true))
-const vimInsertExitKey = ref(initialStringSetting('neopad.vimInsertExitKey', 'jj'))
 const activeVimMode = ref('')
-const tabBarOrientation = ref<TabBarOrientation>(initialTabBarOrientation())
-const wordWrap = ref(initialBooleanSetting('neopad.wordWrap', true))
-const editorFontFamily = ref(initialStringSetting('neopad.editorFontFamily', '"Segoe UI", Arial, sans-serif'))
-const editorFontSize = ref(initialNumberSetting('neopad.editorFontSize', 14, 12, 22))
-const editorBackgroundColor = ref(initialStringSetting('neopad.editorBackgroundColor', '#ffffff'))
-const previewTheme = ref<PreviewTheme>(initialPreviewTheme())
-const previewFontFamily = ref<PreviewFontFamily>(initialPreviewFontFamily())
-const previewFontSize = ref(initialNumberSetting('neopad.previewFontSize', 14, 12, 22))
-const previewLineHeight = ref<PreviewLineHeight>(initialPreviewLineHeight())
-const previewContentWidth = ref<PreviewContentWidth>(initialPreviewContentWidth())
-const windowOpacity = ref(Number(initialStringSetting('neopad.windowOpacity', '1')))
-const runAtStartup = ref(initialBooleanSetting('neopad.runAtStartup', false))
-const startHidden = ref(initialBooleanSetting('neopad.startHidden', false))
-const closeToMinimize = ref(initialBooleanSetting('neopad.closeToMinimize', true))
-const snapToEdges = ref(initialBooleanSetting('neopad.snapToEdges', false))
-const transparencyEnabled = ref(initialBooleanSetting('neopad.transparencyEnabled', true))
-const titleDoubleClickAction = ref<TitleDoubleClickAction>(initialTitleDoubleClickAction())
-const shortcutBaseKey = ref(normalizeStoredShortcutKey(initialStringSetting('neopad.shortcutBaseKey', 'Z'), 'Z'))
-const shortcutModifiers = ref<string[]>(initialJsonSetting('neopad.shortcutModifiers', ['Alt']))
-const clipboardShortcutBaseKey = ref(normalizeStoredShortcutKey(initialStringSetting('neopad.clipboardShortcutBaseKey', 'V'), 'V'))
-const clipboardShortcutModifiers = ref<string[]>(initialJsonSetting('neopad.clipboardShortcutModifiers', ['Ctrl', 'Shift']))
-const insertSeparatorTemplate = ref(initialStringSetting('neopad.insertSeparatorTemplate', "crlf() + chars('-', 80) + crlf()"))
-const insertDateTimeTemplate = ref(initialStringSetting('neopad.insertDateTimeTemplate', "date() + ' ' + time()"))
-const insertDateTimeSeparatorTemplate = ref(initialDateTimeSeparatorTemplate())
-const customInsertTexts = ref<string[]>(initialJsonSetting('neopad.customInsertTexts', []))
+const {
+  previewMode, defaultEditorMode, editorModeShortcut, theme, language, vimMode,
+  vimUseCtrlShortcuts, vimInsertExitKey, tabBarOrientation, wordWrap, editorFontFamily,
+  editorFontSize, editorBackgroundColor, previewTheme, previewFontFamily, previewFontSize,
+  previewLineHeight, previewContentWidth, windowOpacity, runAtStartup, startHidden,
+  closeToMinimize, snapToEdges, transparencyEnabled, titleDoubleClickAction,
+  shortcutBaseKey, shortcutModifiers, clipboardShortcutBaseKey, clipboardShortcutModifiers,
+  insertSeparatorTemplate, insertDateTimeTemplate, insertDateTimeSeparatorTemplate,
+  customInsertTexts,
+} = usePreferenceState({
+  onLanguageChanged: () => {
+    if (isTauriRuntime()) void syncTrayLanguage()
+    statusMessage.value = settingsOpen.value
+      ? t.value.status.settings
+      : searchOpen.value ? t.value.status.search : t.value.status.markdown
+  },
+  onWindowOpacityChanged: () => void syncWindowOpacity(),
+  onAutostartChanged: () => void syncAutostart(),
+  onStartHiddenChanged: () => {
+    if (uiConfigLoaded && isTauriRuntime()) {
+      void setStartHidden(startHidden.value).catch(() => { saveState.value = 'Failed' })
+    }
+  },
+  onCloseToMinimizeChanged: () => void syncCloseToMinimize(),
+  onSnapToEdgesChanged: () => void syncSnapToEdges(),
+  onToggleShortcutChanged: () => void syncToggleShortcut(),
+  onClipboardShortcutChanged: () => void syncClipboardShortcut(),
+  onPersistRequested: () => {
+    if (uiConfigLoaded && isTauriRuntime()) void persistUiConfig()
+  },
+})
 const fileInput = ref<HTMLInputElement | null>(null)
 const backgroundColorInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
@@ -411,193 +391,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', forceSaveOnExit)
   document.removeEventListener('visibilitychange', forceSaveOnHide)
 })
-
-watch(language, () => {
-  window.localStorage.setItem('neopad.language', language.value)
-  if (isTauriRuntime()) {
-    void syncTrayLanguage()
-  }
-  if (settingsOpen.value) {
-    statusMessage.value = t.value.status.settings
-  } else if (searchOpen.value) {
-    statusMessage.value = t.value.status.search
-  } else {
-    statusMessage.value = t.value.status.markdown
-  }
-})
-
-watch(tabBarOrientation, () => {
-  window.localStorage.setItem('neopad.tabBarOrientation', tabBarOrientation.value)
-})
-
-watch(wordWrap, () => {
-  window.localStorage.setItem('neopad.wordWrap', String(wordWrap.value))
-})
-
-watch(editorFontFamily, () => {
-  window.localStorage.setItem('neopad.editorFontFamily', editorFontFamily.value)
-})
-
-watch(editorFontSize, () => {
-  window.localStorage.setItem('neopad.editorFontSize', String(editorFontSize.value))
-})
-
-watch(editorBackgroundColor, () => {
-  window.localStorage.setItem('neopad.editorBackgroundColor', editorBackgroundColor.value)
-})
-
-watch(previewTheme, () => {
-  window.localStorage.setItem('neopad.previewTheme', previewTheme.value)
-})
-
-watch(previewFontFamily, () => {
-  window.localStorage.setItem('neopad.previewFontFamily', previewFontFamily.value)
-})
-
-watch(previewFontSize, () => {
-  window.localStorage.setItem('neopad.previewFontSize', String(previewFontSize.value))
-})
-
-watch(previewLineHeight, () => {
-  window.localStorage.setItem('neopad.previewLineHeight', previewLineHeight.value)
-})
-
-watch(previewContentWidth, () => {
-  window.localStorage.setItem('neopad.previewContentWidth', previewContentWidth.value)
-})
-
-watch(theme, () => {
-  window.localStorage.setItem('neopad.theme', theme.value)
-})
-
-watch(windowOpacity, () => {
-  window.localStorage.setItem('neopad.windowOpacity', String(windowOpacity.value))
-  void syncWindowOpacity()
-})
-
-watch(runAtStartup, () => {
-  window.localStorage.setItem('neopad.runAtStartup', String(runAtStartup.value))
-  void syncAutostart()
-})
-
-watch(startHidden, () => {
-  window.localStorage.setItem('neopad.startHidden', String(startHidden.value))
-  void syncAutostart()
-  if (uiConfigLoaded && isTauriRuntime()) {
-    void setStartHidden(startHidden.value).catch(() => {
-      saveState.value = 'Failed'
-    })
-  }
-})
-
-watch(closeToMinimize, () => {
-  window.localStorage.setItem('neopad.closeToMinimize', String(closeToMinimize.value))
-  void syncCloseToMinimize()
-})
-
-watch(snapToEdges, () => {
-  window.localStorage.setItem('neopad.snapToEdges', String(snapToEdges.value))
-  void syncSnapToEdges()
-})
-
-watch(transparencyEnabled, () => {
-  window.localStorage.setItem('neopad.transparencyEnabled', String(transparencyEnabled.value))
-  void syncWindowOpacity()
-})
-
-watch(titleDoubleClickAction, () => {
-  window.localStorage.setItem('neopad.titleDoubleClickAction', titleDoubleClickAction.value)
-})
-
-watch(shortcutBaseKey, () => {
-  window.localStorage.setItem('neopad.shortcutBaseKey', shortcutBaseKey.value)
-  void syncToggleShortcut()
-})
-
-watch(shortcutModifiers, () => {
-  window.localStorage.setItem('neopad.shortcutModifiers', JSON.stringify(shortcutModifiers.value))
-  void syncToggleShortcut()
-}, { deep: true })
-
-watch(clipboardShortcutBaseKey, () => {
-  window.localStorage.setItem('neopad.clipboardShortcutBaseKey', clipboardShortcutBaseKey.value)
-  void syncClipboardShortcut()
-})
-
-watch(clipboardShortcutModifiers, () => {
-  window.localStorage.setItem('neopad.clipboardShortcutModifiers', JSON.stringify(clipboardShortcutModifiers.value))
-  void syncClipboardShortcut()
-}, { deep: true })
-
-watch(insertSeparatorTemplate, () => {
-  window.localStorage.setItem('neopad.insertSeparatorTemplate', insertSeparatorTemplate.value)
-})
-
-watch(insertDateTimeTemplate, () => {
-  window.localStorage.setItem('neopad.insertDateTimeTemplate', insertDateTimeTemplate.value)
-})
-
-watch(insertDateTimeSeparatorTemplate, () => {
-  window.localStorage.setItem('neopad.insertDateTimeSeparatorTemplate', insertDateTimeSeparatorTemplate.value)
-})
-
-watch(customInsertTexts, () => {
-  window.localStorage.setItem('neopad.customInsertTexts', JSON.stringify(customInsertTexts.value))
-}, { deep: true })
-
-watch(vimMode, () => {
-  window.localStorage.setItem('neopad.vimMode', String(vimMode.value))
-})
-
-watch(vimUseCtrlShortcuts, () => {
-  window.localStorage.setItem('neopad.vimUseCtrlShortcuts', String(vimUseCtrlShortcuts.value))
-})
-
-watch(vimInsertExitKey, () => {
-  window.localStorage.setItem('neopad.vimInsertExitKey', vimInsertExitKey.value)
-})
-
-watch(
-  [
-    language,
-    vimMode,
-    vimUseCtrlShortcuts,
-    vimInsertExitKey,
-    tabBarOrientation,
-    wordWrap,
-    editorFontFamily,
-    editorFontSize,
-    editorBackgroundColor,
-    previewTheme,
-    previewFontFamily,
-    previewFontSize,
-    previewLineHeight,
-    previewContentWidth,
-    theme,
-    windowOpacity,
-    runAtStartup,
-    startHidden,
-    closeToMinimize,
-    snapToEdges,
-    transparencyEnabled,
-    titleDoubleClickAction,
-    shortcutBaseKey,
-    shortcutModifiers,
-    clipboardShortcutBaseKey,
-    clipboardShortcutModifiers,
-    insertSeparatorTemplate,
-    insertDateTimeTemplate,
-    insertDateTimeSeparatorTemplate,
-    customInsertTexts,
-    defaultEditorMode,
-  ],
-  () => {
-    if (uiConfigLoaded && isTauriRuntime()) {
-      void persistUiConfig()
-    }
-  },
-  { deep: true },
-)
 
 function focusEditorAfterPageAction() {
   if (previewMode.value === 'preview') return
