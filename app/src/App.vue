@@ -7,11 +7,8 @@ import SearchPanel from './components/SearchPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import TabBar from './components/TabBar.vue'
 import {
-  archiveNote,
-  closeNote,
   createNote,
   completeStartup,
-  deleteNote,
   exportAllNotesZip,
   getAppVersion,
   getShortcutWarnings,
@@ -23,11 +20,7 @@ import {
   openNote,
   openExternalMarkdown,
   quitApp,
-  renameNote,
-  saveClipboard,
   saveMarkdownFile,
-  setNoteColor,
-  unarchiveNote,
   readExternalMarkdown,
   toggleMainWindowMaximize,
   toggleAlwaysOnTop,
@@ -43,6 +36,7 @@ import { useDialogs } from './composables/useDialogs'
 import { useArchiveState } from './composables/useArchiveState'
 import { usePreferenceState } from './composables/usePreferenceState'
 import { useNativeSettings } from './composables/useNativeSettings'
+import { useNoteLifecycle } from './composables/useNoteLifecycle'
 import { editorBackgroundForTheme } from './lib/theme'
 import { formatShortcutLabel, normalizeShortcutInput } from './lib/shortcut'
 import {
@@ -256,6 +250,30 @@ const {
   onError: () => { saveState.value = 'Failed' },
   onOpacityUpdated: () => { statusMessage.value = t.value.status.opacityUpdated },
 })
+const {
+  selectTab,
+  cycleTab,
+  handleTabTitleDoubleClick,
+  renameActivePage,
+  deleteActivePage,
+  closeActivePage,
+  archiveActivePage,
+  unarchiveActivePage,
+  renamePageById,
+  deletePageById,
+  closePageById,
+  archivePageById,
+  updateTabColor,
+  unarchiveTab,
+  createLocalTab,
+  saveCurrentClipboard,
+} = useNoteLifecycle({
+  tabs, activeTabId, activeTab, content, saveState, statusMessage, language,
+  titleDoubleClickAction, archiveListOpen, text: () => t.value, forceSave,
+  nextNoteLoadGeneration, isCurrentNoteLoad, loadActiveNote, setContentFromLoad,
+  requestInput, requestConfirmation, focusEditor: focusEditorAfterPageAction,
+  refreshRecentNotes, refreshArchivedNotes, upsertTab,
+})
 const displayTabs = computed(() => tabs.value.map((tab) => ({
   ...tab,
   title: tab.id === 'inbox'
@@ -289,7 +307,6 @@ let unlistenOpenSettings: UnlistenFn | null = null
 let unlistenCloseRequested: UnlistenFn | null = null
 let unlistenHideRequested: UnlistenFn | null = null
 let unlistenQuitRequested: UnlistenFn | null = null
-const deletingTabIds = new Set<string>()
 
 onMounted(async () => {
   if (!isTauriRuntime()) {
@@ -386,368 +403,6 @@ onBeforeUnmount(() => {
 function focusEditorAfterPageAction() {
   if (previewMode.value === 'preview') return
   void nextTick(() => editorPane.value?.focusEditor())
-}
-
-async function selectTab(tabId: string) {
-  if (tabId === activeTabId.value) {
-    return
-  }
-
-  const generation = nextNoteLoadGeneration()
-  if (!(await forceSave())) return
-  if (!isCurrentNoteLoad(generation)) return
-  activeTabId.value = tabId
-  if (await loadActiveNote(generation)) {
-    focusEditorAfterPageAction()
-  }
-}
-
-function cycleTab(offset: -1 | 1) {
-  const currentIndex = tabs.value.findIndex((tab) => tab.id === activeTabId.value)
-  if (currentIndex < 0 || tabs.value.length < 2) return
-  const nextIndex = (currentIndex + offset + tabs.value.length) % tabs.value.length
-  const nextTab = tabs.value[nextIndex]
-  if (nextTab) void selectTab(nextTab.id)
-}
-
-async function handleTabTitleDoubleClick(tabId: string) {
-  if (titleDoubleClickAction.value === 'none') {
-    return
-  }
-
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (!tab) {
-    return
-  }
-
-  if (titleDoubleClickAction.value === 'rename') {
-    await renameTab(tab)
-    return
-  }
-
-  if (titleDoubleClickAction.value === 'delete') {
-    await deleteTab(tab)
-  }
-}
-
-async function renameActivePage() {
-  if (activeTab.value) await renameTab(activeTab.value)
-}
-
-async function deleteActivePage() {
-  if (activeTab.value) await deleteTab(activeTab.value)
-}
-
-async function closeActivePage() {
-  if (activeTab.value) await closeTab(activeTab.value)
-}
-
-async function archiveActivePage() {
-  if (activeTab.value) await archiveTab(activeTab.value)
-}
-
-async function unarchiveActivePage() {
-  if (activeTab.value) await unarchiveTab(activeTab.value)
-}
-
-async function renamePageById(tabId: string) {
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (tab) await renameTab(tab)
-}
-
-async function deletePageById(tabId: string) {
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (tab) await deleteTab(tab)
-}
-
-async function closePageById(tabId: string) {
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (tab) await closeTab(tab)
-}
-
-async function archivePageById(tabId: string) {
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (tab) await archiveTab(tab)
-}
-
-async function updateTabColor(tabId: string, color: string | null) {
-  const tab = tabs.value.find((item) => item.id === tabId)
-  if (!tab) return
-  if (isTauriRuntime()) {
-    try {
-      const updated = await setNoteColor(tabId, color)
-      tab.color = updated.color
-      tab.updatedAt = updated.updatedAt
-    } catch {
-      saveState.value = 'Failed'
-    }
-  } else {
-    tab.color = color ?? undefined
-  }
-}
-
-async function renameTab(tab: NoteTab) {
-  if (tab.id === 'inbox' || tab.id === 'clipboard' || tab.external) return
-  const nextTitle = (await requestInput(t.value.settings.renameTitle, tab.title))?.trim()
-  if (!nextTitle) {
-    if (tab.id === activeTabId.value) focusEditorAfterPageAction()
-    return
-  }
-  const previousTitle = tab.title
-
-  if (isTauriRuntime()) {
-    try {
-      if (tab.id === activeTabId.value && !(await forceSave())) return
-      const renamed = await renameNote(tab.id, nextTitle)
-      tab.title = renamed.title
-      tab.updatedAt = renamed.updatedAt
-      tab.systemTitle = renamed.systemTitle
-      if (tab.id === activeTabId.value && await loadActiveNote()) {
-        focusEditorAfterPageAction()
-      }
-    } catch {
-      saveState.value = 'Failed'
-    }
-  } else {
-    tab.title = nextTitle
-    const shouldUpdateDefaultHeading = tab.systemTitle && tab.id === activeTabId.value
-    tab.systemTitle = false
-    tab.updatedAt = Date.now()
-    if (shouldUpdateDefaultHeading) {
-      const defaultHeading = `# ${previousTitle}`
-      if (content.value === defaultHeading || content.value.startsWith(`${defaultHeading}\n`)) {
-        setContentFromLoad(`# ${nextTitle}${content.value.slice(defaultHeading.length)}`)
-      }
-    }
-    if (tab.id === activeTabId.value) focusEditorAfterPageAction()
-  }
-}
-
-function adjacentTabIdAfterRemoval(tabId: string) {
-  const index = tabs.value.findIndex((item) => item.id === tabId)
-  if (index < 0) return tabs.value[0]?.id ?? 'inbox'
-  return tabs.value[index - 1]?.id ?? tabs.value[index + 1]?.id ?? 'inbox'
-}
-
-async function deleteTab(tab: NoteTab) {
-  if (tab.id === 'inbox' || tab.id === 'clipboard' || tab.external) return
-  if (deletingTabIds.has(tab.id)) return
-  const wasActiveTab = activeTabId.value === tab.id
-  const nextActiveTabId = wasActiveTab
-    ? adjacentTabIdAfterRemoval(tab.id)
-    : activeTabId.value
-  const confirmed = await requestConfirmation(
-    t.value.tabs.confirmDeleteTitle,
-    t.value.tabs.confirmDeleteMessage.replace('{title}', tab.title),
-    t.value.tabs.delete,
-    true,
-  )
-  if (!confirmed) {
-    if (wasActiveTab) focusEditorAfterPageAction()
-    return
-  }
-
-  deletingTabIds.add(tab.id)
-  if (isTauriRuntime()) {
-    try {
-      if (!(await forceSave())) {
-        saveState.value = 'Failed'
-        return
-      }
-      if (wasActiveTab) {
-        activeTabId.value = nextActiveTabId ?? 'inbox'
-        await loadActiveNote()
-      }
-      await deleteNote(tab.id)
-    } catch {
-      saveState.value = 'Failed'
-      return
-    } finally {
-      deletingTabIds.delete(tab.id)
-    }
-  }
-  tabs.value = tabs.value.filter((item) => item.id !== tab.id)
-  if (activeTabId.value === tab.id) {
-    activeTabId.value = nextActiveTabId ?? tabs.value[0]?.id ?? 'inbox'
-    await loadActiveNote()
-  }
-  if (wasActiveTab) focusEditorAfterPageAction()
-  deletingTabIds.delete(tab.id)
-}
-
-async function closeTab(tab: NoteTab) {
-  if (tab.id === 'inbox' || tab.id === 'clipboard') return
-  const wasActive = activeTabId.value === tab.id
-  const nextTabId = wasActive ? adjacentTabIdAfterRemoval(tab.id) : activeTabId.value
-  try {
-    if (isTauriRuntime() && !tab.external) {
-      if (!(await forceSave())) return
-      await closeNote(tab.id)
-    }
-    tabs.value = tabs.value.filter((item) => item.id !== tab.id)
-    if (wasActive) {
-      activeTabId.value = nextTabId
-      await loadActiveNote()
-      focusEditorAfterPageAction()
-    }
-    await refreshRecentNotes()
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function archiveTab(tab: NoteTab) {
-  if (tab.id === 'inbox' || tab.id === 'clipboard') return
-  if (tab.external) {
-    const confirmed = await requestConfirmation(
-      t.value.tabs.archive,
-      language.value === 'zh'
-        ? `将“${tab.title}”复制到 NeoPad 存档。原始文件不会移动或删除。`
-        : `Copy "${tab.title}" into the NeoPad archive? The original file will not be moved or deleted.`,
-      t.value.tabs.archive,
-    )
-    if (!confirmed) {
-      if (activeTabId.value === tab.id) focusEditorAfterPageAction()
-      return
-    }
-    try {
-      if (!(await forceSave())) return
-      const created = await createNote(tab.title)
-      const saved = await writeNote(created.id, content.value, created.updatedAt)
-      await archiveNote(saved.id)
-      await closeTab(tab)
-    } catch {
-      saveState.value = 'Failed'
-    }
-    return
-  }
-  if (tab.archived) {
-    await unarchiveTab(tab)
-    return
-  }
-  const wasActive = activeTabId.value === tab.id
-  const nextTabId = wasActive ? adjacentTabIdAfterRemoval(tab.id) : activeTabId.value
-  const confirmed = await requestConfirmation(
-    t.value.tabs.archive,
-    t.value.tabs.confirmArchiveMessage.replace('{title}', tab.title),
-    t.value.tabs.archive,
-  )
-  if (!confirmed) {
-    if (wasActive) focusEditorAfterPageAction()
-    return
-  }
-  try {
-    if (isTauriRuntime()) {
-      if (!(await forceSave())) return
-      await archiveNote(tab.id)
-    }
-    tabs.value = tabs.value.filter((item) => item.id !== tab.id)
-    if (wasActive) {
-      activeTabId.value = nextTabId
-      await loadActiveNote()
-      focusEditorAfterPageAction()
-    }
-    await refreshRecentNotes()
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function unarchiveTab(tab: NoteTab) {
-  try {
-    const restored = isTauriRuntime() ? await unarchiveNote(tab.id) : { ...tab, archived: false, open: true }
-    upsertTab(restored)
-    activeTabId.value = restored.id
-    await loadActiveNote()
-    await refreshRecentNotes()
-    if (archiveListOpen.value) await refreshArchivedNotes()
-    else focusEditorAfterPageAction()
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function createLocalTab() {
-  const generation = nextNoteLoadGeneration()
-  if (isTauriRuntime()) {
-    if (!(await forceSave())) return
-    if (!isCurrentNoteLoad(generation)) return
-    try {
-      const note = await createNote()
-      if (!isCurrentNoteLoad(generation)) return
-      upsertTab({
-        id: note.id,
-        title: note.title,
-        fileName: note.fileName,
-        createdAt: note.updatedAt,
-        updatedAt: note.updatedAt,
-        pinned: false,
-        deleted: false,
-        archived: false,
-        open: true,
-        systemTitle: true,
-      })
-      activeTabId.value = note.id
-      setContentFromLoad(note.content)
-      saveState.value = 'Saved'
-      focusEditorAfterPageAction()
-      return
-    } catch {
-      saveState.value = 'Failed'
-    }
-  }
-
-  const createdAt = Date.now()
-  const tab: NoteTab = {
-    id: `draft-${createdAt}`,
-    title: 'Untitled',
-    fileName: `page-${createdAt}.md`,
-    createdAt,
-    updatedAt: createdAt,
-    pinned: false,
-    deleted: false,
-    archived: false,
-    open: true,
-    systemTitle: true,
-  }
-
-  tabs.value.push(tab)
-  activeTabId.value = tab.id
-  content.value = `# ${tab.title}\n\n`
-  focusEditorAfterPageAction()
-}
-
-async function saveCurrentClipboard() {
-  if (!isTauriRuntime()) {
-    statusMessage.value = t.value.status.clipboard
-    return
-  }
-
-  const generation = nextNoteLoadGeneration()
-  try {
-    if (!(await forceSave())) return
-    if (!isCurrentNoteLoad(generation)) return
-    const note = await saveClipboard()
-    if (!isCurrentNoteLoad(generation)) return
-    upsertTab({
-      id: note.id,
-      title: note.title,
-      fileName: note.fileName,
-      createdAt: note.updatedAt,
-      updatedAt: note.updatedAt,
-      pinned: true,
-      deleted: false,
-      archived: false,
-      open: true,
-      systemTitle: false,
-    })
-    activeTabId.value = note.id
-    setContentFromLoad(note.content)
-    statusMessage.value = t.value.status.clipboardSaved
-    focusEditorAfterPageAction()
-  } catch {
-    saveState.value = 'Failed'
-  }
 }
 
 function triggerLoadFile() {
