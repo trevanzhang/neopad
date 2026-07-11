@@ -135,3 +135,5 @@ export function usePreferenceState(callbacks: PreferenceCallbacks) {
     customInsertTexts,
   }
 }
+
+export type PreferenceState = ReturnType<typeof usePreferenceState>

@@ -15,7 +15,6 @@ import {
   exportAllNotesZip,
   getAppVersion,
   getShortcutWarnings,
-  getUiConfig,
   getWorkspace,
   hideWindow,
   listNotes,
@@ -27,20 +26,11 @@ import {
   renameNote,
   saveClipboard,
   saveMarkdownFile,
-  saveUiConfig,
   setNoteColor,
   unarchiveNote,
   readExternalMarkdown,
-  setAutostart,
-  setCloseToMinimize,
-  setSnapToEdges,
-  setStartHidden,
-  setWindowOpacity,
   toggleMainWindowMaximize,
-  setTrayLanguage,
   toggleAlwaysOnTop,
-  updateToggleShortcut,
-  updateClipboardShortcut,
   writeNote,
 } from './lib/invoke'
 import { messages, type AppLanguage } from './lib/i18n'
@@ -52,8 +42,9 @@ import { useMcpService } from './composables/useMcpService'
 import { useDialogs } from './composables/useDialogs'
 import { useArchiveState } from './composables/useArchiveState'
 import { usePreferenceState } from './composables/usePreferenceState'
+import { useNativeSettings } from './composables/useNativeSettings'
 import { editorBackgroundForTheme } from './lib/theme'
-import { formatShortcutLabel, normalizeShortcutInput, normalizeStoredShortcutKey } from './lib/shortcut'
+import { formatShortcutLabel, normalizeShortcutInput } from './lib/shortcut'
 import {
   convertChinese,
   digestText,
@@ -65,18 +56,9 @@ import {
   toHalfWidth,
 } from './lib/document-utils'
 import { simplifiedToTraditionalMap, traditionalToSimplifiedMap } from './lib/chinese-maps'
-import {
-  defaultDateTimeSeparatorTemplate,
-  initialJsonSetting,
-  legacyDateTimeSeparatorTemplate,
-  normalizePreviewTheme,
-} from './lib/preferences'
+import { initialJsonSetting } from './lib/preferences'
 import type { NoteTab, Reminder, SearchResult } from './types/note'
 import {
-  isEditorMode,
-  isPreviewContentWidth,
-  isPreviewFontFamily,
-  isPreviewLineHeight,
   nextEditorMode,
   previewThemes,
   type EditorMode,
@@ -143,6 +125,24 @@ const {
 const immersiveMode = ref(false)
 const alwaysOnTop = ref(false)
 const activeVimMode = ref('')
+const preferenceState = usePreferenceState({
+  onLanguageChanged: () => {
+    if (isTauriRuntime()) void syncTrayLanguage()
+    statusMessage.value = settingsOpen.value
+      ? t.value.status.settings
+      : searchOpen.value ? t.value.status.search : t.value.status.markdown
+  },
+  onWindowOpacityChanged: () => void syncWindowOpacity(),
+  onAutostartChanged: () => void syncAutostart(),
+  onStartHiddenChanged: () => void syncStartHidden(),
+  onCloseToMinimizeChanged: () => void syncCloseToMinimize(),
+  onSnapToEdgesChanged: () => void syncSnapToEdges(),
+  onToggleShortcutChanged: () => void syncToggleShortcut(),
+  onClipboardShortcutChanged: () => void syncClipboardShortcut(),
+  onPersistRequested: () => {
+    if (uiConfigLoaded.value && isTauriRuntime()) void persistUiConfig()
+  },
+})
 const {
   previewMode, defaultEditorMode, editorModeShortcut, theme, language, vimMode,
   vimUseCtrlShortcuts, vimInsertExitKey, tabBarOrientation, wordWrap, editorFontFamily,
@@ -152,28 +152,7 @@ const {
   shortcutBaseKey, shortcutModifiers, clipboardShortcutBaseKey, clipboardShortcutModifiers,
   insertSeparatorTemplate, insertDateTimeTemplate, insertDateTimeSeparatorTemplate,
   customInsertTexts,
-} = usePreferenceState({
-  onLanguageChanged: () => {
-    if (isTauriRuntime()) void syncTrayLanguage()
-    statusMessage.value = settingsOpen.value
-      ? t.value.status.settings
-      : searchOpen.value ? t.value.status.search : t.value.status.markdown
-  },
-  onWindowOpacityChanged: () => void syncWindowOpacity(),
-  onAutostartChanged: () => void syncAutostart(),
-  onStartHiddenChanged: () => {
-    if (uiConfigLoaded && isTauriRuntime()) {
-      void setStartHidden(startHidden.value).catch(() => { saveState.value = 'Failed' })
-    }
-  },
-  onCloseToMinimizeChanged: () => void syncCloseToMinimize(),
-  onSnapToEdgesChanged: () => void syncSnapToEdges(),
-  onToggleShortcutChanged: () => void syncToggleShortcut(),
-  onClipboardShortcutChanged: () => void syncClipboardShortcut(),
-  onPersistRequested: () => {
-    if (uiConfigLoaded && isTauriRuntime()) void persistUiConfig()
-  },
-})
+} = preferenceState
 const fileInput = ref<HTMLInputElement | null>(null)
 const backgroundColorInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
@@ -258,6 +237,25 @@ const {
 } = useArchiveState(forceSave, () => {
   saveState.value = 'Failed'
 })
+const {
+  uiConfigLoaded,
+  loadNativeUiConfig,
+  persistUiConfig,
+  syncTrayLanguage,
+  syncAutostart,
+  syncStartHidden,
+  syncCloseToMinimize,
+  syncSnapToEdges,
+  syncWindowOpacity,
+  syncToggleShortcut,
+  syncClipboardShortcut,
+  scheduleNativeSettingsSync,
+  disposeNativeSettings,
+} = useNativeSettings({
+  preferences: preferenceState,
+  onError: () => { saveState.value = 'Failed' },
+  onOpacityUpdated: () => { statusMessage.value = t.value.status.opacityUpdated },
+})
 const displayTabs = computed(() => tabs.value.map((tab) => ({
   ...tab,
   title: tab.id === 'inbox'
@@ -285,15 +283,12 @@ const editorModeLabel = computed(() => {
 })
 const effectiveEditorBackground = computed(() => editorBackgroundForTheme(theme.value, editorBackgroundColor.value))
 const themeToggleLabel = computed(() => theme.value === 'dark' ? t.value.status.switchToLight : t.value.status.switchToDark)
-let uiConfigTimer: number | null = null
-let nativeSettingsTimer: number | null = null
 let unlistenNewNoteRequested: UnlistenFn | null = null
 let unlistenSaveClipboardRequested: UnlistenFn | null = null
 let unlistenOpenSettings: UnlistenFn | null = null
 let unlistenCloseRequested: UnlistenFn | null = null
 let unlistenHideRequested: UnlistenFn | null = null
 let unlistenQuitRequested: UnlistenFn | null = null
-let uiConfigLoaded = false
 const deletingTabIds = new Set<string>()
 
 onMounted(async () => {
@@ -320,10 +315,7 @@ onMounted(async () => {
   await completeStartup().catch(() => {
     saveState.value = 'Failed'
   })
-  nativeSettingsTimer = window.setTimeout(() => {
-    nativeSettingsTimer = null
-    void syncNativeSettings()
-  }, 5000)
+  scheduleNativeSettingsSync()
   await startReminderPolling()
 })
 
@@ -378,8 +370,7 @@ async function resetWebviewZoom() {
 onBeforeUnmount(() => {
   disposeDocumentSession()
   disposeSearchState()
-  if (uiConfigTimer) window.clearTimeout(uiConfigTimer)
-  if (nativeSettingsTimer) window.clearTimeout(nativeSettingsTimer)
+  disposeNativeSettings()
   disposeReminderState()
   void unlistenNewNoteRequested?.()
   void unlistenSaveClipboardRequested?.()
@@ -1366,218 +1357,6 @@ async function loadWorkspacePath() {
   try {
     const workspace = await getWorkspace()
     workspacePath.value = workspace.root
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function loadNativeUiConfig() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    const stored = await getUiConfig()
-    if (!stored.initialized) {
-      uiConfigLoaded = true
-      persistUiConfig()
-      return
-    }
-    const ui = stored.ui
-    theme.value = stored.theme === 'dark'
-      ? 'dark'
-      : stored.theme === 'light'
-        ? 'light'
-        : window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    const storedMode = isEditorMode(stored.previewMode) ? stored.previewMode : 'edit'
-    previewMode.value = 'edit'
-    defaultEditorMode.value = 'edit'
-    language.value = ui.language === 'zh' ? 'zh' : 'en'
-    vimMode.value = ui.vimMode
-    vimUseCtrlShortcuts.value = ui.vimUseCtrlShortcuts
-    vimInsertExitKey.value = ui.vimInsertExitKey
-    tabBarOrientation.value = ui.tabBarOrientation === 'vertical' ? 'vertical' : 'horizontal'
-    wordWrap.value = ui.wordWrap
-    editorFontFamily.value = ui.editorFontFamily
-    editorFontSize.value = Math.min(22, Math.max(12, Number(ui.editorFontSize) || 14))
-    editorBackgroundColor.value = ui.editorBackgroundColor
-    previewTheme.value = normalizePreviewTheme(ui.previewTheme)
-    previewFontFamily.value = isPreviewFontFamily(ui.previewFontFamily) ? ui.previewFontFamily : 'editor'
-    previewFontSize.value = Math.min(22, Math.max(12, Number(ui.previewFontSize) || 14))
-    previewLineHeight.value = isPreviewLineHeight(ui.previewLineHeight) ? ui.previewLineHeight : 'standard'
-    previewContentWidth.value = isPreviewContentWidth(ui.previewContentWidth) ? ui.previewContentWidth : 'standard'
-    windowOpacity.value = Math.min(1, Math.max(0.2, ui.windowOpacity))
-    runAtStartup.value = ui.runAtStartup
-    startHidden.value = ui.startHidden
-    closeToMinimize.value = ui.closeToMinimize
-    snapToEdges.value = ui.snapToEdges
-    transparencyEnabled.value = ui.transparencyEnabled
-    titleDoubleClickAction.value =
-      ui.titleDoubleClickAction === 'none' || ui.titleDoubleClickAction === 'delete'
-        ? ui.titleDoubleClickAction
-        : 'rename'
-    shortcutBaseKey.value = normalizeStoredShortcutKey(ui.shortcutBaseKey, 'Z')
-    shortcutModifiers.value = ui.shortcutModifiers
-    clipboardShortcutBaseKey.value = normalizeStoredShortcutKey(ui.clipboardShortcutBaseKey, 'V')
-    clipboardShortcutModifiers.value = ui.clipboardShortcutModifiers
-    insertSeparatorTemplate.value = ui.insertSeparatorTemplate
-    insertDateTimeTemplate.value = ui.insertDateTimeTemplate
-    insertDateTimeSeparatorTemplate.value = ui.insertDateTimeSeparatorTemplate === legacyDateTimeSeparatorTemplate
-      ? defaultDateTimeSeparatorTemplate
-      : ui.insertDateTimeSeparatorTemplate
-    customInsertTexts.value = ui.customInsertTexts
-    const shouldMigrateEditorShortcut = (ui.editorModeShortcut as string) !== 'F4'
-    editorModeShortcut.value = 'F4'
-    uiConfigLoaded = true
-    if (storedMode !== 'edit' || shouldMigrateEditorShortcut) {
-      persistUiConfig()
-    }
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-function persistUiConfig() {
-  if (uiConfigTimer) {
-    window.clearTimeout(uiConfigTimer)
-  }
-  uiConfigTimer = window.setTimeout(async () => {
-    uiConfigTimer = null
-    try {
-      await saveUiConfig({
-        language: language.value,
-        vimMode: vimMode.value,
-        vimUseCtrlShortcuts: vimUseCtrlShortcuts.value,
-        vimInsertExitKey: vimInsertExitKey.value,
-        tabBarOrientation: tabBarOrientation.value,
-        wordWrap: wordWrap.value,
-        editorFontFamily: editorFontFamily.value,
-        editorFontSize: editorFontSize.value,
-        editorBackgroundColor: editorBackgroundColor.value,
-        previewTheme: previewTheme.value,
-        previewFontFamily: previewFontFamily.value,
-        previewFontSize: previewFontSize.value,
-        previewLineHeight: previewLineHeight.value,
-        previewContentWidth: previewContentWidth.value,
-        windowOpacity: windowOpacity.value,
-        runAtStartup: runAtStartup.value,
-        startHidden: startHidden.value,
-        closeToMinimize: closeToMinimize.value,
-        snapToEdges: snapToEdges.value,
-        transparencyEnabled: transparencyEnabled.value,
-        titleDoubleClickAction: titleDoubleClickAction.value,
-        shortcutBaseKey: shortcutBaseKey.value,
-        shortcutModifiers: shortcutModifiers.value,
-        clipboardShortcutBaseKey: clipboardShortcutBaseKey.value,
-        clipboardShortcutModifiers: clipboardShortcutModifiers.value,
-        insertSeparatorTemplate: insertSeparatorTemplate.value,
-        insertDateTimeTemplate: insertDateTimeTemplate.value,
-        insertDateTimeSeparatorTemplate: insertDateTimeSeparatorTemplate.value,
-        customInsertTexts: customInsertTexts.value,
-        editorModeShortcut: editorModeShortcut.value,
-      }, defaultEditorMode.value, theme.value)
-    } catch {
-      saveState.value = 'Failed'
-    }
-  }, 150)
-}
-
-async function syncNativeSettings() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  await Promise.allSettled([
-    syncAutostart(),
-    syncCloseToMinimize(),
-    syncSnapToEdges(),
-    syncWindowOpacity(),
-    syncTrayLanguage(),
-    syncToggleShortcut(),
-    syncClipboardShortcut(),
-  ])
-}
-
-async function syncTrayLanguage() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await setTrayLanguage(language.value)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncAutostart() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await setAutostart(runAtStartup.value, startHidden.value)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncCloseToMinimize() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await setCloseToMinimize(closeToMinimize.value)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncSnapToEdges() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await setSnapToEdges(snapToEdges.value)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncWindowOpacity() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await setWindowOpacity(transparencyEnabled.value ? windowOpacity.value : 1)
-    statusMessage.value = t.value.status.opacityUpdated
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncToggleShortcut() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await updateToggleShortcut(shortcutBaseKey.value, shortcutModifiers.value)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
-
-async function syncClipboardShortcut() {
-  if (!isTauriRuntime()) {
-    return
-  }
-
-  try {
-    await updateClipboardShortcut(clipboardShortcutBaseKey.value, clipboardShortcutModifiers.value)
   } catch {
     saveState.value = 'Failed'
   }
