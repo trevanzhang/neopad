@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { AppMessages } from '../lib/i18n'
-import type { EditorMode } from '../types/editor'
 import type { NoteTab } from '../types/note'
 
 const props = defineProps<{
-  previewMode: EditorMode
-  tabBarOrientation: 'horizontal' | 'vertical'
   wordWrap: boolean
   alwaysOnTop: boolean
   pageActionsEnabled: boolean
@@ -43,7 +40,7 @@ const emit = defineEmits<{
   search: []
   settings: []
   togglePin: []
-  updateTabBarOrientation: [orientation: 'horizontal' | 'vertical']
+  toggleNoteLibrary: []
   formatFont: []
   formatBackground: []
   toggleWordWrap: []
@@ -58,7 +55,7 @@ const emit = defineEmits<{
   reminderList: []
   processText: [action: string]
   helpTopic: [topic: 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about']
-  updatePreviewMode: [mode: EditorMode]
+  cycleEditorMode: []
 }>()
 
 function toggleArchive() {
@@ -85,8 +82,10 @@ const menuBar = ref<HTMLElement | null>(null)
 let focusBeforeMenu: HTMLElement | null = null
 const mnemonicRoots: Record<string, number> = { f: 0, e: 1, v: 2, p: 3, o: 4, i: 5, t: 6, h: 7 }
 
-onMounted(() => window.addEventListener('keydown', handleMenuKeydown, { capture: true }))
-onBeforeUnmount(() => window.removeEventListener('keydown', handleMenuKeydown, { capture: true }))
+// Application-level shortcuts run during capture so overlays can own Escape
+// before menu navigation is considered.
+onMounted(() => window.addEventListener('keydown', handleMenuKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', handleMenuKeydown))
 
 function rootTitles() {
   return Array.from(menuBar.value?.querySelectorAll<HTMLButtonElement>(':scope > .menu-root > .menu-title') ?? [])
@@ -284,46 +283,15 @@ function handleMenuKeydown(event: KeyboardEvent) {
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.view }}</button>
       <div class="menu-popover menu-view-popover">
-        <div class="menu-subroot">
-          <button type="button" class="menu-command">
-            <span>{{ messages.editorMode }}</span>
-            <span class="menu-arrow">&rsaquo;</span>
-          </button>
-          <div class="menu-popover menu-subpopover menu-view-subpopover">
-            <button type="button" :class="{ checked: previewMode === 'edit' }" @click="$emit('updatePreviewMode', 'edit')">
-              {{ messages.editMode }}
-            </button>
-            <button type="button" :class="{ checked: previewMode === 'split' }" @click="$emit('updatePreviewMode', 'split')">
-              {{ messages.splitMode }}
-            </button>
-            <button type="button" :class="{ checked: previewMode === 'preview' }" @click="$emit('updatePreviewMode', 'preview')">
-              {{ messages.previewMode }}
-            </button>
-          </div>
-        </div>
+        <button type="button" class="menu-command" @click="$emit('cycleEditorMode')">
+          <span>{{ messages.switchEditorMode }}</span>
+          <span class="menu-shortcut">{{ messages.f8 }}</span>
+        </button>
         <div class="menu-separator" role="separator" />
-        <div class="menu-subroot">
-          <button type="button" class="menu-command">
-            <span>{{ messages.tabBarDisplay }}</span>
-            <span class="menu-arrow">&rsaquo;</span>
-          </button>
-          <div class="menu-popover menu-subpopover menu-view-subpopover">
-            <button
-              type="button"
-              :class="{ checked: tabBarOrientation === 'horizontal' }"
-              @click="$emit('updateTabBarOrientation', 'horizontal')"
-            >
-              {{ messages.horizontal }}
-            </button>
-            <button
-              type="button"
-              :class="{ checked: tabBarOrientation === 'vertical' }"
-              @click="$emit('updateTabBarOrientation', 'vertical')"
-            >
-              {{ messages.vertical }}
-            </button>
-          </div>
-        </div>
+        <button type="button" class="menu-command" @click="$emit('toggleNoteLibrary')">
+          <span>{{ messages.openNoteBrowser }}</span>
+          <span class="menu-shortcut">{{ messages.f4 }}</span>
+        </button>
       </div>
     </div>
 
@@ -422,7 +390,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
         <div class="menu-separator" role="separator" />
         <button type="button" class="menu-command" @click="$emit('settings')">
           <span>{{ messages.settingsWithKey }}</span>
-          <span class="menu-shortcut">{{ messages.f8 }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlComma }}</span>
         </button>
       </div>
     </div>

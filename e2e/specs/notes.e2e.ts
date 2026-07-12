@@ -55,7 +55,7 @@ describe('NeoPad desktop note workflow', () => {
   })
 
   it('opens native-backed settings without losing the active note', async () => {
-    await browser.keys('F8')
+    await browser.keys(['Control', ','])
     await expect($('.settings-panel')).toBeDisplayed()
     const closeButton = await $('.settings-footer button')
     await browser.execute((element) => (element as HTMLElement).click(), closeButton)
@@ -63,7 +63,7 @@ describe('NeoPad desktop note workflow', () => {
   })
 
   it('uses Escape to close settings and menus before hiding the window', async () => {
-    await browser.keys('F8')
+    await browser.keys(['Control', ','])
     await expect($('.settings-panel')).toBeDisplayed()
     await browser.keys('Escape')
     await expect($('.settings-panel')).not.toBeDisplayed()
@@ -126,7 +126,7 @@ describe('NeoPad desktop note workflow', () => {
 
   it('maximizes and restores with Alt+Enter while edge snapping is enabled', async () => {
     await browser.setWindowSize(720, 520)
-    await browser.keys('F8')
+    await browser.keys(['Control', ','])
     const snapRow = await $('.settings-check-row*=Snap main window to screen edges')
     const snapCheckbox = await snapRow.$('input')
     await snapCheckbox.waitForExist()

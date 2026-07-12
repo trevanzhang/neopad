@@ -33,6 +33,34 @@ pub fn list_archived_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
         .collect())
 }
 
+pub fn list_trashed_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
+    Ok(load_tabs(workspace)?
+        .tabs
+        .into_iter()
+        .filter(|tab| tab.deleted)
+        .collect())
+}
+
+pub fn clear_trash(workspace: &Workspace) -> Result<()> {
+    for entry in fs::read_dir(&workspace.trash_dir).with_context(|| {
+        format!(
+            "failed to read trash directory {}",
+            workspace.trash_dir.display()
+        )
+    })? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            fs::remove_file(&path)
+                .with_context(|| format!("failed to remove trashed note {}", path.display()))?;
+        }
+    }
+
+    let mut tabs = load_tabs(workspace)?;
+    tabs.tabs.retain(|tab| !tab.deleted);
+    save_tabs(workspace, &tabs)
+}
+
 pub fn list_open_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
     Ok(existing_tabs(workspace, load_tabs(workspace)?.tabs)?
         .into_iter()
@@ -283,6 +311,40 @@ pub fn delete_note_to_trash(workspace: &Workspace, note_id: &str) -> Result<Note
     Ok(deleted)
 }
 
+pub fn restore_note_from_trash(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
+    let mut tabs = load_tabs(workspace)?;
+    let tab = tabs
+        .tabs
+        .iter_mut()
+        .find(|tab| tab.id == note_id && tab.deleted)
+        .with_context(|| format!("trashed note not found: {note_id}"))?;
+    let source = trashed_note_path(workspace, &tab.file_name)?;
+    let target = if tab.archived {
+        archive_file_path(workspace, &tab.file_name)?
+    } else {
+        note_file_path(workspace, &tab.file_name)?
+    };
+    fs::rename(&source, &target).with_context(|| {
+        format!(
+            "failed to restore trashed note {} to {}",
+            source.display(),
+            target.display()
+        )
+    })?;
+    tab.deleted = false;
+    tab.open = !tab.archived;
+    tab.last_opened_at = if tab.archived { None } else { Some(now_ms()?) };
+    tab.updated_at = next_updated_at(tab.updated_at)?;
+    let restored = tab.clone();
+    if let Err(error) = save_tabs(workspace, &tabs) {
+        fs::rename(&target, &source).with_context(|| {
+            format!("failed to return note to trash after metadata error: {error:#}")
+        })?;
+        return Err(error);
+    }
+    Ok(restored)
+}
+
 pub fn close_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
     if matches!(note_id, "inbox" | "clipboard") {
         bail!("{note_id} is pinned and cannot be closed");
@@ -432,6 +494,17 @@ pub fn reconcile_note_metadata(workspace: &Workspace) -> Result<bool> {
 
 fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result<bool> {
     let mut changed = false;
+
+    let mut stale_deleted_ids = HashSet::new();
+    for tab in &tabs.tabs {
+        if tab.deleted && find_trashed_note_path(workspace, &tab.file_name)?.is_none() {
+            stale_deleted_ids.insert(tab.id.clone());
+        }
+    }
+    if !stale_deleted_ids.is_empty() {
+        tabs.tabs.retain(|tab| !stale_deleted_ids.contains(&tab.id));
+        changed = true;
+    }
 
     for tab in &mut tabs.tabs {
         if tab.deleted {
@@ -602,6 +675,34 @@ fn note_path(workspace: &Workspace, tab: &NoteTab) -> Result<std::path::PathBuf>
     }
 }
 
+fn trashed_note_path(workspace: &Workspace, file_name: &str) -> Result<std::path::PathBuf> {
+    find_trashed_note_path(workspace, file_name)?
+        .with_context(|| format!("trashed note file not found for {file_name}"))
+}
+
+fn find_trashed_note_path(
+    workspace: &Workspace,
+    file_name: &str,
+) -> Result<Option<std::path::PathBuf>> {
+    let suffix = format!("-{file_name}");
+    let mut matches = fs::read_dir(&workspace.trash_dir)
+        .with_context(|| {
+            format!(
+                "failed to read trash directory {}",
+                workspace.trash_dir.display()
+            )
+        })?
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            let path = entry.path();
+            let name = path.file_name()?.to_str()?;
+            (path.is_file() && name.ends_with(&suffix)).then_some(path)
+        })
+        .collect::<Vec<_>>();
+    matches.sort();
+    Ok(matches.pop())
+}
+
 fn find_note_tab(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
     let tabs = load_tabs(workspace)?;
     tabs.tabs
@@ -739,6 +840,69 @@ mod tests {
         assert!(rename_note(&workspace, "clipboard", "Other".to_owned()).is_err());
         assert!(workspace.inbox_path().is_file());
         assert!(workspace.clipboard_path().is_file());
+    }
+
+    #[test]
+    fn trashed_notes_can_be_listed_and_restored() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Restore me".to_owned())).expect("create");
+
+        let deleted = delete_note_to_trash(&workspace, &created.id).expect("delete");
+        assert!(deleted.deleted);
+        assert_eq!(list_trashed_notes(&workspace).expect("list trash").len(), 1);
+
+        let restored = restore_note_from_trash(&workspace, &created.id).expect("restore");
+        assert!(!restored.deleted);
+        assert!(note_file_path(&workspace, &restored.file_name)
+            .expect("note path")
+            .is_file());
+        assert!(list_trashed_notes(&workspace)
+            .expect("list trash")
+            .is_empty());
+    }
+
+    #[test]
+    fn reconciliation_removes_metadata_for_manually_cleared_trash() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Manual cleanup".to_owned())).expect("create");
+        delete_note_to_trash(&workspace, &created.id).expect("delete");
+        let trashed_path = trashed_note_path(&workspace, &created.file_name).expect("trashed path");
+        fs::remove_file(trashed_path).expect("manual cleanup");
+
+        assert!(reconcile_note_metadata(&workspace).expect("reconcile"));
+        assert!(list_trashed_notes(&workspace)
+            .expect("list trash")
+            .is_empty());
+        assert!(load_tabs(&workspace)
+            .expect("tabs")
+            .tabs
+            .iter()
+            .all(|tab| tab.id != created.id));
+    }
+
+    #[test]
+    fn clear_trash_removes_files_and_deleted_metadata() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Clear me".to_owned())).expect("create");
+        delete_note_to_trash(&workspace, &created.id).expect("delete");
+
+        clear_trash(&workspace).expect("clear trash");
+
+        assert!(fs::read_dir(&workspace.trash_dir)
+            .expect("trash dir")
+            .next()
+            .is_none());
+        assert!(list_trashed_notes(&workspace)
+            .expect("list trash")
+            .is_empty());
+        assert!(load_tabs(&workspace)
+            .expect("tabs")
+            .tabs
+            .iter()
+            .all(|tab| tab.id != created.id));
     }
 
     #[test]

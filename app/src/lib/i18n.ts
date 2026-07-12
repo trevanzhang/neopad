@@ -13,6 +13,7 @@ export type AppMessages = {
     defaultColor: string
     previous: string
     next: string
+    library: string
     f2: string
     altDel: string
     f12: string
@@ -65,16 +66,15 @@ export type AppMessages = {
     altDel: string
     f12: string
     ctrlO: string
-    tabBarDisplay: string
-    horizontal: string
-    vertical: string
+    openNoteBrowser: string
+    f4: string
     font: string
     backgroundColor: string
     togglePreviewTheme: string
     toggleTheme: string
     wordWrap: string
     ctrlW: string
-    editorMode: string
+    switchEditorMode: string
     cycleEditorMode: string
     editMode: string
     splitMode: string
@@ -129,6 +129,7 @@ export type AppMessages = {
     f5: string
     settingsWithKey: string
     f8: string
+    ctrlComma: string
     search: string
     settings: string
     f1: string
@@ -146,6 +147,13 @@ export type AppMessages = {
     shortcutsTab: string
     insertTextTab: string
     advancedTab: string
+    about: string
+    aboutDescription: string
+    version: string
+    author: string
+    openSource: string
+    license: string
+    builtWith: string
     generalOptions: string
     vimMode: string
     vimUseCtrlShortcuts: string
@@ -183,6 +191,10 @@ export type AppMessages = {
     light: string
     dark: string
     shortcuts: string
+    globalShortcuts: string
+    globalShortcutHint: string
+    applicationShortcuts: string
+    applicationShortcutHint: string
     toggleWindow: string
     saveClipboard: string
     hideWindow: string
@@ -291,6 +303,23 @@ export type AppMessages = {
     empty: string
     restore: string
   }
+  library: {
+    title: string
+    notes: string
+    archive: string
+    trash: string
+    emptyNotes: string
+    emptyArchive: string
+    emptyTrash: string
+    newNote: string
+    refresh: string
+    restore: string
+    rename: string
+    archiveAction: string
+    delete: string
+    clearTrash: string
+    help: string
+  }
   status: {
     editMode: string
     hybridMode: string
@@ -343,6 +372,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       defaultColor: 'Default',
       previous: 'Previous tab',
       next: 'Next tab',
+      library: 'Open note browser',
       f2: 'F2',
       altDel: 'Alt+Del',
       f12: 'F12',
@@ -395,16 +425,15 @@ export const messages: Record<AppLanguage, AppMessages> = {
       altDel: 'Alt+Del',
       f12: 'F12',
       ctrlO: 'Ctrl+O',
-      tabBarDisplay: 'Tab Bar Position(F10)',
-      horizontal: 'Top(H)',
-      vertical: 'Left(V)',
+      openNoteBrowser: 'Open Note Browser',
+      f4: 'F4',
       font: 'Font(F)...',
       backgroundColor: 'Background Color(B)...',
       togglePreviewTheme: 'Toggle Preview Theme',
       toggleTheme: 'Toggle Day/Night Mode',
       wordWrap: 'Word Wrap(W)',
       ctrlW: 'Ctrl+W',
-      editorMode: 'Editor Mode(F4)',
+      switchEditorMode: 'Switch Editor Mode',
       cycleEditorMode: 'Cycle Editor Mode(C)',
       editMode: 'Edit',
       splitMode: 'Hybrid',
@@ -459,6 +488,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f5: 'F5',
       settingsWithKey: 'Settings(O)...',
       f8: 'F8',
+      ctrlComma: 'Ctrl+,',
       search: 'Search',
       settings: 'Settings',
       f1: 'F1',
@@ -475,7 +505,14 @@ export const messages: Record<AppLanguage, AppMessages> = {
       previewTab: 'Preview',
       shortcutsTab: 'Shortcuts',
       insertTextTab: 'Insert Text',
-      advancedTab: 'Advanced',
+      advancedTab: 'Vim',
+      about: 'About',
+      aboutDescription: 'A lightweight, local-first Markdown desktop note pad.',
+      version: 'Version',
+      author: 'Author',
+      openSource: 'Open source',
+      license: 'License',
+      builtWith: 'Built with',
       generalOptions: 'General Options',
       vimMode: 'Enable Vim key bindings',
       vimUseCtrlShortcuts: 'Keep NeoPad Ctrl shortcuts enabled',
@@ -513,6 +550,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       light: 'Light',
       dark: 'Dark',
       shortcuts: 'Shortcuts',
+      globalShortcuts: 'Global shortcuts',
+      globalShortcutHint: 'Available even when NeoPad is not focused.',
+      applicationShortcuts: 'Application shortcuts',
+      applicationShortcutHint: 'Available while the NeoPad window is active.',
       toggleWindow: 'Toggle window',
       saveClipboard: 'Save clipboard',
       hideWindow: 'Hide window',
@@ -621,6 +662,23 @@ export const messages: Record<AppLanguage, AppMessages> = {
       empty: 'No archived pages',
       restore: 'Restore',
     },
+    library: {
+      title: 'FILES',
+      notes: 'Notes',
+      archive: 'Archive',
+      trash: 'Trash',
+      emptyNotes: 'No notes yet',
+      emptyArchive: 'No archived notes',
+      emptyTrash: 'Trash is empty',
+      newNote: 'New note',
+      refresh: 'Refresh library',
+      restore: 'Restore note',
+      rename: 'Rename',
+      archiveAction: 'Archive',
+      delete: 'Delete',
+      clearTrash: 'Empty Trash',
+      help: 'Browse local notes, archived notes, and Trash. Ctrl-click selects individual notes; Shift-click selects a range. Right-click to manage the selection.',
+    },
     status: {
       editMode: 'Edit mode',
       hybridMode: 'Hybrid mode',
@@ -671,6 +729,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       defaultColor: '\u9ed8\u8ba4\u989c\u8272',
       previous: '\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875',
       next: '\u4e0b\u4e00\u4e2a\u6807\u7b7e\u9875',
+      library: '\u6253\u5f00\u7b14\u8bb0\u6d4f\u89c8\u5668',
       f2: 'F2',
       altDel: 'Alt+Del',
       f12: 'F12',
@@ -723,16 +782,15 @@ export const messages: Record<AppLanguage, AppMessages> = {
       altDel: 'Alt+Del',
       f12: 'F12',
       ctrlO: 'Ctrl+O',
-      tabBarDisplay: '\u6807\u7b7e\u680f\u4f4d\u7f6e(F10)',
-      horizontal: '\u9876\u90e8(H)',
-      vertical: '\u5de6\u4fa7(V)',
+      openNoteBrowser: '\u6253\u5f00\u7b14\u8bb0\u6d4f\u89c8\u5668',
+      f4: 'F4',
       font: '\u5b57\u4f53(F)...',
       backgroundColor: '\u80cc\u666f\u8272(B)...',
       togglePreviewTheme: '\u5207\u6362\u9884\u89c8\u4e3b\u9898',
       toggleTheme: '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f',
       wordWrap: '\u81ea\u52a8\u6362\u884c(W)',
       ctrlW: 'Ctrl+W',
-      editorMode: '\u7f16\u8f91\u5668\u6a21\u5f0f(F4)',
+      switchEditorMode: '\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f',
       cycleEditorMode: '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f(C)',
       editMode: '\u7f16\u8f91',
       splitMode: '\u6df7\u5408',
@@ -787,6 +845,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f5: 'F5',
       settingsWithKey: '\u8bbe\u7f6e(O)...',
       f8: 'F8',
+      ctrlComma: 'Ctrl+,',
       search: '\u641c\u7d22',
       settings: '\u8bbe\u7f6e',
       f1: 'F1',
@@ -803,7 +862,14 @@ export const messages: Record<AppLanguage, AppMessages> = {
       previewTab: '\u9884\u89c8',
       shortcutsTab: '\u5feb\u6377\u952e',
       insertTextTab: '\u63d2\u5165\u6587\u672c',
-      advancedTab: '\u9ad8\u7ea7',
+      advancedTab: 'Vim \u6a21\u5f0f',
+      about: '\u5173\u4e8e',
+      aboutDescription: '\u8f7b\u91cf\u3001\u672c\u5730\u4f18\u5148\u7684 Markdown \u684c\u9762\u4fbf\u7b7a\u3002',
+      version: '\u7248\u672c',
+      author: '\u4f5c\u8005',
+      openSource: '\u5f00\u6e90\u9879\u76ee',
+      license: '\u5f00\u6e90\u8bb8\u53ef',
+      builtWith: '\u6280\u672f\u6808',
       generalOptions: '\u5e38\u89c4\u9009\u9879',
       vimMode: '\u542f\u7528 Vim \u952e\u4f4d',
       vimUseCtrlShortcuts: '\u4fdd\u7559 NeoPad \u7684 Ctrl \u5feb\u6377\u952e',
@@ -841,6 +907,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       light: '\u6d45\u8272',
       dark: '\u6df1\u8272',
       shortcuts: '\u5feb\u6377\u952e',
+      globalShortcuts: '\u5168\u5c40\u5feb\u6377\u952e',
+      globalShortcutHint: 'NeoPad \u4e0d\u5728\u524d\u53f0\u65f6\u4ecd\u53ef\u4f7f\u7528\u3002',
+      applicationShortcuts: '\u5e94\u7528\u5185\u5feb\u6377\u952e',
+      applicationShortcutHint: 'NeoPad \u7a97\u53e3\u5904\u4e8e\u6d3b\u52a8\u72b6\u6001\u65f6\u53ef\u4f7f\u7528\u3002',
       toggleWindow: '\u663e\u793a/\u9690\u85cf\u7a97\u53e3',
       saveClipboard: '\u4fdd\u5b58\u526a\u8d34\u677f',
       hideWindow: '\u9690\u85cf\u7a97\u53e3',
@@ -948,6 +1018,23 @@ export const messages: Record<AppLanguage, AppMessages> = {
       refresh: '\u5237\u65b0',
       empty: '\u6682\u65e0\u5b58\u6863\u9875\u9762',
       restore: '\u6062\u590d',
+    },
+    library: {
+      title: '\u6587\u4ef6',
+      notes: '\u7b14\u8bb0',
+      archive: '\u5b58\u6863',
+      trash: '\u56de\u6536\u7ad9',
+      emptyNotes: '\u6682\u65e0\u7b14\u8bb0',
+      emptyArchive: '\u6682\u65e0\u5b58\u6863\u7b14\u8bb0',
+      emptyTrash: '\u56de\u6536\u7ad9\u4e3a\u7a7a',
+      newNote: '\u65b0\u5efa\u7b14\u8bb0',
+      refresh: '\u5237\u65b0\u7b14\u8bb0\u5e93',
+      restore: '\u6062\u590d\u7b14\u8bb0',
+      rename: '\u91cd\u547d\u540d',
+      archiveAction: '\u5b58\u6863',
+      delete: '\u5220\u9664',
+      clearTrash: '\u6e05\u7a7a\u56de\u6536\u7ad9',
+      help: '\u6d4f\u89c8\u672c\u5730\u7b14\u8bb0\u3001\u5b58\u6863\u548c\u56de\u6536\u7ad9\u3002Ctrl+\u70b9\u51fb\u53ef\u591a\u9009\uff0cShift+\u70b9\u51fb\u53ef\u8fde\u7eed\u9009\u4e2d\uff1b\u53f3\u952e\u7ba1\u7406\u5f53\u524d\u9009\u533a\u3002',
     },
     status: {
       editMode: '\u7f16\u8f91\u6a21\u5f0f',

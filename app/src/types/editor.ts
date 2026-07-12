@@ -1,6 +1,6 @@
 export type EditorMode = 'edit' | 'preview' | 'split'
 
-export type EditorModeShortcut = 'F4'
+export type EditorModeShortcut = 'F8'
 
 export type PreviewTheme = 'light' | 'oneDark' | 'nord' | 'solarizedLight' | 'solarizedDark' | 'monokai' | 'githubLight' | 'dracula'
 export type PreviewFontFamily = 'editor' | 'system' | 'serif' | 'mono'

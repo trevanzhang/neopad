@@ -22,7 +22,7 @@ function harness() {
 function keyEvent(key: string, modifiers: Partial<KeyboardEvent> = {}) {
   return {
     key,
-    code: key === '-' ? 'Minus' : key,
+    code: key === '-' ? 'Minus' : key === ',' ? 'Comma' : key,
     ctrlKey: false,
     altKey: false,
     shiftKey: false,
@@ -51,6 +51,24 @@ describe('keyboard shortcut routing', () => {
     expect(spies.cycleTab).toHaveBeenCalledWith(-1)
   })
 
+  it('opens the note browser with F4', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('F4'))
+    expect(spies.toggleNoteLibrary).toHaveBeenCalledOnce()
+  })
+
+  it('cycles editor mode with F8', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('F8'))
+    expect(spies.cycleEditorMode).toHaveBeenCalledOnce()
+  })
+
+  it('opens settings with Ctrl+Comma', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent(',', { ctrlKey: true }))
+    expect(spies.openSettings).toHaveBeenCalledOnce()
+  })
+
   it('honors Escape surface precedence', () => {
     const { flags, spies, handler } = harness()
     flags.set('confirmationOpen', true)
@@ -58,6 +76,35 @@ describe('keyboard shortcut routing', () => {
     handler(keyEvent('Escape'))
     expect(spies.cancelConfirmation).toHaveBeenCalledOnce()
     expect(spies.cancelInput).not.toHaveBeenCalled()
+  })
+
+  it('closes settings before requesting native window hiding', () => {
+    const { flags, spies, handler } = harness()
+    flags.set('settingsOpen', true)
+    flags.set('nativeRuntime', true)
+    handler(keyEvent('Escape'))
+    expect(spies.closeSettings).toHaveBeenCalledOnce()
+    expect(spies.hideMainWindow).toBeUndefined()
+  })
+
+  it.each([
+    ['reminder dialog', 'reminderDialogOpen', 'closeReminderDialog'],
+    ['reminder list', 'reminderListOpen', 'closeReminderList'],
+    ['archive list', 'archiveListOpen', 'closeArchiveList'],
+    ['confirmation dialog', 'confirmationOpen', 'cancelConfirmation'],
+    ['input dialog', 'inputOpen', 'cancelInput'],
+    ['font dialog', 'fontDialogOpen', 'closeFontDialog'],
+    ['settings', 'settingsOpen', 'closeSettings'],
+    ['help', 'helpOpen', 'closeHelp'],
+    ['search', 'searchOpen', 'closeSearch'],
+    ['editor find panel', 'findPanelOpen', 'closeEditorFind'],
+  ])('closes %s before requesting native window hiding', (_label, stateKey, actionKey) => {
+    const { flags, spies, handler } = harness()
+    flags.set(stateKey, true)
+    flags.set('nativeRuntime', true)
+    handler(keyEvent('Escape'))
+    expect(spies[actionKey]).toHaveBeenCalledOnce()
+    expect(spies.hideMainWindow).toBeUndefined()
   })
 
   it('does not archive through an open settings surface', () => {

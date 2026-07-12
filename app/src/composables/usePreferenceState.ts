@@ -42,7 +42,7 @@ interface PreferenceCallbacks {
 export function usePreferenceState(callbacks: PreferenceCallbacks) {
   const previewMode = ref<EditorMode>('edit')
   const defaultEditorMode = ref<EditorMode>('edit')
-  const editorModeShortcut = ref('F4' as const)
+  const editorModeShortcut = ref('F8' as const)
   const theme = ref<AppTheme>(initialTheme())
   const language = ref<AppLanguage>(initialLanguage())
   const vimMode = ref(initialBooleanSetting('neopad.vimMode', false))

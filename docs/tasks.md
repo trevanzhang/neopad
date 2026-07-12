@@ -19,7 +19,7 @@ This file tracks the implemented MVP relative to the original task plan.
 - Tauri command bridge.
 - Vue app shell with tabs, editor, preview, search, settings, and status bar.
 - Edit, split, and preview modes with a compact View menu, status indicator,
-  fixed `F4` cycling shortcut, and a Default Mode selector that takes effect
+  fixed `F8` cycling shortcut, and a Default Mode selector that takes effect
   immediately and is restored at startup. New installations start in Edit mode.
 - Page rename and trash actions with UI and core protection for default pages.
 - Tab context menu with rename, archive, trash, persistent color selection,
@@ -27,7 +27,7 @@ This file tracks the implemented MVP relative to the original task plan.
 - Localized system page labels that preserve stable storage IDs and user titles.
 - CodeMirror 6 Markdown editor.
 - Optional persisted Vim key bindings with Normal, Insert, and Visual status,
-  plus a configurable Insert exit sequence in Advanced settings.
+  plus a configurable Insert exit sequence in Vim settings.
 - Persistent light and dark themes with a destination-state status-bar toggle.
 - Viewport-constrained settings dialog with fixed navigation and actions.
 - Autosave from the UI.

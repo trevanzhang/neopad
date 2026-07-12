@@ -1,10 +1,11 @@
 use neopad_core::{
-    append_to_clipboard_note, archive_note, claim_due_reminders, close_note,
+    append_to_clipboard_note, archive_note, claim_due_reminders, clear_trash, close_note,
     complete_due_reminders, complete_reminder, create_note, delete_note_to_trash, export_note_file,
-    list_archived_notes, list_open_notes, list_recent_notes, list_reminders, list_searchable_notes,
-    load_config, lock_workspace_for_write, read_note, reconcile_note_metadata, rename_note,
-    reopen_reminder, save_config, search_notes, write_note_atomic_checked, NoteContent, NoteTab,
-    PreviewMode, Reminder, SearchResult, Theme, UiConfig, Workspace,
+    list_archived_notes, list_notes, list_open_notes, list_recent_notes, list_reminders,
+    list_searchable_notes, list_trashed_notes, load_config, lock_workspace_for_write, read_note,
+    reconcile_note_metadata, rename_note, reopen_reminder, restore_note_from_trash, save_config,
+    search_notes, write_note_atomic_checked, NoteContent, NoteTab, PreviewMode, Reminder,
+    SearchResult, Theme, UiConfig, Workspace,
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -119,10 +120,24 @@ pub fn list_notes_command(state: State<'_, AppState>) -> Result<Vec<NoteTab>, St
 }
 
 #[tauri::command]
+pub fn list_library_notes_command(state: State<'_, AppState>) -> Result<Vec<NoteTab>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reconcile_note_metadata(&state.workspace).map_err(display_error)?;
+    list_notes(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
 pub fn list_archived_notes_command(state: State<'_, AppState>) -> Result<Vec<NoteTab>, String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     reconcile_note_metadata(&state.workspace).map_err(display_error)?;
     list_archived_notes(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn list_trashed_notes_command(state: State<'_, AppState>) -> Result<Vec<NoteTab>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reconcile_note_metadata(&state.workspace).map_err(display_error)?;
+    list_trashed_notes(&state.workspace).map_err(display_error)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -189,6 +204,21 @@ pub fn rename_note_command(
 pub fn delete_note_command(state: State<'_, AppState>, note_id: String) -> Result<NoteTab, String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     delete_note_to_trash(&state.workspace, &note_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn restore_note_from_trash_command(
+    state: State<'_, AppState>,
+    note_id: String,
+) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    restore_note_from_trash(&state.workspace, &note_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn clear_trash_command(state: State<'_, AppState>) -> Result<(), String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    clear_trash(&state.workspace).map_err(display_error)
 }
 
 #[tauri::command]
