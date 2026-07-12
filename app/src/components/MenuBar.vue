@@ -82,8 +82,10 @@ const menuBar = ref<HTMLElement | null>(null)
 let focusBeforeMenu: HTMLElement | null = null
 const mnemonicRoots: Record<string, number> = { f: 0, e: 1, v: 2, p: 3, o: 4, i: 5, t: 6, h: 7 }
 
-onMounted(() => window.addEventListener('keydown', handleMenuKeydown, { capture: true }))
-onBeforeUnmount(() => window.removeEventListener('keydown', handleMenuKeydown, { capture: true }))
+// Application-level shortcuts run during capture so overlays can own Escape
+// before menu navigation is considered.
+onMounted(() => window.addEventListener('keydown', handleMenuKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', handleMenuKeydown))
 
 function rootTitles() {
   return Array.from(menuBar.value?.querySelectorAll<HTMLButtonElement>(':scope > .menu-root > .menu-title') ?? [])

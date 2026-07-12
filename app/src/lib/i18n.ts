@@ -191,6 +191,10 @@ export type AppMessages = {
     light: string
     dark: string
     shortcuts: string
+    globalShortcuts: string
+    globalShortcutHint: string
+    applicationShortcuts: string
+    applicationShortcutHint: string
     toggleWindow: string
     saveClipboard: string
     hideWindow: string
@@ -546,6 +550,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       light: 'Light',
       dark: 'Dark',
       shortcuts: 'Shortcuts',
+      globalShortcuts: 'Global shortcuts',
+      globalShortcutHint: 'Available even when NeoPad is not focused.',
+      applicationShortcuts: 'Application shortcuts',
+      applicationShortcutHint: 'Available while the NeoPad window is active.',
       toggleWindow: 'Toggle window',
       saveClipboard: 'Save clipboard',
       hideWindow: 'Hide window',
@@ -899,6 +907,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       light: '\u6d45\u8272',
       dark: '\u6df1\u8272',
       shortcuts: '\u5feb\u6377\u952e',
+      globalShortcuts: '\u5168\u5c40\u5feb\u6377\u952e',
+      globalShortcutHint: 'NeoPad \u4e0d\u5728\u524d\u53f0\u65f6\u4ecd\u53ef\u4f7f\u7528\u3002',
+      applicationShortcuts: '\u5e94\u7528\u5185\u5feb\u6377\u952e',
+      applicationShortcutHint: 'NeoPad \u7a97\u53e3\u5904\u4e8e\u6d3b\u52a8\u72b6\u6001\u65f6\u53ef\u4f7f\u7528\u3002',
       toggleWindow: '\u663e\u793a/\u9690\u85cf\u7a97\u53e3',
       saveClipboard: '\u4fdd\u5b58\u526a\u8d34\u677f',
       hideWindow: '\u9690\u85cf\u7a97\u53e3',

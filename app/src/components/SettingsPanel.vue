@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 import type { AppLanguage, AppMessages } from '../lib/i18n'
+import { getHelpContent } from '../lib/help-content'
 import type { EditorMode, PreviewContentWidth, PreviewFontFamily, PreviewLineHeight, PreviewTheme } from '../types/editor'
 
 type SettingsTab = 'general' | 'preview' | 'shortcuts' | 'insertText' | 'advanced' | 'mcp' | 'about'
@@ -14,7 +15,7 @@ type McpStatus = {
   lastError: string | null
 }
 
-defineProps<{
+const props = defineProps<{
   alwaysOnTop: boolean
   vimMode: boolean
   vimUseCtrlShortcuts: boolean
@@ -103,6 +104,19 @@ const activeTabLabel = computed<keyof AppMessages['settings']>(() => {
   }
   return labels[activeTab.value]
 })
+
+const shortcutReference = computed(() => getHelpContent('shortcuts', props.language, {
+  appVersion: props.appVersion,
+  shortcutBaseKey: props.shortcutBaseKey,
+  shortcutModifiers: props.shortcutModifiers,
+  clipboardShortcutBaseKey: props.clipboardShortcutBaseKey,
+  clipboardShortcutModifiers: props.clipboardShortcutModifiers,
+}).lines.map((line) => {
+  const dividerIndex = line.indexOf(' - ')
+  return dividerIndex === -1
+    ? { keys: line, description: '' }
+    : { keys: line.slice(0, dividerIndex), description: line.slice(dividerIndex + 3) }
+}))
 
 function mcpAgentConfig(status: McpStatus | null) {
   return JSON.stringify(
@@ -324,91 +338,81 @@ function deleteCustomText(current: string[]) {
       </template>
 
       <template v-else-if="activeTab === 'shortcuts'">
-        <fieldset class="settings-fieldset settings-shortcut-fieldset">
-          <legend>{{ messages.switchTabs }}</legend>
-          <div class="settings-form-row">
-            <span>{{ messages.shortcut }}:</span>
-            <kbd>Ctrl+Tab / Ctrl+Shift+Tab</kbd>
-          </div>
-        </fieldset>
-        <fieldset class="settings-fieldset settings-shortcut-fieldset">
-          <legend>{{ messages.togglePreviewThemeShortcut }}</legend>
-          <div class="settings-form-row">
-            <span>{{ messages.shortcut }}:</span>
-            <kbd>F7</kbd>
-          </div>
-        </fieldset>
-        <fieldset class="settings-fieldset settings-shortcut-fieldset">
-          <legend>{{ messages.toggleThemeShortcut }}</legend>
-          <div class="settings-form-row">
-            <span>{{ messages.shortcut }}:</span>
-            <kbd>F9</kbd>
-          </div>
-        </fieldset>
-        <fieldset class="settings-fieldset settings-shortcut-fieldset">
-          <legend>{{ messages.immersiveFullscreen }}</legend>
-          <div class="settings-form-row">
-            <span>{{ messages.shortcut }}:</span>
-            <kbd>F11</kbd>
-          </div>
-        </fieldset>
-        <fieldset class="settings-fieldset settings-shortcut-fieldset">
-          <legend>{{ messages.cycleEditorMode }}</legend>
-          <div class="settings-form-row">
-            <span>{{ messages.shortcut }}:</span>
-            <kbd>F8</kbd>
-          </div>
-        </fieldset>
-        <fieldset class="settings-fieldset settings-shortcut-fieldset">
-          <legend>{{ messages.toggleWindow }}</legend>
-          <label class="settings-form-row">
-            <span>{{ messages.baseKey }}:</span>
-            <input
-              type="text"
-              maxlength="3"
-              :value="shortcutBaseKey"
-              @input="$emit('update:shortcutBaseKey', ($event.target as HTMLInputElement).value)"
-            />
-          </label>
-          <div class="settings-form-row">
-            <span>{{ messages.modifiers }}:</span>
-            <div class="settings-modifier-list">
-              <label v-for="modifier in ['Ctrl', 'Alt', 'Shift', 'Win']" :key="modifier">
-                <input
-                  type="checkbox"
-                  :checked="shortcutModifiers.includes(modifier)"
-                  @change="updateModifier(modifier, ($event.target as HTMLInputElement).checked, shortcutModifiers)"
-                />
-                {{ modifier }}
-              </label>
+        <section class="settings-shortcut-group">
+          <header class="settings-shortcut-group-header">
+            <h3>{{ messages.globalShortcuts }}</h3>
+            <p>{{ messages.globalShortcutHint }}</p>
+          </header>
+          <div class="settings-shortcut-card">
+            <div class="settings-shortcut-row settings-shortcut-config-row">
+              <div class="settings-shortcut-copy">
+                <strong>{{ messages.toggleWindow }}</strong>
+                <span>{{ shortcutReference[0]?.keys }}</span>
+              </div>
+              <div class="settings-shortcut-config-controls">
+                <label class="settings-shortcut-key-input">
+                  <span>{{ messages.baseKey }}</span>
+                  <input
+                    type="text"
+                    maxlength="3"
+                    :value="shortcutBaseKey"
+                    @input="$emit('update:shortcutBaseKey', ($event.target as HTMLInputElement).value)"
+                  />
+                </label>
+                <div class="settings-modifier-list">
+                  <label v-for="modifier in ['Ctrl', 'Alt', 'Shift', 'Win']" :key="modifier">
+                    <input
+                      type="checkbox"
+                      :checked="shortcutModifiers.includes(modifier)"
+                      @change="updateModifier(modifier, ($event.target as HTMLInputElement).checked, shortcutModifiers)"
+                    />
+                    {{ modifier }}
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="settings-shortcut-row settings-shortcut-config-row">
+              <div class="settings-shortcut-copy">
+                <strong>{{ messages.saveClipboard }}</strong>
+                <span>{{ shortcutReference[1]?.keys }}</span>
+              </div>
+              <div class="settings-shortcut-config-controls">
+                <label class="settings-shortcut-key-input">
+                  <span>{{ messages.baseKey }}</span>
+                  <input
+                    type="text"
+                    maxlength="3"
+                    :value="clipboardShortcutBaseKey"
+                    @input="$emit('update:clipboardShortcutBaseKey', ($event.target as HTMLInputElement).value)"
+                  />
+                </label>
+                <div class="settings-modifier-list">
+                  <label v-for="modifier in ['Ctrl', 'Alt', 'Shift', 'Win']" :key="modifier">
+                    <input
+                      type="checkbox"
+                      :checked="clipboardShortcutModifiers.includes(modifier)"
+                      @change="updateClipboardModifier(modifier, ($event.target as HTMLInputElement).checked, clipboardShortcutModifiers)"
+                    />
+                    {{ modifier }}
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
-        </fieldset>
-        <fieldset class="settings-fieldset settings-shortcut-fieldset">
-          <legend>{{ messages.saveClipboard }}</legend>
-          <label class="settings-form-row">
-            <span>{{ messages.baseKey }}:</span>
-            <input
-              type="text"
-              maxlength="3"
-              :value="clipboardShortcutBaseKey"
-              @input="$emit('update:clipboardShortcutBaseKey', ($event.target as HTMLInputElement).value)"
-            />
-          </label>
-          <div class="settings-form-row">
-            <span>{{ messages.modifiers }}:</span>
-            <div class="settings-modifier-list">
-              <label v-for="modifier in ['Ctrl', 'Alt', 'Shift', 'Win']" :key="modifier">
-                <input
-                  type="checkbox"
-                  :checked="clipboardShortcutModifiers.includes(modifier)"
-                  @change="updateClipboardModifier(modifier, ($event.target as HTMLInputElement).checked, clipboardShortcutModifiers)"
-                />
-                {{ modifier }}
-              </label>
+        </section>
+
+        <section class="settings-shortcut-group">
+          <header class="settings-shortcut-group-header">
+            <h3>{{ messages.applicationShortcuts }}</h3>
+            <p>{{ messages.applicationShortcutHint }}</p>
+          </header>
+          <div class="settings-shortcut-card">
+            <div v-for="item in shortcutReference.slice(2)" :key="item.keys" class="settings-shortcut-row">
+              <span>{{ item.description }}</span>
+              <kbd>{{ item.keys }}</kbd>
             </div>
           </div>
-        </fieldset>
+        </section>
       </template>
 
       <template v-else-if="activeTab === 'preview'">

@@ -87,6 +87,26 @@ describe('keyboard shortcut routing', () => {
     expect(spies.hideMainWindow).toBeUndefined()
   })
 
+  it.each([
+    ['reminder dialog', 'reminderDialogOpen', 'closeReminderDialog'],
+    ['reminder list', 'reminderListOpen', 'closeReminderList'],
+    ['archive list', 'archiveListOpen', 'closeArchiveList'],
+    ['confirmation dialog', 'confirmationOpen', 'cancelConfirmation'],
+    ['input dialog', 'inputOpen', 'cancelInput'],
+    ['font dialog', 'fontDialogOpen', 'closeFontDialog'],
+    ['settings', 'settingsOpen', 'closeSettings'],
+    ['help', 'helpOpen', 'closeHelp'],
+    ['search', 'searchOpen', 'closeSearch'],
+    ['editor find panel', 'findPanelOpen', 'closeEditorFind'],
+  ])('closes %s before requesting native window hiding', (_label, stateKey, actionKey) => {
+    const { flags, spies, handler } = harness()
+    flags.set(stateKey, true)
+    flags.set('nativeRuntime', true)
+    handler(keyEvent('Escape'))
+    expect(spies[actionKey]).toHaveBeenCalledOnce()
+    expect(spies.hideMainWindow).toBeUndefined()
+  })
+
   it('does not archive through an open settings surface', () => {
     const { flags, spies, handler } = harness()
     flags.set('settingsOpen', true)

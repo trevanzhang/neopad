@@ -1208,6 +1208,7 @@ body {
   padding: 8px;
   text-align: left;
   color: var(--np-text);
+  font-size: 13px;
   background: var(--np-chrome-elevated);
   border: 0;
   border-bottom: 1px solid var(--np-border);
@@ -1238,6 +1239,7 @@ body {
   border-bottom: 1px solid var(--np-border);
   text-align: left;
   color: var(--np-text);
+  font-size: 13px;
   background: var(--np-surface);
   border-radius: 0;
 }
@@ -1252,7 +1254,7 @@ body {
   color: var(--np-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .search-result mark {
@@ -2175,7 +2177,7 @@ body {
 }
 
 .settings-header strong {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 650;
   letter-spacing: 0.01em;
 }
@@ -2202,6 +2204,7 @@ body {
   height: 34px;
   padding: 0 9px;
   color: var(--np-muted);
+  font-size: 13px;
   text-align: left;
   white-space: nowrap;
   background: transparent;
@@ -2318,6 +2321,109 @@ body {
 
 .settings-tab-content .settings-shortcut-fieldset .settings-form-row {
   margin-bottom: 0;
+}
+
+.settings-shortcut-group {
+  margin: 0 0 22px;
+}
+
+.settings-shortcut-group:last-child {
+  margin-bottom: 0;
+}
+
+.settings-shortcut-group-header {
+  margin-bottom: 9px;
+}
+
+.settings-shortcut-group-header h3 {
+  margin: 0;
+  color: var(--np-text);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.settings-shortcut-group-header p {
+  margin: 4px 0 0;
+  color: var(--np-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.settings-shortcut-card {
+  overflow: hidden;
+  background: var(--np-chrome-elevated);
+  border: 1px solid var(--np-border);
+  border-radius: 4px;
+}
+
+.settings-shortcut-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: baseline;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 12px;
+  color: var(--np-text);
+  font-size: 13px;
+}
+
+.settings-shortcut-row + .settings-shortcut-row {
+  border-top: 1px solid var(--np-border);
+}
+
+.settings-shortcut-row kbd,
+.settings-shortcut-copy > span {
+  white-space: nowrap;
+}
+
+.settings-shortcut-config-row {
+  align-items: center;
+  min-height: 68px;
+}
+
+.settings-shortcut-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-shortcut-copy strong {
+  color: var(--np-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings-shortcut-copy > span {
+  overflow: hidden;
+  color: var(--np-muted);
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
+.settings-shortcut-config-controls {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.settings-shortcut-key-input {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--np-muted);
+  font-size: 12px;
+}
+
+.settings-shortcut-key-input input {
+  width: 48px;
+  height: 25px;
+  padding: 0 6px;
+  color: var(--np-text);
+  text-align: center;
+  background: var(--np-surface);
+  border: 1px solid var(--np-border);
+  border-radius: 3px;
 }
 
 .settings-tab-content .settings-template-row {
@@ -2466,6 +2572,21 @@ body {
 
   .settings-tab-content {
     padding: 14px 16px 20px;
+  }
+
+  .settings-shortcut-row {
+    gap: 10px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .settings-shortcut-config-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .settings-shortcut-config-controls {
+    justify-items: start;
   }
 
   .settings-about-details > div {
