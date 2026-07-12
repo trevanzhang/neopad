@@ -137,7 +137,9 @@ the configured workspace.
 - Local keyboard shortcuts:
   - `F1`: open shortcut help.
   - `F2`: rename the current page.
-  - `F4`: cycle edit, split, and preview editor modes.
+  - `F4`: show or hide the note browser.
+  - `F8`: cycle edit, split, and preview editor modes.
+  - `Ctrl+,`: open settings.
   - `F5`: toggle the reminder list.
   - `F9`: toggle the light or dark theme.
   - `F11`: toggle immersive fullscreen.
@@ -145,7 +147,7 @@ the configured workspace.
   `[x]` while preserving the reminder lines.
 - Native reminder notifications while the desktop process remains running.
 - New installations start in Edit mode; later launches restore the Default Mode
-  chosen in Settings > General. `F4` is the fixed local shortcut for cycling
+  chosen in Settings > General. `F8` is the fixed local shortcut for cycling
   edit, split, and preview modes.
 - `Ctrl+O` opens an explicitly selected external Markdown file in place. Its
   picker-approved canonical path is persisted, and writes use atomic

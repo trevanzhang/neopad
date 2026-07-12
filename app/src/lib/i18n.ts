@@ -66,15 +66,15 @@ export type AppMessages = {
     altDel: string
     f12: string
     ctrlO: string
-    noteLibrary: string
-    f10: string
+    openNoteBrowser: string
+    f4: string
     font: string
     backgroundColor: string
     togglePreviewTheme: string
     toggleTheme: string
     wordWrap: string
     ctrlW: string
-    editorMode: string
+    switchEditorMode: string
     cycleEditorMode: string
     editMode: string
     splitMode: string
@@ -129,6 +129,7 @@ export type AppMessages = {
     f5: string
     settingsWithKey: string
     f8: string
+    ctrlComma: string
     search: string
     settings: string
     f1: string
@@ -360,7 +361,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       defaultColor: 'Default',
       previous: 'Previous tab',
       next: 'Next tab',
-      library: 'Show or hide note library',
+      library: 'Open note browser',
       f2: 'F2',
       altDel: 'Alt+Del',
       f12: 'F12',
@@ -413,15 +414,15 @@ export const messages: Record<AppLanguage, AppMessages> = {
       altDel: 'Alt+Del',
       f12: 'F12',
       ctrlO: 'Ctrl+O',
-      noteLibrary: 'Note Library',
-      f10: 'F10',
+      openNoteBrowser: 'Open Note Browser',
+      f4: 'F4',
       font: 'Font(F)...',
       backgroundColor: 'Background Color(B)...',
       togglePreviewTheme: 'Toggle Preview Theme',
       toggleTheme: 'Toggle Day/Night Mode',
       wordWrap: 'Word Wrap(W)',
       ctrlW: 'Ctrl+W',
-      editorMode: 'Editor Mode(F4)',
+      switchEditorMode: 'Switch Editor Mode',
       cycleEditorMode: 'Cycle Editor Mode(C)',
       editMode: 'Edit',
       splitMode: 'Hybrid',
@@ -476,6 +477,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f5: 'F5',
       settingsWithKey: 'Settings(O)...',
       f8: 'F8',
+      ctrlComma: 'Ctrl+,',
       search: 'Search',
       settings: 'Settings',
       f1: 'F1',
@@ -705,7 +707,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       defaultColor: '\u9ed8\u8ba4\u989c\u8272',
       previous: '\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875',
       next: '\u4e0b\u4e00\u4e2a\u6807\u7b7e\u9875',
-      library: '\u663e\u793a\u6216\u9690\u85cf\u7b14\u8bb0\u5e93',
+      library: '\u6253\u5f00\u7b14\u8bb0\u6d4f\u89c8\u5668',
       f2: 'F2',
       altDel: 'Alt+Del',
       f12: 'F12',
@@ -758,15 +760,15 @@ export const messages: Record<AppLanguage, AppMessages> = {
       altDel: 'Alt+Del',
       f12: 'F12',
       ctrlO: 'Ctrl+O',
-      noteLibrary: '\u7b14\u8bb0\u5e93',
-      f10: 'F10',
+      openNoteBrowser: '\u6253\u5f00\u7b14\u8bb0\u6d4f\u89c8\u5668',
+      f4: 'F4',
       font: '\u5b57\u4f53(F)...',
       backgroundColor: '\u80cc\u666f\u8272(B)...',
       togglePreviewTheme: '\u5207\u6362\u9884\u89c8\u4e3b\u9898',
       toggleTheme: '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f',
       wordWrap: '\u81ea\u52a8\u6362\u884c(W)',
       ctrlW: 'Ctrl+W',
-      editorMode: '\u7f16\u8f91\u5668\u6a21\u5f0f(F4)',
+      switchEditorMode: '\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f',
       cycleEditorMode: '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f(C)',
       editMode: '\u7f16\u8f91',
       splitMode: '\u6df7\u5408',
@@ -821,6 +823,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f5: 'F5',
       settingsWithKey: '\u8bbe\u7f6e(O)...',
       f8: 'F8',
+      ctrlComma: 'Ctrl+,',
       search: '\u641c\u7d22',
       settings: '\u8bbe\u7f6e',
       f1: 'F1',

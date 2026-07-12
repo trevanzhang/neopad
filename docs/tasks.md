@@ -19,7 +19,7 @@ This file tracks the implemented MVP relative to the original task plan.
 - Tauri command bridge.
 - Vue app shell with tabs, editor, preview, search, settings, and status bar.
 - Edit, split, and preview modes with a compact View menu, status indicator,
-  fixed `F4` cycling shortcut, and a Default Mode selector that takes effect
+  fixed `F8` cycling shortcut, and a Default Mode selector that takes effect
   immediately and is restored at startup. New installations start in Edit mode.
 - Page rename and trash actions with UI and core protection for default pages.
 - Tab context menu with rename, archive, trash, persistent color selection,

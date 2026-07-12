@@ -73,7 +73,7 @@ export interface KeyboardShortcutContext {
 }
 
 export function matchesEditorModeShortcut(event: KeyboardEvent) {
-  return event.key === 'F4' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
+  return event.key === 'F8' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
 }
 
 export function matchesDeletePageShortcut(event: KeyboardEvent) {
@@ -105,8 +105,8 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
   return function handleKeydown(event: KeyboardEvent) {
     if (state.modalOpen() && event.key !== 'Escape') {
       const key = event.key.toLowerCase()
-      const blockedCtrl = event.ctrlKey && !event.altKey && !event.metaKey && ['tab', 'n', 'w', 'o'].includes(key)
-      const blockedFunction = plainKey(event, event.key) && ['F4', 'F5', 'F7', 'F9', 'F11', 'F12'].includes(event.key)
+      const blockedCtrl = event.ctrlKey && !event.altKey && !event.metaKey && ['tab', 'n', 'w', 'o', ','].includes(key)
+      const blockedFunction = plainKey(event, event.key) && ['F4', 'F5', 'F7', 'F8', 'F9', 'F11', 'F12'].includes(event.key)
       if (blockedCtrl || blockedFunction || matchesDeletePageShortcut(event) || matchesEditorModeShortcut(event)) consume(event)
       return
     }
@@ -153,6 +153,10 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
       consume(event, () => { if (state.nativeRuntime()) void actions.toggleMainWindowMaximize() }); return
     }
 
+    if (event.code === 'Comma' && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
+      consume(event, actions.openSettings); return
+    }
+
     if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
       const key = event.key.toLowerCase()
       if (key === 'n') { consume(event, () => void actions.createLocalTab()); return }
@@ -164,7 +168,7 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
     }
 
     if (state.vimMode() && state.editorFocused()) {
-      const appFunctionKey = ['F3', 'F6', 'F8', 'F10'].includes(event.key)
+      const appFunctionKey = ['F3', 'F4', 'F6'].includes(event.key)
       const hideFromNormalMode = event.key === 'Escape' && state.vimNormalMode()
       const preservedCtrl = state.vimUseCtrlShortcuts() && (event.ctrlKey || event.metaKey)
       if (!appFunctionKey && !hideFromNormalMode && !preservedCtrl) return
@@ -189,9 +193,8 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
     if (plainKey(event, 'F3')) { consume(event, actions.findNext); return }
     if (event.key === 'Enter' && event.ctrlKey) { consume(event, actions.calculateExpression); return }
     if (event.key === 'Escape' && state.nativeRuntime()) { event.preventDefault(); void actions.hideMainWindow() }
-    if (event.key === 'F10') { event.preventDefault(); actions.toggleNoteLibrary() }
+    if (event.key === 'F4') { event.preventDefault(); actions.toggleNoteLibrary() }
     if (event.key === 'F6') { event.preventDefault(); void actions.togglePin() }
-    if (event.key === 'F8') { event.preventDefault(); actions.openSettings() }
     if (event.code === 'Minus' && event.ctrlKey && event.shiftKey) { event.preventDefault(); actions.insertDateTimeSeparator() }
     else if (event.code === 'Minus' && event.ctrlKey) { event.preventDefault(); actions.insertSeparator() }
     if (event.key.toLowerCase() === 'd' && event.ctrlKey) { event.preventDefault(); actions.insertDateTime() }

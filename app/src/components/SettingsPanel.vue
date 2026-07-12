@@ -315,7 +315,7 @@ function deleteCustomText(current: string[]) {
           <legend>{{ messages.cycleEditorMode }}</legend>
           <div class="settings-form-row">
             <span>{{ messages.shortcut }}:</span>
-            <kbd>F4</kbd>
+            <kbd>F8</kbd>
           </div>
         </fieldset>
         <fieldset class="settings-fieldset settings-shortcut-fieldset">

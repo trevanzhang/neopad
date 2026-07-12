@@ -22,7 +22,7 @@ function harness() {
 function keyEvent(key: string, modifiers: Partial<KeyboardEvent> = {}) {
   return {
     key,
-    code: key === '-' ? 'Minus' : key,
+    code: key === '-' ? 'Minus' : key === ',' ? 'Comma' : key,
     ctrlKey: false,
     altKey: false,
     shiftKey: false,
@@ -49,6 +49,24 @@ describe('keyboard shortcut routing', () => {
     const { spies, handler } = harness()
     handler(keyEvent('Tab', { ctrlKey: true, shiftKey: true }))
     expect(spies.cycleTab).toHaveBeenCalledWith(-1)
+  })
+
+  it('opens the note browser with F4', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('F4'))
+    expect(spies.toggleNoteLibrary).toHaveBeenCalledOnce()
+  })
+
+  it('cycles editor mode with F8', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('F8'))
+    expect(spies.cycleEditorMode).toHaveBeenCalledOnce()
+  })
+
+  it('opens settings with Ctrl+Comma', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent(',', { ctrlKey: true }))
+    expect(spies.openSettings).toHaveBeenCalledOnce()
   })
 
   it('honors Escape surface precedence', () => {

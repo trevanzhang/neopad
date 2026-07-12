@@ -175,7 +175,7 @@ fn default_insert_date_time_separator_template() -> String {
 }
 
 fn default_editor_mode_shortcut() -> String {
-    "F4".to_owned()
+    "F8".to_owned()
 }
 
 fn default_true() -> bool {
@@ -345,7 +345,7 @@ mod tests {
     }
 
     #[test]
-    fn old_ui_config_without_editor_mode_shortcut_uses_f4() {
+    fn old_ui_config_without_editor_mode_shortcut_uses_f8() {
         let mut value = serde_json::to_value(UiConfig::default()).expect("serialize UI config");
         value
             .as_object_mut()
@@ -353,7 +353,7 @@ mod tests {
             .remove("editorModeShortcut");
 
         let config: UiConfig = serde_json::from_value(value).expect("legacy UI config");
-        assert_eq!(config.editor_mode_shortcut, "F4");
+        assert_eq!(config.editor_mode_shortcut, "F8");
     }
 
     #[test]
@@ -411,7 +411,7 @@ mod tests {
         assert_eq!(config.vim_insert_exit_key, "jj");
         assert_eq!(config.shortcut_base_key, "Z");
         assert_eq!(config.clipboard_shortcut_modifiers, ["Ctrl", "Shift"]);
-        assert_eq!(config.editor_mode_shortcut, "F4");
+        assert_eq!(config.editor_mode_shortcut, "F8");
     }
 
     #[test]

@@ -26,7 +26,7 @@ The repository currently contains a working Windows-focused MVP:
   maximize/restore.
 - Clipboard captures use readable local timestamps in compact separator lines.
 - Edit, split, and preview editor modes selectable from the View menu, status
-  bar, and fixed `F4` shortcut. The Default Mode selector in Settings > General
+  bar, and fixed `F8` shortcut. The Default Mode selector in Settings > General
   takes effect immediately and is restored on later launches; new installations
   start in Edit mode.
 - Optional Vim key bindings for the CodeMirror editor, with persisted settings
@@ -221,12 +221,12 @@ Common local shortcuts:
 ```text
 F1              Shortcut help
 F2              Rename current page and its untouched default heading
-F4              Cycle edit, split, and preview modes
+F4              Show or hide the note browser
 F5              Open or close the reminder list
 F7              Cycle preview theme
-F8              Open settings
+F8              Cycle edit, split, and preview modes
 F9              Toggle day/night mode
-F10             Show or hide the note library
+Ctrl+,          Open settings
 F11             Toggle immersive fullscreen
 F12             Archive the current page
 Alt+Enter       Maximize or restore the main window

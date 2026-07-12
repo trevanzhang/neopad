@@ -1115,7 +1115,6 @@ function createLocalTabFromContent(title: string, nextContent: string) {
   >
     <template #title>
       <MenuBar
-        :preview-mode="previewMode"
         :word-wrap="wordWrap"
         :always-on-top="alwaysOnTop"
         :page-actions-enabled="Boolean(activeTab && activeTab.id !== 'inbox' && activeTab.id !== 'clipboard')"
@@ -1150,6 +1149,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @settings="showSettingsPlaceholder"
         @toggle-pin="togglePin"
         @toggle-note-library="toggleNoteLibrary"
+        @cycle-editor-mode="cycleEditorMode"
         @format-font="promptEditorFont"
         @format-background="openBackgroundColorPicker"
         @toggle-word-wrap="toggleWordWrap"
@@ -1164,7 +1164,6 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @reminder-list="openReminderList"
         @process-text="processEditorText"
         @help-topic="openHelpTopic"
-        @update-preview-mode="setEditorMode"
       />
     </template>
 
