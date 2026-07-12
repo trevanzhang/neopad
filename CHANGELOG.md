@@ -6,8 +6,17 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.5.0 - 2026-07-12
+
 ### Added
 
+- Added the `F4` note library sidebar for active, archived, and trashed notes,
+  including direct restore, archive, rename, and trash actions.
+- Added a reorganized Settings center with focused General, Editor, Preview,
+  Vim, Shortcuts, and MCP sections, including configurable global shortcuts.
+- Added native drag-and-drop opening for `.md` and `.markdown` files, plus
+  desktop file-association declarations so NeoPad can be selected as their
+  default editor.
 - Added cross-platform release builds via GitHub Actions. Pushing a `v*` tag
   now produces Windows `.msi`, macOS `.dmg` (ARM64), and Linux `.deb` +
   `.AppImage` installers automatically.
@@ -19,6 +28,11 @@ patch versions are reserved for compatible fixes.
 
 ### Changed
 
+- Modernized the compact desktop UI with unified color tokens, a refreshed
+  application chrome, improved tab colors, responsive dialog layouts, clearer
+  focus states, and consistent icon-only controls.
+- Consolidated font, input, confirmation, reminder, and help dialogs behind a
+  shared visual layer, keeping long content within the viewport.
 - Refactored the frontend composition root into focused document, note
   lifecycle, preferences, native settings, search, reminder, archive, MCP, and
   dialog modules while preserving existing UI and data behavior.
@@ -30,8 +44,8 @@ patch versions are reserved for compatible fixes.
   responsibilities by extracting search-panel UI, themes, and line-calculation
   logic, with regression coverage for match navigation and expression parsing.
 - External Markdown conflict checks now use content revisions instead of
-  millisecond modification times, and external paths must first be approved by
-  the native file picker.
+  millisecond modification times; files opened through the picker, drag and
+  drop, or an operating-system association are approved before reopening.
 - Desktop-managed MCP tokens are passed through the child environment instead
   of command-line arguments, and the HTTP service only accepts loopback binds.
 - Platform builds now request explicit bundle types so Windows builds no

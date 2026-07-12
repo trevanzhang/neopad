@@ -48,6 +48,12 @@ The repository currently contains a working Windows-focused MVP:
   closes the reminder list. "Mark Completed", "Mark Unfinished",
   and "Clear Due" update reminder checkboxes directly without deleting note
   content.
+- `F4` opens the compact note library for active, archived, and trashed notes;
+  it keeps everyday note actions close to the editor without turning NeoPad
+  into a knowledge-base suite.
+- The reorganized Settings center groups General, Editor, Preview, Vim,
+  Shortcuts, and MCP controls in a focused dialog, including configurable
+  visibility and clipboard-capture shortcuts.
 - `Ctrl+W` closes the current non-pinned tab without changing its file. The tab
   context menu also provides explicit archive and trash actions, while recent
   documents provide a quick way to reopen closed or archived notes.
@@ -172,7 +178,7 @@ NSIS.
 The Windows MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.4.6_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.5.0_x64_en-US.msi
 ```
 
 Cross-platform release builds also run automatically in GitHub Actions when a

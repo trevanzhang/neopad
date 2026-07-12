@@ -45,6 +45,10 @@ This file tracks the implemented MVP relative to the original task plan.
 - Native picker, drag-and-drop, and operating-system file-association opening
   with in-place autosave for external Markdown files; content-revision
   conflicts, persistent recent-document list, and copy-to-archive behavior.
+- Compact `F4` note library sidebar for active, archived, and trashed notes,
+  with direct lifecycle actions near the editor.
+- Modernized desktop chrome, unified dialogs, and a reorganized Settings center
+  with configurable global shortcuts.
 - Manual clipboard capture to `clipboard.md`.
 - Standalone Streamable HTTP `neopad-mcp` read and write tools.
 - Dedicated MCP settings page with service start/stop, status, token display,

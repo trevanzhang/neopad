@@ -23,6 +23,10 @@ Markdown 文件，用户数据不需要账号，也不依赖云服务。
 - 编辑器字体设置提供预设字体、字号滑块和实时预览，不需要手写 CSS 字体串。
 - 应用支持日间/夜间模式，`F9` 可快速切换。
 - `F7` 可循环切换预览主题。
+- `F4` 可打开紧凑的笔记浏览器，查看活动、归档和回收站笔记，并在编辑器附近完成
+  常用操作。
+- 重组后的设置中心将通用、编辑器、预览、Vim、快捷键和 MCP 设置集中在一个聚焦的
+  对话框中；窗口显示与剪贴板捕获快捷键均可配置。
 - 可选 Vim 编辑模式，支持 Normal、Insert、Visual 状态显示。
 - Markdown 原生提醒，格式为
   `- [ ] @remind YYYY-MM-DD HH:mm 提醒内容`。
@@ -122,7 +126,7 @@ AppImage；Windows 不会额外生成 NSIS。
 安装包输出位置：
 
 ```text
-target/release/bundle/msi/NeoPad_0.4.6_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.5.0_x64_en-US.msi
 ```
 
 ## MCP 服务
