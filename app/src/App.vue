@@ -1293,6 +1293,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       :vim-insert-exit-key="vimInsertExitKey"
       :preview-mode="defaultEditorMode"
       :language="language"
+      :app-version="appVersion"
       :workspace-path="workspacePath"
       :run-at-startup="runAtStartup"
       :start-hidden="startHidden"

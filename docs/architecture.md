@@ -128,7 +128,7 @@ the configured workspace.
   `SetLayeredWindowAttributes`; CSS opacity is not used for the app shell.
 - Tab context actions for rename, trash, and persistent color selection.
 - Compact settings dialog with independently scrollable content. Optional Vim
-  controls live under Advanced settings, while MCP service controls have their
+  controls live under Vim settings, while MCP service controls have their
   own MCP tab.
 - Autosave and status reporting.
 - Compact reminder creation and list surfaces. New reminder lines use

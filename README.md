@@ -30,7 +30,7 @@ The repository currently contains a working Windows-focused MVP:
   takes effect immediately and is restored on later launches; new installations
   start in Edit mode.
 - Optional Vim key bindings for the CodeMirror editor, with persisted settings
-  in the Advanced tab, configurable Insert exit sequence, and a visible Normal,
+  in the Vim tab, configurable Insert exit sequence, and a visible Normal,
   Insert, or Visual mode indicator. NeoPad Ctrl shortcuts can optionally take
   priority over conflicting Vim mappings.
 - Persistent light and dark themes available from the Format menu and status

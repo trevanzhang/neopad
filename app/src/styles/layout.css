@@ -2154,3 +2154,322 @@ body {
 .settings-footer button {
   min-width: 110px;
 }
+
+/* Settings is a compact workspace: navigation stays visible while each group
+   gets a full-width, scrollable control surface. */
+.settings-dialog {
+  grid-template-columns: 148px minmax(0, 1fr);
+  grid-template-rows: 48px minmax(0, 1fr);
+  width: min(840px, calc(100% - 32px));
+  height: min(640px, calc(100% - 32px));
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  border-radius: 5px;
+}
+
+.settings-header {
+  grid-column: 1 / -1;
+  min-height: 48px;
+  padding: 0 10px 0 16px;
+}
+
+.settings-header strong {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.settings-tabs {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  padding: 10px 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--np-chrome);
+  border-right: 1px solid var(--np-border);
+}
+
+.settings-tabs button {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  width: 100%;
+  height: 34px;
+  padding: 0 9px;
+  color: var(--np-muted);
+  text-align: left;
+  white-space: nowrap;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.settings-tabs button:hover {
+  color: var(--np-text);
+  background: var(--np-hover);
+}
+
+.settings-tabs button.active {
+  color: var(--np-text);
+  font-weight: 600;
+  background: var(--np-surface);
+  border-color: var(--np-border);
+  box-shadow: inset 2px 0 0 var(--np-accent);
+}
+
+.settings-tab-about {
+  position: relative;
+  margin-top: 10px;
+}
+
+.settings-tab-about::before {
+  position: absolute;
+  top: -6px;
+  right: 4px;
+  left: 4px;
+  height: 1px;
+  content: "";
+  background: var(--np-border);
+}
+
+.settings-tab-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.settings-content {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--np-surface);
+  border: 0;
+}
+
+.settings-content-header {
+  padding: 18px 24px 12px;
+  border-bottom: 1px solid var(--np-border);
+}
+
+.settings-content-header h2 {
+  margin: 0;
+  color: var(--np-text);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.settings-tab-content {
+  min-height: 0;
+  padding: 16px 24px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.settings-tab-content > .settings-fieldset,
+.settings-tab-content > .settings-shortcut-fieldset,
+.settings-tab-content > .settings-custom-fieldset {
+  margin: 0 0 18px;
+  padding: 0 0 18px;
+  border: 0;
+  border-bottom: 1px solid var(--np-border);
+  border-radius: 0;
+}
+
+.settings-tab-content > .settings-fieldset:last-child,
+.settings-tab-content > .settings-shortcut-fieldset:last-child,
+.settings-tab-content > .settings-custom-fieldset:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.settings-tab-content .settings-fieldset legend,
+.settings-tab-content .settings-custom-fieldset legend {
+  padding: 0;
+  margin-bottom: 9px;
+  color: var(--np-text);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.settings-tab-content .settings-check-row {
+  min-height: 32px;
+}
+
+.settings-tab-content .settings-shortcut-fieldset {
+  display: grid;
+  gap: 7px;
+}
+
+.settings-tab-content .settings-shortcut-fieldset .settings-form-row {
+  margin-bottom: 0;
+}
+
+.settings-tab-content .settings-template-row {
+  margin-bottom: 14px;
+}
+
+.settings-tab-content .settings-custom-fieldset {
+  margin-top: 20px;
+}
+
+.settings-tab-content .settings-description {
+  max-width: 620px;
+}
+
+.settings-about {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  max-width: 620px;
+  padding: 6px 0 0;
+}
+
+.settings-about-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: var(--np-accent);
+  background: var(--np-accent-soft);
+  border: 1px solid var(--np-border);
+  border-radius: 4px;
+}
+
+.settings-about-mark svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.settings-about h3 {
+  margin: 0 0 4px;
+  color: var(--np-text);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.settings-about p {
+  margin: 0;
+  color: var(--np-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.settings-about-details {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 8px 0 0;
+  border-top: 1px solid var(--np-border);
+}
+
+.settings-about-details > div {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 35px;
+  align-items: center;
+  border-bottom: 1px solid var(--np-border);
+}
+
+.settings-about-details dt {
+  color: var(--np-muted);
+  font-size: 13px;
+}
+
+.settings-about-details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--np-text);
+  font-size: 13px;
+}
+
+@media (max-width: 620px) {
+  .settings-dialog {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 44px auto minmax(0, 1fr);
+    width: calc(100% - 20px);
+    height: calc(100% - 20px);
+  }
+
+  .settings-header {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 44px;
+    padding-left: 12px;
+  }
+
+  .settings-tabs {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    gap: 0;
+    padding: 6px 7px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: var(--np-chrome);
+    border-right: 0;
+    border-bottom: 1px solid var(--np-border);
+  }
+
+  .settings-tabs button {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+    width: auto;
+    height: 30px;
+    padding: 0 8px;
+    border-radius: 3px 3px 0 0;
+  }
+
+  .settings-tabs button.active {
+    box-shadow: inset 0 -2px 0 var(--np-accent);
+  }
+
+  .settings-tab-about {
+    margin-top: 0;
+  }
+
+  .settings-tab-about::before {
+    display: none;
+  }
+
+  .settings-content {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .settings-content-header {
+    padding: 14px 16px 10px;
+  }
+
+  .settings-tab-content {
+    padding: 14px 16px 20px;
+  }
+
+  .settings-about-details > div {
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+  }
+}

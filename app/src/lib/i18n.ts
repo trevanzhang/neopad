@@ -147,6 +147,13 @@ export type AppMessages = {
     shortcutsTab: string
     insertTextTab: string
     advancedTab: string
+    about: string
+    aboutDescription: string
+    version: string
+    author: string
+    openSource: string
+    license: string
+    builtWith: string
     generalOptions: string
     vimMode: string
     vimUseCtrlShortcuts: string
@@ -494,7 +501,14 @@ export const messages: Record<AppLanguage, AppMessages> = {
       previewTab: 'Preview',
       shortcutsTab: 'Shortcuts',
       insertTextTab: 'Insert Text',
-      advancedTab: 'Advanced',
+      advancedTab: 'Vim',
+      about: 'About',
+      aboutDescription: 'A lightweight, local-first Markdown desktop note pad.',
+      version: 'Version',
+      author: 'Author',
+      openSource: 'Open source',
+      license: 'License',
+      builtWith: 'Built with',
       generalOptions: 'General Options',
       vimMode: 'Enable Vim key bindings',
       vimUseCtrlShortcuts: 'Keep NeoPad Ctrl shortcuts enabled',
@@ -840,7 +854,14 @@ export const messages: Record<AppLanguage, AppMessages> = {
       previewTab: '\u9884\u89c8',
       shortcutsTab: '\u5feb\u6377\u952e',
       insertTextTab: '\u63d2\u5165\u6587\u672c',
-      advancedTab: '\u9ad8\u7ea7',
+      advancedTab: 'Vim \u6a21\u5f0f',
+      about: '\u5173\u4e8e',
+      aboutDescription: '\u8f7b\u91cf\u3001\u672c\u5730\u4f18\u5148\u7684 Markdown \u684c\u9762\u4fbf\u7b7a\u3002',
+      version: '\u7248\u672c',
+      author: '\u4f5c\u8005',
+      openSource: '\u5f00\u6e90\u9879\u76ee',
+      license: '\u5f00\u6e90\u8bb8\u53ef',
+      builtWith: '\u6280\u672f\u6808',
       generalOptions: '\u5e38\u89c4\u9009\u9879',
       vimMode: '\u542f\u7528 Vim \u952e\u4f4d',
       vimUseCtrlShortcuts: '\u4fdd\u7559 NeoPad \u7684 Ctrl \u5feb\u6377\u952e',

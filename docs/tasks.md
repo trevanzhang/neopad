@@ -27,7 +27,7 @@ This file tracks the implemented MVP relative to the original task plan.
 - Localized system page labels that preserve stable storage IDs and user titles.
 - CodeMirror 6 Markdown editor.
 - Optional persisted Vim key bindings with Normal, Insert, and Visual status,
-  plus a configurable Insert exit sequence in Advanced settings.
+  plus a configurable Insert exit sequence in Vim settings.
 - Persistent light and dark themes with a destination-state status-bar toggle.
 - Viewport-constrained settings dialog with fixed navigation and actions.
 - Autosave from the UI.
