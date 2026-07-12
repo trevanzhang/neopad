@@ -9,12 +9,14 @@ import StatusBar from './components/StatusBar.vue'
 import TabBar from './components/TabBar.vue'
 import {
   createNote,
+  clearTrash,
   completeStartup,
   exportAllNotesZip,
   getAppVersion,
   getShortcutWarnings,
   getWorkspace,
   listLibraryNotes,
+  listTrashedNotes,
   listNotes,
   listRecentNotes,
   openTrash,
@@ -24,6 +26,7 @@ import {
   readExternalMarkdown,
   toggleMainWindowMaximize,
   toggleAlwaysOnTop,
+  restoreNoteFromTrash,
   writeNote,
 } from './lib/invoke'
 import { messages } from './lib/i18n'
@@ -145,6 +148,7 @@ const searchPanel = ref<InstanceType<typeof SearchPanel> | null>(null)
 const workspacePath = ref('~/.neopad')
 const noteLibraryOpen = ref(false)
 const libraryNotes = ref<NoteTab[]>([])
+const trashedNotes = ref<NoteTab[]>([])
 const libraryLoading = ref(false)
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
 const t = computed(() => messages[language.value])
@@ -259,13 +263,16 @@ const {
   archivePageById,
   updateTabColor,
   unarchiveTab,
+  renameTab,
+  archiveTab,
+  deleteTab,
   createLocalTab,
   saveCurrentClipboard,
 } = useNoteLifecycle({
   tabs, activeTabId, activeTab, content, saveState, statusMessage, language,
   titleDoubleClickAction, archiveListOpen, text: () => t.value, forceSave,
   nextNoteLoadGeneration, isCurrentNoteLoad, loadActiveNote, setContentFromLoad,
-  requestInput, requestConfirmation, focusEditor: focusEditorAfterPageAction,
+  requestInput, focusEditor: focusEditorAfterPageAction,
   refreshRecentNotes, refreshArchivedNotes, refreshLibrary: refreshNoteLibrary, upsertTab,
 })
 const {
@@ -611,11 +618,13 @@ async function refreshNoteLibrary() {
   libraryLoading.value = true
   try {
     if (isTauriRuntime()) {
-      const [notes] = await Promise.all([listLibraryNotes(), refreshArchivedNotes()])
+      const [notes, trashed] = await Promise.all([listLibraryNotes(), listTrashedNotes(), refreshArchivedNotes()])
       libraryNotes.value = notes
+      trashedNotes.value = trashed
     } else {
       libraryNotes.value = tabs.value.filter((tab) => !tab.archived && !tab.deleted && !tab.external)
       archivedNotes.value = tabs.value.filter((tab) => tab.archived && !tab.deleted && !tab.external)
+      trashedNotes.value = tabs.value.filter((tab) => tab.deleted && !tab.external)
     }
   } catch {
     saveState.value = 'Failed'
@@ -624,28 +633,65 @@ async function refreshNoteLibrary() {
   }
 }
 
-async function selectLibraryNote(noteId: string) {
+async function selectLibraryNote(noteId: string): Promise<boolean> {
   if (noteId === activeTabId.value) {
     focusEditorAfterPageAction()
-    return
+    return true
   }
   const generation = nextNoteLoadGeneration()
-  if (!(await forceSave()) || !isCurrentNoteLoad(generation)) return
+  if (!(await forceSave()) || !isCurrentNoteLoad(generation)) return false
   try {
     const opened = isTauriRuntime() ? await openNote(noteId) : libraryNotes.value.find((tab) => tab.id === noteId)
-    if (!opened || !isCurrentNoteLoad(generation)) return
+    if (!opened || !isCurrentNoteLoad(generation)) return false
     upsertTab(opened)
     activeTabId.value = opened.id
-    await loadActiveNote(generation)
+    if (!(await loadActiveNote(generation))) return false
     await refreshRecentNotes()
     focusEditorAfterPageAction()
+    return true
+  } catch {
+    saveState.value = 'Failed'
+    return false
+  }
+}
+
+async function restoreLibraryNote(notes: NoteTab[]) {
+  for (const tab of notes) await unarchiveTab(tab)
+  await refreshNoteLibrary()
+}
+
+async function restoreTrashedLibraryNotes(notes: NoteTab[]) {
+  try {
+    for (const tab of notes) {
+      const restored = isTauriRuntime() ? await restoreNoteFromTrash(tab.id) : { ...tab, deleted: false, open: true }
+      upsertTab(restored)
+    }
+    await refreshNoteLibrary()
   } catch {
     saveState.value = 'Failed'
   }
 }
 
-async function restoreLibraryNote(tab: NoteTab) {
-  await unarchiveTab(tab)
+async function clearLibraryTrash() {
+  try {
+    if (isTauriRuntime()) await clearTrash()
+    else tabs.value = tabs.value.filter((tab) => !tab.deleted)
+    await refreshNoteLibrary()
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function runLibraryNoteAction(notes: NoteTab[], action: 'rename' | 'archive' | 'delete') {
+  if (action === 'rename') {
+    const [tab] = notes
+    if (tab) await renameTab(tab)
+  } else {
+    for (const tab of notes) {
+      if (action === 'archive') await archiveTab(tab)
+      else await deleteTab(tab)
+    }
+  }
   await refreshNoteLibrary()
 }
 
@@ -1147,11 +1193,17 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         v-if="noteLibraryOpen"
         :notes="libraryNotes"
         :archived-notes="archivedNotes"
+        :trashed-notes="trashedNotes"
         :active-note-id="activeTabId"
         :loading="libraryLoading"
         :messages="t.library"
         @select="selectLibraryNote"
         @restore="restoreLibraryNote"
+        @restore-trash="restoreTrashedLibraryNotes"
+        @clear-trash="clearLibraryTrash"
+        @rename="runLibraryNoteAction($event, 'rename')"
+        @archive="runLibraryNoteAction($event, 'archive')"
+        @delete="runLibraryNoteAction($event, 'delete')"
         @new-note="createLocalTab"
         @refresh="refreshNoteLibrary"
       />

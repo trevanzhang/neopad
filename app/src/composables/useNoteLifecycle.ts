@@ -32,7 +32,6 @@ interface NoteLifecycleOptions {
   loadActiveNote: (generation?: number) => Promise<boolean>
   setContentFromLoad: (content: string) => void
   requestInput: (title: string, initialValue: string) => Promise<string | null>
-  requestConfirmation: (title: string, message: string, confirmLabel: string, danger?: boolean) => Promise<boolean>
   focusEditor: () => void
   refreshRecentNotes: () => Promise<void>
   refreshArchivedNotes: () => Promise<void>
@@ -100,16 +99,6 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
     if (tab.id === 'inbox' || tab.id === 'clipboard' || tab.external || deletingTabIds.has(tab.id)) return
     const wasActive = o.activeTabId.value === tab.id
     const nextId = wasActive ? adjacentTabIdAfterRemoval(tab.id) : o.activeTabId.value
-    const confirmed = await o.requestConfirmation(
-      o.text().tabs.confirmDeleteTitle,
-      o.text().tabs.confirmDeleteMessage.replace('{title}', tab.title),
-      o.text().tabs.delete,
-      true,
-    )
-    if (!confirmed) {
-      if (wasActive) o.focusEditor()
-      return
-    }
     deletingTabIds.add(tab.id)
     if (isTauriRuntime()) {
       try {
@@ -147,6 +136,7 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
   async function archiveTab(tab: NoteTab) {
     if (tab.id === 'inbox' || tab.id === 'clipboard') return
     if (tab.external) {
+      /*
       const confirmed = await o.requestConfirmation(
         o.text().tabs.archive,
         o.language.value === 'zh'
@@ -155,6 +145,7 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
         o.text().tabs.archive,
       )
       if (!confirmed) { if (o.activeTabId.value === tab.id) o.focusEditor(); return }
+      */
       try {
         if (!(await o.forceSave())) return
         const created = await createNote(tab.title)
@@ -167,12 +158,6 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
     if (tab.archived) { await unarchiveTab(tab); return }
     const wasActive = o.activeTabId.value === tab.id
     const nextId = wasActive ? adjacentTabIdAfterRemoval(tab.id) : o.activeTabId.value
-    const confirmed = await o.requestConfirmation(
-      o.text().tabs.archive,
-      o.text().tabs.confirmArchiveMessage.replace('{title}', tab.title),
-      o.text().tabs.archive,
-    )
-    if (!confirmed) { if (wasActive) o.focusEditor(); return }
     try {
       if (isTauriRuntime()) { if (!(await o.forceSave())) return; await archiveNote(tab.id) }
       o.tabs.value = o.tabs.value.filter((item) => item.id !== tab.id)

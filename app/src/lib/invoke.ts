@@ -83,6 +83,10 @@ export function listArchivedNotes(): Promise<NoteTab[]> {
   return invoke('list_archived_notes_command')
 }
 
+export function listTrashedNotes(): Promise<NoteTab[]> {
+  return invoke('list_trashed_notes_command')
+}
+
 export function readNote(noteId: string): Promise<NoteContent> {
   return invoke('read_note_command', { noteId })
 }
@@ -101,6 +105,14 @@ export function renameNote(noteId: string, title: string): Promise<NoteTab> {
 
 export function deleteNote(noteId: string): Promise<NoteTab> {
   return invoke('delete_note_command', { noteId })
+}
+
+export function restoreNoteFromTrash(noteId: string): Promise<NoteTab> {
+  return invoke('restore_note_from_trash_command', { noteId })
+}
+
+export function clearTrash(): Promise<void> {
+  return invoke('clear_trash_command')
 }
 
 export function closeNote(noteId: string): Promise<NoteTab> {

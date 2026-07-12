@@ -295,11 +295,18 @@ export type AppMessages = {
     title: string
     notes: string
     archive: string
+    trash: string
     emptyNotes: string
     emptyArchive: string
+    emptyTrash: string
     newNote: string
     refresh: string
     restore: string
+    rename: string
+    archiveAction: string
+    delete: string
+    clearTrash: string
+    help: string
   }
   status: {
     editMode: string
@@ -635,11 +642,18 @@ export const messages: Record<AppLanguage, AppMessages> = {
       title: 'FILES',
       notes: 'Notes',
       archive: 'Archive',
+      trash: 'Trash',
       emptyNotes: 'No notes yet',
       emptyArchive: 'No archived notes',
+      emptyTrash: 'Trash is empty',
       newNote: 'New note',
       refresh: 'Refresh library',
       restore: 'Restore note',
+      rename: 'Rename',
+      archiveAction: 'Archive',
+      delete: 'Delete',
+      clearTrash: 'Empty Trash',
+      help: 'Browse local notes, archived notes, and Trash. Ctrl-click selects individual notes; Shift-click selects a range. Right-click to manage the selection.',
     },
     status: {
       editMode: 'Edit mode',
@@ -973,11 +987,18 @@ export const messages: Record<AppLanguage, AppMessages> = {
       title: '\u6587\u4ef6',
       notes: '\u7b14\u8bb0',
       archive: '\u5b58\u6863',
+      trash: '\u56de\u6536\u7ad9',
       emptyNotes: '\u6682\u65e0\u7b14\u8bb0',
       emptyArchive: '\u6682\u65e0\u5b58\u6863\u7b14\u8bb0',
+      emptyTrash: '\u56de\u6536\u7ad9\u4e3a\u7a7a',
       newNote: '\u65b0\u5efa\u7b14\u8bb0',
       refresh: '\u5237\u65b0\u7b14\u8bb0\u5e93',
       restore: '\u6062\u590d\u7b14\u8bb0',
+      rename: '\u91cd\u547d\u540d',
+      archiveAction: '\u5b58\u6863',
+      delete: '\u5220\u9664',
+      clearTrash: '\u6e05\u7a7a\u56de\u6536\u7ad9',
+      help: '\u6d4f\u89c8\u672c\u5730\u7b14\u8bb0\u3001\u5b58\u6863\u548c\u56de\u6536\u7ad9\u3002Ctrl+\u70b9\u51fb\u53ef\u591a\u9009\uff0cShift+\u70b9\u51fb\u53ef\u8fde\u7eed\u9009\u4e2d\uff1b\u53f3\u952e\u7ba1\u7406\u5f53\u524d\u9009\u533a\u3002',
     },
     status: {
       editMode: '\u7f16\u8f91\u6a21\u5f0f',
