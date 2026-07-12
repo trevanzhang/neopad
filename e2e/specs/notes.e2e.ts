@@ -57,8 +57,8 @@ describe('NeoPad desktop note workflow', () => {
   it('opens native-backed settings without losing the active note', async () => {
     await browser.keys(['Control', ','])
     await expect($('.settings-panel')).toBeDisplayed()
-    const closeButton = await $('.settings-footer button')
-    await browser.execute((element) => (element as HTMLElement).click(), closeButton)
+    await click('.settings-close')
+    await expect($('.settings-panel')).not.toBeDisplayed()
     expect(await $('.cm-content').getText()).toContain('E2E autosave content')
   })
 
@@ -131,7 +131,8 @@ describe('NeoPad desktop note workflow', () => {
     const snapCheckbox = await snapRow.$('input')
     await snapCheckbox.waitForExist()
     await browser.execute((element) => (element as HTMLInputElement).click(), snapCheckbox)
-    await click('.settings-footer button')
+    await click('.settings-close')
+    await expect($('.settings-panel')).not.toBeDisplayed()
 
     const restored = await browser.getWindowSize()
     await browser.keys(['Alt', 'Enter'])
