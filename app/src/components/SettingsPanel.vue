@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import type { AppLanguage, AppMessages } from '../lib/i18n'
 import type { EditorMode, PreviewContentWidth, PreviewFontFamily, PreviewLineHeight, PreviewTheme } from '../types/editor'
 
@@ -85,6 +85,11 @@ const emit = defineEmits<{
 
 const activeTab = ref<SettingsTab>('general')
 const selectedCustomIndex = ref<number | null>(null)
+const panel = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+  void nextTick(() => panel.value?.focus())
+})
 
 const activeTabLabel = computed<keyof AppMessages['settings']>(() => {
   const labels: Record<SettingsTab, keyof AppMessages['settings']> = {
@@ -150,7 +155,15 @@ function deleteCustomText(current: string[]) {
 </script>
 
 <template>
-  <aside class="settings-panel settings-dialog" :aria-label="messages.title">
+  <aside
+    ref="panel"
+    class="settings-panel settings-dialog"
+    role="dialog"
+    aria-modal="true"
+    :aria-label="messages.title"
+    tabindex="-1"
+    @keydown.esc.stop.prevent="emit('close')"
+  >
     <header class="settings-header">
       <strong>{{ messages.title }}</strong>
       <button type="button" class="settings-close" :aria-label="messages.close" :title="messages.close" @click="$emit('close')"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg></button>

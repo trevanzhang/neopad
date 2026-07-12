@@ -78,6 +78,15 @@ describe('keyboard shortcut routing', () => {
     expect(spies.cancelInput).not.toHaveBeenCalled()
   })
 
+  it('closes settings before requesting native window hiding', () => {
+    const { flags, spies, handler } = harness()
+    flags.set('settingsOpen', true)
+    flags.set('nativeRuntime', true)
+    handler(keyEvent('Escape'))
+    expect(spies.closeSettings).toHaveBeenCalledOnce()
+    expect(spies.hideMainWindow).toBeUndefined()
+  })
+
   it('does not archive through an open settings surface', () => {
     const { flags, spies, handler } = harness()
     flags.set('settingsOpen', true)
