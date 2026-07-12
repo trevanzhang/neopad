@@ -149,10 +149,11 @@ the configured workspace.
 - New installations start in Edit mode; later launches restore the Default Mode
   chosen in Settings > General. `F8` is the fixed local shortcut for cycling
   edit, split, and preview modes.
-- `Ctrl+O` opens an explicitly selected external Markdown file in place. Its
-  picker-approved canonical path is persisted, and writes use atomic
-  replacement with a SHA-256 content-revision conflict check. The file remains
-  outside NeoPad lifecycle operations unless copied into archive.
+- `Ctrl+O`, native file drag and drop, and operating-system file associations
+  open external Markdown files in place. Their canonical paths are persisted,
+  and writes use atomic replacement with a SHA-256 content-revision conflict
+  check. The file remains outside NeoPad lifecycle operations unless copied
+  into archive.
 - Tray menu: show, hide, new note, save clipboard, settings, quit.
 - Global shortcuts:
   - `Alt+Z`: toggle window.

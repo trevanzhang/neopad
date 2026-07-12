@@ -42,9 +42,9 @@ This file tracks the implemented MVP relative to the original task plan.
   and native due notifications.
 - ZIP export for active and archived NeoPad notes, preserving each note as its
   own Markdown file.
-- Native opening and in-place autosave for external Markdown files, with a
-  native-picker authorization boundary, content-revision conflicts, persistent
-  recent-document list, and copy-to-archive behavior.
+- Native picker, drag-and-drop, and operating-system file-association opening
+  with in-place autosave for external Markdown files; content-revision
+  conflicts, persistent recent-document list, and copy-to-archive behavior.
 - Manual clipboard capture to `clipboard.md`.
 - Standalone Streamable HTTP `neopad-mcp` read and write tools.
 - Dedicated MCP settings page with service start/stop, status, token display,

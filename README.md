@@ -61,12 +61,13 @@ The repository currently contains a working Windows-focused MVP:
   build.
 - Global search groups matching lines by note, shows a per-note match count,
   and lets you expand repeated matches only when needed.
-- `Ctrl+O` opens an external Markdown file in place through the native file
-  picker. Only picker-approved paths can be reopened, and changes autosave back
-  to the original path with a SHA-256 content-revision conflict check. External
-  files can be copied into the NeoPad archive without moving or deleting their
-  originals. Native Save As dialogs export the active note as Markdown or all
-  notes as a ZIP archive containing one Markdown file per tab.
+- `Ctrl+O`, dragging `.md` or `.markdown` files onto the window, or opening an
+  associated Markdown document from the operating system opens it in place.
+  Changes autosave back to the original path with a SHA-256 content-revision
+  conflict check. External files can be copied into the NeoPad archive without
+  moving or deleting their originals. Native Save As dialogs export the active
+  note as Markdown or all notes as a ZIP archive containing one Markdown file
+  per tab.
 - Standalone local HTTP `neopad-mcp` service managed from Settings, with bearer
   token access for local agents. The dedicated MCP settings page can start or
   stop the service, show the local URL and token, regenerate the token, and copy
@@ -74,9 +75,9 @@ The repository currently contains a working Windows-focused MVP:
 - Save barriers prevent navigation and content-replacing actions from
   discarding pending edits. Note metadata is reconciled under a cross-process
   lock, and interrupted archive/trash state is recovered from Markdown files.
-- Windows MSI packaging with app icon, branded WiX installer images, and desktop
-  and start-menu shortcut icons. The MSI includes `neopad-mcp.exe` as a bundled
-  sidecar binary.
+- Windows MSI packaging with app icon, branded WiX installer images, desktop and
+  start-menu shortcut icons, and `.md` / `.markdown` file-association support.
+  The MSI includes `neopad-mcp.exe` as a bundled sidecar binary.
 
 ## Workspace Layout
 

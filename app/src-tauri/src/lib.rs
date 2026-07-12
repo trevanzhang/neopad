@@ -12,31 +12,40 @@ use commands::{
     get_workspace_command, hide_window_command, list_archived_notes_command,
     list_library_notes_command, list_notes_command, list_recent_notes_command,
     list_reminders_command, list_trashed_notes_command, open_external_markdown_command,
-    open_external_url_command, open_note_command, open_trash_command, quit_app_command,
-    read_external_markdown_command, read_note_command, rename_note_command,
-    reopen_reminder_command, restore_note_from_trash_command, save_clipboard_command,
-    save_markdown_file_command, save_ui_config_command, search_notes_command,
-    set_autostart_command, set_close_to_minimize_command, set_note_color_command,
-    set_snap_to_edges_command, set_start_hidden_command, set_window_opacity_command,
-    show_window_command, toggle_always_on_top_command, toggle_main_window_maximize_command,
-    toggle_window_command, unarchive_note_command, update_clipboard_shortcut_command,
-    update_toggle_shortcut_command, write_external_markdown_command, write_note_command, AppState,
+    open_external_markdown_paths_command, open_external_url_command, open_note_command,
+    open_trash_command, quit_app_command, read_external_markdown_command, read_note_command,
+    rename_note_command, reopen_reminder_command, restore_note_from_trash_command,
+    save_clipboard_command, save_markdown_file_command, save_ui_config_command,
+    search_notes_command, set_autostart_command, set_close_to_minimize_command,
+    set_note_color_command, set_snap_to_edges_command, set_start_hidden_command,
+    set_window_opacity_command, show_window_command, take_pending_external_markdown_paths_command,
+    toggle_always_on_top_command, toggle_main_window_maximize_command, toggle_window_command,
+    unarchive_note_command, update_clipboard_shortcut_command, update_toggle_shortcut_command,
+    write_external_markdown_command, write_note_command, AppState,
 };
 use neopad_core::{init_workspace, load_config};
+use std::ffi::OsString;
+use std::path::{Path, PathBuf};
 use std::sync::{atomic::AtomicBool, Arc, Mutex};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 use tauri_plugin_window_state::StateFlags;
 
 fn build_state() -> anyhow::Result<AppState> {
     let workspace_path = std::env::var_os("NEOPAD_WORKSPACE").map(std::path::PathBuf::from);
     let workspace = init_workspace(workspace_path)?;
-    let startup_hidden = std::env::args_os().any(|arg| arg == "--hidden")
+    let startup_args = std::env::args_os().collect::<Vec<_>>();
+    let startup_hidden = startup_args.iter().any(|arg| arg == "--hidden")
         || load_config(&workspace)
             .map(|config| config.ui.start_hidden)
             .unwrap_or(false);
+    let startup_cwd = std::env::current_dir().unwrap_or_default();
     Ok(AppState {
         workspace,
+        pending_external_markdown_paths: Mutex::new(external_markdown_paths_from_args(
+            startup_args,
+            &startup_cwd,
+        )),
         shortcut_warnings: Mutex::new(Vec::new()),
         mcp_process: Mutex::new(None),
         mcp_error: Arc::new(Mutex::new(None)),
@@ -52,6 +61,35 @@ fn build_state() -> anyhow::Result<AppState> {
         )),
         startup_hidden,
     })
+}
+
+const EXTERNAL_MARKDOWN_OPEN_REQUEST: &str = "neopad://external-markdown-open-requested";
+
+fn external_markdown_paths_from_args(
+    args: impl IntoIterator<Item = OsString>,
+    cwd: &Path,
+) -> Vec<String> {
+    args.into_iter()
+        .skip(1)
+        .map(PathBuf::from)
+        .map(|path| {
+            if path.is_absolute() {
+                path
+            } else {
+                cwd.join(path)
+            }
+        })
+        .filter(|path| {
+            matches!(
+                path.extension()
+                    .and_then(|extension| extension.to_str())
+                    .map(|extension| extension.to_ascii_lowercase())
+                    .as_deref(),
+                Some("md" | "markdown")
+            )
+        })
+        .map(|path| path.to_string_lossy().to_string())
+        .collect()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -74,7 +112,21 @@ pub fn run() {
 
     let mut builder = tauri::Builder::default();
     if std::env::var_os("NEOPAD_E2E").is_none() {
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            let paths = external_markdown_paths_from_args(
+                args.into_iter().map(OsString::from),
+                Path::new(&cwd),
+            );
+            if !paths.is_empty() {
+                if let Ok(mut pending) = app
+                    .state::<AppState>()
+                    .pending_external_markdown_paths
+                    .lock()
+                {
+                    pending.extend(paths.iter().cloned());
+                }
+                let _ = app.emit(EXTERNAL_MARKDOWN_OPEN_REQUEST, paths);
+            }
             let _ = window::show_main_window(app);
         }));
     }
@@ -124,6 +176,8 @@ pub fn run() {
             close_note_command,
             open_note_command,
             open_external_markdown_command,
+            open_external_markdown_paths_command,
+            take_pending_external_markdown_paths_command,
             read_external_markdown_command,
             write_external_markdown_command,
             archive_note_command,
@@ -162,4 +216,33 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("failed to run NeoPad");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::external_markdown_paths_from_args;
+    use std::ffi::OsString;
+
+    #[test]
+    fn startup_arguments_keep_only_markdown_paths() {
+        let cwd = std::env::temp_dir().join("neopad-startup-arguments");
+        let paths = external_markdown_paths_from_args(
+            [
+                OsString::from("neopad.exe"),
+                OsString::from("readme.md"),
+                OsString::from("--hidden"),
+                OsString::from("notes.txt"),
+                OsString::from("guide.MARKDOWN"),
+            ],
+            &cwd,
+        );
+
+        assert_eq!(
+            paths,
+            vec![
+                cwd.join("readme.md").to_string_lossy().to_string(),
+                cwd.join("guide.MARKDOWN").to_string_lossy().to_string(),
+            ]
+        );
+    }
 }

@@ -24,6 +24,7 @@ use tauri_plugin_global_shortcut::Shortcut;
 #[derive(Debug)]
 pub struct AppState {
     pub workspace: Workspace,
+    pub pending_external_markdown_paths: Mutex<Vec<String>>,
     pub shortcut_warnings: Mutex<Vec<String>>,
     pub mcp_process: Mutex<Option<std::process::Child>>,
     pub mcp_error: Arc<Mutex<Option<String>>>,
@@ -361,6 +362,36 @@ pub async fn open_external_markdown_command(
             .map_err(display_error)?;
     }
     Ok(document)
+}
+
+#[tauri::command]
+pub fn open_external_markdown_paths_command(
+    state: State<'_, AppState>,
+    paths: Vec<String>,
+) -> Result<Vec<ExternalDocument>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    let documents = paths
+        .iter()
+        .map(|path| read_external_document(std::path::Path::new(path)))
+        .collect::<anyhow::Result<Vec<_>>>()
+        .map_err(display_error)?;
+
+    for document in &documents {
+        approve_external_markdown_path(&state.workspace, std::path::Path::new(&document.path))
+            .map_err(display_error)?;
+    }
+    Ok(documents)
+}
+
+#[tauri::command]
+pub fn take_pending_external_markdown_paths_command(
+    state: State<'_, AppState>,
+) -> Result<Vec<String>, String> {
+    let mut paths = state
+        .pending_external_markdown_paths
+        .lock()
+        .map_err(|_| "pending external Markdown paths lock is unavailable".to_owned())?;
+    Ok(std::mem::take(&mut *paths))
 }
 
 #[tauri::command]

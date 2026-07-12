@@ -55,10 +55,11 @@ Implemented MVP capabilities:
   Markdown lines.
 - Native Save As for exporting the active note to Markdown or all notes to a
   ZIP archive with one Markdown file per tab.
-- `Ctrl+O` opens external Markdown files in place and autosaves changes back
-  to their original paths. Access requires native-picker approval and writes
-  use content revisions to detect out-of-band edits. External files can be
-  copied into the NeoPad archive without changing the originals.
+- `Ctrl+O`, native file drag and drop, and operating-system file associations
+  open external Markdown files in place and autosave changes back to their
+  original paths. Writes use content revisions to detect out-of-band edits.
+  External files can be copied into the NeoPad archive without changing the
+  originals.
 - Manual clipboard capture into `clipboard.md` with readable local timestamp
   separator lines.
 - Tray menu.

@@ -8,6 +8,8 @@ interface WindowLifecycleOptions {
   closeToMinimize: Ref<boolean>
   createLocalTab: () => void | Promise<void>
   saveCurrentClipboard: () => void | Promise<void>
+  openExternalDocuments: (paths: string[]) => void | Promise<void>
+  openPendingExternalDocuments: () => void | Promise<void>
   openSettings: () => void
   saveBeforeWindowAction: () => Promise<boolean>
   onError: () => void
@@ -22,9 +24,17 @@ export function useWindowLifecycle(options: WindowLifecycleOptions) {
         listen('neopad://new-note-requested', () => void options.createLocalTab()),
         listen('neopad://save-clipboard-requested', () => void options.saveCurrentClipboard()),
         listen('neopad://open-settings', options.openSettings),
+        listen('neopad://external-markdown-open-requested', () => {
+          void options.openPendingExternalDocuments()
+        }),
         listen('neopad://close-requested', () => void handleCloseRequested()),
         listen('neopad://hide-requested', () => void handleHideRequested()),
         listen('neopad://quit-requested', () => void handleQuitRequested()),
+        getCurrentWebview().onDragDropEvent((event) => {
+          if (event.payload.type === 'drop') {
+            void options.openExternalDocuments(event.payload.paths)
+          }
+        }),
       ])
       unlisteners.push(...listeners)
     } catch {

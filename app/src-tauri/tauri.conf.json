@@ -21,6 +21,7 @@
         "center": false,
         "visible": false,
         "decorations": true,
+        "dragDropEnabled": true,
         "zoomHotkeysEnabled": false
       }
     ],
@@ -33,6 +34,15 @@
     "targets": ["msi"],
     "externalBin": [
       "../../target/release/neopad-mcp"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown"],
+        "name": "Markdown document",
+        "description": "NeoPad Markdown document",
+        "role": "Editor",
+        "mimeType": "text/markdown"
+      }
     ],
     "icon": [
       "icons/icon.ico",

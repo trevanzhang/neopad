@@ -139,6 +139,14 @@ export function openExternalMarkdown(): Promise<ExternalDocument | null> {
   return invoke('open_external_markdown_command')
 }
 
+export function openExternalMarkdownPaths(paths: string[]): Promise<ExternalDocument[]> {
+  return invoke('open_external_markdown_paths_command', { paths })
+}
+
+export function takePendingExternalMarkdownPaths(): Promise<string[]> {
+  return invoke('take_pending_external_markdown_paths_command')
+}
+
 export function readExternalMarkdown(path: string): Promise<ExternalDocument> {
   return invoke('read_external_markdown_command', { path })
 }

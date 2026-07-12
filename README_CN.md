@@ -28,9 +28,11 @@ Markdown 文件，用户数据不需要账号，也不依赖云服务。
   `- [ ] @remind YYYY-MM-DD HH:mm 提醒内容`。
 - 本地 HTTP MCP 服务默认关闭，可在设置中启停；启用后通过 bearer token
   授权本地 Agent 读写笔记。
-- Windows MSI 安装包会内置 `neopad-mcp.exe` 作为 sidecar。
-- `Ctrl+O` 通过原生文件选择器授权外部 Markdown 路径，并使用 SHA-256
-  内容 revision 检测外部修改，避免静默覆盖。
+- Windows MSI 安装包会内置 `neopad-mcp.exe` 作为 sidecar，并声明 `.md` 和
+  `.markdown` 文件关联，供用户在系统中选择 NeoPad 作为默认打开方式。
+- `Ctrl+O`、将 `.md` 或 `.markdown` 文件拖入窗口、或从系统打开关联文件，都会
+  就地打开外部 Markdown 文件，并使用 SHA-256 内容 revision 检测外部修改，避免
+  静默覆盖。
 
 ## 用户数据
 

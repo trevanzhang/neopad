@@ -22,8 +22,10 @@ import {
   openTrash,
   openNote,
   openExternalMarkdown,
+  openExternalMarkdownPaths,
   saveMarkdownFile,
   readExternalMarkdown,
+  takePendingExternalMarkdownPaths,
   toggleMainWindowMaximize,
   toggleAlwaysOnTop,
   restoreNoteFromTrash,
@@ -285,6 +287,8 @@ const {
   closeToMinimize,
   createLocalTab,
   saveCurrentClipboard,
+  openExternalDocuments: openExternalDocumentPaths,
+  openPendingExternalDocuments,
   openSettings,
   saveBeforeWindowAction,
   onError: () => { saveState.value = 'Failed' },
@@ -411,6 +415,7 @@ onMounted(async () => {
   window.addEventListener('beforeunload', forceSaveOnExit)
   document.addEventListener('visibilitychange', forceSaveOnHide)
   await registerNativeEventListeners()
+  await openPendingExternalDocuments()
   appReady.value = true
   await nextTick()
   await completeStartup().catch(() => {
@@ -438,6 +443,27 @@ async function openExternalDocument() {
     const document = await openExternalMarkdown()
     if (!document) return
     await openExternalDocumentPath(document.path, document)
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function openPendingExternalDocuments() {
+  try {
+    const paths = await takePendingExternalMarkdownPaths()
+    if (paths.length > 0) await openExternalDocumentPaths(paths)
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function openExternalDocumentPaths(paths: string[]) {
+  if (paths.length === 0) return
+  try {
+    const documents = await openExternalMarkdownPaths(paths)
+    for (const document of documents) {
+      await openExternalDocumentPath(document.path, document)
+    }
   } catch {
     saveState.value = 'Failed'
   }
