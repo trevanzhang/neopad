@@ -173,8 +173,8 @@ patch versions are reserved for compatible fixes.
 - MCP service startup no longer opens a console window on Windows.
 - Older sparse `config.json` files now load with defaults for newly added UI
   fields instead of failing on missing settings.
-- Native window opacity is reapplied after maximize, restore, focus, and resize
-  events.
+- Native window opacity is reapplied when the window is shown or focused without
+  interrupting maximize and restore transitions.
 
 ## 0.4.1 - 2026-07-08
 
