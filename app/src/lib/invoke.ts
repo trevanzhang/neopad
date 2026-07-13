@@ -55,6 +55,11 @@ export interface McpStatus {
   lastError: string | null
 }
 
+export interface RecoverableNoteWrite {
+  recoveryFileName: string
+  targetFileName: string
+}
+
 export function getAppVersion(): Promise<string> {
   return invoke('app_version')
 }
@@ -113,6 +118,14 @@ export function restoreNoteFromTrash(noteId: string): Promise<NoteTab> {
 
 export function clearTrash(): Promise<void> {
   return invoke('clear_trash_command')
+}
+
+export function listRecoverableNoteWrites(): Promise<RecoverableNoteWrite[]> {
+  return invoke('list_recoverable_note_writes_command')
+}
+
+export function restoreRecoverableNoteWrite(recoveryFileName: string): Promise<string> {
+  return invoke('restore_recoverable_note_write_command', { recoveryFileName })
 }
 
 export function closeNote(noteId: string): Promise<NoteTab> {
@@ -245,6 +258,14 @@ export function toggleMainWindowMaximize(): Promise<void> {
 
 export function openTrash(): Promise<void> {
   return invoke('open_trash_command')
+}
+
+export function revealNoteInFileManager(noteId: string): Promise<void> {
+  return invoke('reveal_note_in_file_manager_command', { noteId })
+}
+
+export function revealExternalMarkdownInFileManager(path: string): Promise<void> {
+  return invoke('reveal_external_markdown_in_file_manager_command', { path })
 }
 
 export function openExternalUrl(url: string): Promise<void> {

@@ -19,6 +19,13 @@ pub struct NoteContent {
     pub updated_at: i64,
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoverableNoteWrite {
+    pub recovery_file_name: String,
+    pub target_file_name: String,
+}
+
 pub fn list_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
     Ok(existing_tabs(workspace, load_tabs(workspace)?.tabs)?
         .into_iter()
@@ -39,6 +46,47 @@ pub fn list_trashed_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
         .into_iter()
         .filter(|tab| tab.deleted)
         .collect())
+}
+
+pub fn list_recoverable_note_writes(workspace: &Workspace) -> Result<Vec<RecoverableNoteWrite>> {
+    let mut recoveries = fs::read_dir(&workspace.notes_dir)
+        .with_context(|| {
+            format!(
+                "failed to read notes directory {}",
+                workspace.notes_dir.display()
+            )
+        })?
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            let path = entry.path();
+            let recovery_file_name = path.file_name()?.to_str()?.to_owned();
+            let target_file_name =
+                crate::atomic_write::temporary_target_file_name(&recovery_file_name)?.to_owned();
+            (path.is_file() && target_file_name.ends_with(".md")).then_some(RecoverableNoteWrite {
+                recovery_file_name,
+                target_file_name,
+            })
+        })
+        .collect::<Vec<_>>();
+    recoveries.sort_by(|left, right| left.recovery_file_name.cmp(&right.recovery_file_name));
+    Ok(recoveries)
+}
+
+pub fn restore_recoverable_note_write(
+    workspace: &Workspace,
+    recovery_file_name: &str,
+) -> Result<String> {
+    let recovery = list_recoverable_note_writes(workspace)?
+        .into_iter()
+        .find(|entry| entry.recovery_file_name == recovery_file_name)
+        .with_context(|| "recoverable note write not found")?;
+    let recovery_path = workspace.notes_dir.join(&recovery.recovery_file_name);
+    let target_path = note_file_path(workspace, &recovery.target_file_name)?;
+    let contents = fs::read_to_string(&recovery_path)
+        .with_context(|| format!("failed to read recovery file {}", recovery_path.display()))?;
+    write_atomic(&target_path, &contents)?;
+    let _ = fs::remove_file(&recovery_path);
+    Ok(recovery.target_file_name)
 }
 
 pub fn clear_trash(workspace: &Workspace) -> Result<()> {
@@ -386,6 +434,20 @@ pub fn open_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
     let opened = tab.clone();
     save_tabs(workspace, &tabs)?;
     Ok(opened)
+}
+
+pub fn note_file_path_for_id(workspace: &Workspace, note_id: &str) -> Result<std::path::PathBuf> {
+    let tabs = load_tabs(workspace)?;
+    let tab = tabs
+        .tabs
+        .into_iter()
+        .find(|tab| tab.id == note_id)
+        .with_context(|| format!("note not found: {note_id}"))?;
+    if tab.deleted {
+        trashed_note_path(workspace, &tab.file_name)
+    } else {
+        note_path(workspace, &tab)
+    }
 }
 
 pub fn archive_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
@@ -827,6 +889,33 @@ mod tests {
                 .file_name()
                 .to_string_lossy()
                 .contains(&created.file_name)));
+    }
+
+    #[test]
+    fn preserved_note_write_can_be_listed_and_restored() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let recovery_file_name = ".clipboard.md.100.200.tmp";
+        let recovery_path = workspace.notes_dir.join(recovery_file_name);
+        fs::write(&recovery_path, "# Clipboard\n\nRecovered content").expect("recovery file");
+        fs::write(workspace.notes_dir.join("not-a-note.tmp"), "ignore").expect("unrelated temp");
+
+        assert_eq!(
+            list_recoverable_note_writes(&workspace).expect("list recovery"),
+            vec![RecoverableNoteWrite {
+                recovery_file_name: recovery_file_name.to_owned(),
+                target_file_name: "clipboard.md".to_owned(),
+            }]
+        );
+
+        let restored = restore_recoverable_note_write(&workspace, recovery_file_name)
+            .expect("restore recovery");
+        assert_eq!(restored, "clipboard.md");
+        assert_eq!(
+            fs::read_to_string(workspace.notes_dir.join("clipboard.md")).expect("restored note"),
+            "# Clipboard\n\nRecovered content"
+        );
+        assert!(!recovery_path.exists());
     }
 
     #[test]

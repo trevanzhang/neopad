@@ -90,8 +90,8 @@ export function useNativeSettings(options: NativeSettingsOptions) {
         ? defaultDateTimeSeparatorTemplate
         : ui.insertDateTimeSeparatorTemplate
       p.customInsertTexts.value = ui.customInsertTexts
-      const shouldMigrateEditorShortcut = (ui.editorModeShortcut as string) !== 'F8'
-      p.editorModeShortcut.value = 'F8'
+      const shouldMigrateEditorShortcut = (ui.editorModeShortcut as string) !== 'F5'
+      p.editorModeShortcut.value = 'F5'
       uiConfigLoaded.value = true
       if (shouldMigrateEditorShortcut) persistUiConfig()
     } catch {

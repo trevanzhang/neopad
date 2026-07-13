@@ -23,6 +23,7 @@ const props = defineProps<{
     archiveAction: string
     delete: string
     clearTrash: string
+    revealInFileManager: string
     help: string
   }
 }>()
@@ -34,6 +35,7 @@ const emit = defineEmits<{
   rename: [notes: NoteTab[]]
   archive: [notes: NoteTab[]]
   delete: [notes: NoteTab[]]
+  reveal: [note: NoteTab]
   clearTrash: []
   newNote: []
   refresh: []
@@ -105,7 +107,7 @@ function openContextMenu(event: MouseEvent, note: NoteTab, group: LibraryGroup) 
     notes: selected,
     group,
     x: Math.min(event.clientX, window.innerWidth - 176),
-    y: Math.min(event.clientY, window.innerHeight - (group === 'notes' ? 106 : 58)),
+    y: Math.min(event.clientY, window.innerHeight - (group === 'notes' ? 136 : 88)),
   }
   void nextTick(() => contextMenuElement.value?.querySelector<HTMLButtonElement>('button')?.focus())
 }
@@ -121,11 +123,14 @@ function closeContextMenuOnEscape(event: KeyboardEvent) {
   contextMenu.value = null
 }
 
-function runContextAction(action: 'rename' | 'archive' | 'delete' | 'restore') {
+function runContextAction(action: 'rename' | 'archive' | 'delete' | 'restore' | 'reveal') {
   const menu = contextMenu.value
   if (!menu) return
   contextMenu.value = null
-  if (action === 'rename') emit('rename', menu.notes)
+  if (action === 'reveal') {
+    const note = menu.notes[0]
+    if (note) emit('reveal', note)
+  } else if (action === 'rename') emit('rename', menu.notes)
   else if (action === 'archive') emit('archive', menu.notes)
   else if (action === 'delete') emit('delete', menu.notes)
   else if (menu.group === 'trash') emit('restoreTrash', menu.notes)
@@ -224,6 +229,14 @@ function runContextAction(action: 'rename' | 'archive' | 'delete' | 'restore') {
       :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
       @contextmenu.prevent
     >
+      <button
+        v-if="contextMenu.notes.length === 1"
+        type="button"
+        role="menuitem"
+        @click="runContextAction('reveal')"
+      >
+        {{ messages.revealInFileManager }}
+      </button>
       <template v-if="contextMenu.group !== 'notes'">
         <button type="button" role="menuitem" @click="runContextAction('restore')">{{ messages.restore }}</button>
       </template>

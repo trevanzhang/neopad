@@ -57,10 +57,52 @@ describe('keyboard shortcut routing', () => {
     expect(spies.toggleNoteLibrary).toHaveBeenCalledOnce()
   })
 
-  it('cycles editor mode with F8', () => {
+  it('switches to the previous tab with F2', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('F2'))
+    expect(spies.cycleTab).toHaveBeenCalledWith(-1)
+  })
+
+  it('switches to the next tab with F3', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('F3'))
+    expect(spies.cycleTab).toHaveBeenCalledWith(1)
+  })
+
+  it('cycles editor mode with F5', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('F5'))
+    expect(spies.cycleEditorMode).toHaveBeenCalledOnce()
+  })
+
+  it('toggles the preview theme with F10', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('F10'))
+    expect(spies.togglePreviewTheme).toHaveBeenCalledOnce()
+  })
+
+  it('opens the reminder list with F6', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('F6'))
+    expect(spies.openReminderList).toHaveBeenCalledOnce()
+  })
+
+  it('toggles window on top with F7', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('F7'))
+    expect(spies.togglePin).toHaveBeenCalledOnce()
+  })
+
+  it('renames the current page with F8', () => {
     const { spies, handler } = harness()
     handler(keyEvent('F8'))
-    expect(spies.cycleEditorMode).toHaveBeenCalledOnce()
+    expect(spies.renameActivePage).toHaveBeenCalledOnce()
+  })
+
+  it('finds the next match with Ctrl+G', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('g', { ctrlKey: true }))
+    expect(spies.findNext).toHaveBeenCalledOnce()
   })
 
   it('opens settings with Ctrl+Comma', () => {

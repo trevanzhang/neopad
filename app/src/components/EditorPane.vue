@@ -394,9 +394,13 @@ function appendCurrentLineCalculation() {
   }
 
   const nextLine = `${sourceText} = ${formatCalculationResult(result)}`
+  const hasFollowingLine = line.to < editorView.state.doc.length
+  const insert = hasFollowingLine ? nextLine : `${nextLine}\n`
+  const nextCursor = line.from + nextLine.length + 1
   editorView.dispatch({
-    changes: { from: line.from, to: line.to, insert: nextLine },
-    selection: EditorSelection.single(line.from + nextLine.length),
+    changes: { from: line.from, to: line.to, insert },
+    selection: EditorSelection.cursor(nextCursor),
+    effects: EditorView.scrollIntoView(nextCursor, { y: 'center' }),
   })
   editorView.focus()
   return true

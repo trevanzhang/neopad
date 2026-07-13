@@ -14,8 +14,9 @@ The repository currently contains a working Windows-focused MVP:
 
 - Tauri 2 desktop app with Vue 3, TypeScript, Vite, CodeMirror 6, and
   `markdown-it`.
-- Shared Rust core crate for workspace initialization, note CRUD, atomic writes,
-  trash moves, search, config, tabs, and path safety.
+- Shared Rust core crate for workspace initialization, note CRUD, atomic writes
+  with startup recovery for a preserved failed note write, trash moves, search,
+  config, tabs, and path safety.
 - System tray menu, close-to-hide behavior, global shortcuts, and clipboard
   append.
 - Flicker-free single-instance startup, first-launch placement at the screen's bottom-right,
@@ -26,7 +27,7 @@ The repository currently contains a working Windows-focused MVP:
   maximize/restore.
 - Clipboard captures use readable local timestamps in compact separator lines.
 - Edit, split, and preview editor modes selectable from the View menu, status
-  bar, and fixed `F8` shortcut. The Default Mode selector in Settings > General
+  bar, and fixed `F5` shortcut. The Default Mode selector in Settings > General
   takes effect immediately and is restored on later launches; new installations
   start in Edit mode.
 - Optional Vim key bindings for the CodeMirror editor, with persisted settings
@@ -44,13 +45,15 @@ The repository currently contains a working Windows-focused MVP:
   `- [ ] @remind YYYY-MM-DD HH:mm content`, with a compact `Ctrl+E` editor,
   sortable and filterable reminder list, source-line navigation, and native
   notifications while NeoPad is running in the tray.
-- `F1` opens shortcut help, `F2` renames the current page, and `F5` opens or
-  closes the reminder list. "Mark Completed", "Mark Unfinished",
+- `F1` opens shortcut help, `F2` and `F3` switch to the previous and next tab,
+  and `F6` opens or closes the reminder list. "Mark Completed", "Mark Unfinished",
   and "Clear Due" update reminder checkboxes directly without deleting note
   content.
 - `F4` opens the compact note library for active, archived, and trashed notes;
   it keeps everyday note actions close to the editor without turning NeoPad
   into a knowledge-base suite.
+- Right-click a tab or a single note in the note library to reveal its Markdown
+  file in the system file manager.
 - The reorganized Settings center groups General, Editor, Preview, Vim,
   Shortcuts, and MCP controls in a focused dialog, including configurable
   visibility and clipboard-capture shortcuts.
@@ -178,11 +181,14 @@ NSIS.
 The Windows MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.5.0_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.5.1_x64_en-US.msi
 ```
 
 Cross-platform release builds also run automatically in GitHub Actions when a
 `v*` tag is pushed, producing Windows, macOS (ARM64), and Linux installers.
+Before a release is created or published, run the
+[release smoke checklist](docs/release-smoke-checklist.md) against the packaged
+Windows build.
 
 ## MCP Server
 
@@ -227,12 +233,15 @@ Common local shortcuts:
 
 ```text
 F1              Shortcut help
-F2              Rename current page and its untouched default heading
+F2              Switch to the previous tab
+F3              Switch to the next tab
 F4              Show or hide the note browser
-F5              Open or close the reminder list
-F7              Cycle preview theme
-F8              Cycle edit, split, and preview modes
+F5              Cycle edit, split, and preview modes
+F6              Open or close the reminder list
+F7              Toggle window on top
+F8              Rename current page and its untouched default heading
 F9              Toggle day/night mode
+F10             Toggle preview theme
 Ctrl+,          Open settings
 F11             Toggle immersive fullscreen
 F12             Archive the current page

@@ -1,11 +1,12 @@
 use neopad_core::{
     append_to_clipboard_note, archive_note, claim_due_reminders, clear_trash, close_note,
     complete_due_reminders, complete_reminder, create_note, delete_note_to_trash, export_note_file,
-    list_archived_notes, list_notes, list_open_notes, list_recent_notes, list_reminders,
-    list_searchable_notes, list_trashed_notes, load_config, lock_workspace_for_write, read_note,
-    reconcile_note_metadata, rename_note, reopen_reminder, restore_note_from_trash, save_config,
-    search_notes, write_note_atomic_checked, NoteContent, NoteTab, PreviewMode, Reminder,
-    SearchResult, Theme, UiConfig, Workspace,
+    list_archived_notes, list_notes, list_open_notes, list_recent_notes,
+    list_recoverable_note_writes, list_reminders, list_searchable_notes, list_trashed_notes,
+    load_config, lock_workspace_for_write, read_note, reconcile_note_metadata, rename_note,
+    reopen_reminder, restore_note_from_trash, restore_recoverable_note_write, save_config,
+    search_notes, write_note_atomic_checked, NoteContent, NoteTab, PreviewMode,
+    RecoverableNoteWrite, Reminder, SearchResult, Theme, UiConfig, Workspace,
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -552,6 +553,26 @@ pub fn open_trash_command(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn reveal_note_in_file_manager_command(
+    state: State<'_, AppState>,
+    note_id: String,
+) -> Result<(), String> {
+    let path =
+        neopad_core::note_file_path_for_id(&state.workspace, &note_id).map_err(display_error)?;
+    reveal_path(&path).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn reveal_external_markdown_in_file_manager_command(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<(), String> {
+    let path = approved_external_markdown_path(&state.workspace, std::path::Path::new(&path))
+        .map_err(display_error)?;
+    reveal_path(&path).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 pub fn open_external_url_command(url: String) -> Result<(), String> {
     let parsed = validate_external_url(&url).map_err(display_error)?;
     open_target(parsed.as_str()).map_err(|error| error.to_string())
@@ -596,6 +617,23 @@ pub fn save_clipboard_command(
     state: State<'_, AppState>,
 ) -> Result<NoteContent, String> {
     save_clipboard_text(&app, &state)
+}
+
+#[tauri::command]
+pub fn list_recoverable_note_writes_command(
+    state: State<'_, AppState>,
+) -> Result<Vec<RecoverableNoteWrite>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    list_recoverable_note_writes(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn restore_recoverable_note_write_command(
+    state: State<'_, AppState>,
+    recovery_file_name: String,
+) -> Result<String, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    restore_recoverable_note_write(&state.workspace, &recovery_file_name).map_err(display_error)
 }
 
 #[tauri::command]
@@ -725,6 +763,33 @@ fn external_updated_at(path: &std::path::Path) -> anyhow::Result<i64> {
 
 fn open_path(path: &std::path::Path) -> anyhow::Result<()> {
     open_target(path.as_os_str())
+}
+
+fn reveal_path(path: &std::path::Path) -> anyhow::Result<()> {
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        let mut command = Command::new("explorer");
+        command.arg("/select,").arg(path);
+        command
+    };
+
+    #[cfg(target_os = "macos")]
+    let mut command = {
+        let mut command = Command::new("open");
+        command.arg("-R").arg(path);
+        command
+    };
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let mut command = {
+        let parent = path.parent().context("note path has no parent directory")?;
+        let mut command = Command::new("xdg-open");
+        command.arg(parent);
+        command
+    };
+
+    command.spawn()?;
+    Ok(())
 }
 
 fn open_target(target: impl AsRef<std::ffi::OsStr>) -> anyhow::Result<()> {

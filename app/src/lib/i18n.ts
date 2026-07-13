@@ -14,7 +14,8 @@ export type AppMessages = {
     previous: string
     next: string
     library: string
-    f2: string
+    revealInFileManager: string
+    f8: string
     altDel: string
     f12: string
     ctrlW: string
@@ -57,6 +58,7 @@ export type AppMessages = {
     ctrlC: string
     ctrlV: string
     ctrlF: string
+    ctrlG: string
     f3: string
     ctrlR: string
     ctrlShiftF: string
@@ -74,6 +76,8 @@ export type AppMessages = {
     toggleTheme: string
     wordWrap: string
     ctrlW: string
+    previousTab: string
+    nextTab: string
     switchEditorMode: string
     cycleEditorMode: string
     editMode: string
@@ -102,6 +106,7 @@ export type AppMessages = {
     f6: string
     f7: string
     f9: string
+    f10: string
     windowOpacity: string
     textProcessing: string
     uppercase: string
@@ -318,7 +323,14 @@ export type AppMessages = {
     archiveAction: string
     delete: string
     clearTrash: string
+    revealInFileManager: string
     help: string
+  }
+  recovery: {
+    title: string
+    message: string
+    restore: string
+    restored: string
   }
   status: {
     editMode: string
@@ -373,7 +385,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       previous: 'Previous tab',
       next: 'Next tab',
       library: 'Open note browser',
-      f2: 'F2',
+      revealInFileManager: 'Show in Explorer',
+      f8: 'F8',
       altDel: 'Alt+Del',
       f12: 'F12',
       ctrlW: 'Ctrl+W',
@@ -416,6 +429,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlC: 'Ctrl+C',
       ctrlV: 'Ctrl+V',
       ctrlF: 'Ctrl+F',
+      ctrlG: 'Ctrl+G',
       f3: 'F3',
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
@@ -433,6 +447,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       toggleTheme: 'Toggle Day/Night Mode',
       wordWrap: 'Word Wrap(W)',
       ctrlW: 'Ctrl+W',
+      previousTab: 'Previous Tab',
+      nextTab: 'Next Tab',
       switchEditorMode: 'Switch Editor Mode',
       cycleEditorMode: 'Cycle Editor Mode(C)',
       editMode: 'Edit',
@@ -461,6 +477,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f6: 'F6',
       f7: 'F7',
       f9: 'F9',
+      f10: 'F10',
       windowOpacity: 'Window Opacity(W)...',
       textProcessing: 'Text Processing(P)',
       uppercase: 'To Uppercase(U)',
@@ -677,7 +694,14 @@ export const messages: Record<AppLanguage, AppMessages> = {
       archiveAction: 'Archive',
       delete: 'Delete',
       clearTrash: 'Empty Trash',
+      revealInFileManager: 'Show in Explorer',
       help: 'Browse local notes, archived notes, and Trash. Ctrl-click selects individual notes; Shift-click selects a range. Right-click to manage the selection.',
+    },
+    recovery: {
+      title: 'Recover unsaved note?',
+      message: 'NeoPad found an unfinished save for {fileName}. Restore the preserved content?',
+      restore: 'Restore',
+      restored: 'Recovered unsaved content',
     },
     status: {
       editMode: 'Edit mode',
@@ -730,7 +754,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       previous: '\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875',
       next: '\u4e0b\u4e00\u4e2a\u6807\u7b7e\u9875',
       library: '\u6253\u5f00\u7b14\u8bb0\u6d4f\u89c8\u5668',
-      f2: 'F2',
+      revealInFileManager: '\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u663e\u793a',
+      f8: 'F8',
       altDel: 'Alt+Del',
       f12: 'F12',
       ctrlW: 'Ctrl+W',
@@ -773,6 +798,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       ctrlC: 'Ctrl+C',
       ctrlV: 'Ctrl+V',
       ctrlF: 'Ctrl+F',
+      ctrlG: 'Ctrl+G',
       f3: 'F3',
       ctrlR: 'Ctrl+R',
       ctrlShiftF: 'Ctrl+Shift+F',
@@ -790,6 +816,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       toggleTheme: '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f',
       wordWrap: '\u81ea\u52a8\u6362\u884c(W)',
       ctrlW: 'Ctrl+W',
+      previousTab: '\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875',
+      nextTab: '\u4e0b\u4e00\u4e2a\u6807\u7b7e\u9875',
       switchEditorMode: '\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f',
       cycleEditorMode: '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f(C)',
       editMode: '\u7f16\u8f91',
@@ -818,6 +846,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f6: 'F6',
       f7: 'F7',
       f9: 'F9',
+      f10: 'F10',
       windowOpacity: '\u7a97\u53e3\u900f\u660e\u5ea6(W)...',
       textProcessing: '\u6587\u672c\u5904\u7406(P)',
       uppercase: '\u8f6c\u5927\u5199(U)',
@@ -1034,7 +1063,14 @@ export const messages: Record<AppLanguage, AppMessages> = {
       archiveAction: '\u5b58\u6863',
       delete: '\u5220\u9664',
       clearTrash: '\u6e05\u7a7a\u56de\u6536\u7ad9',
+      revealInFileManager: '\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u663e\u793a',
       help: '\u6d4f\u89c8\u672c\u5730\u7b14\u8bb0\u3001\u5b58\u6863\u548c\u56de\u6536\u7ad9\u3002Ctrl+\u70b9\u51fb\u53ef\u591a\u9009\uff0cShift+\u70b9\u51fb\u53ef\u8fde\u7eed\u9009\u4e2d\uff1b\u53f3\u952e\u7ba1\u7406\u5f53\u524d\u9009\u533a\u3002',
+    },
+    recovery: {
+      title: '\u6062\u590d\u672a\u4fdd\u5b58\u7684\u7b14\u8bb0\uff1f',
+      message: 'NeoPad \u53d1\u73b0 {fileName} \u6709\u4e00\u6b21\u672a\u5b8c\u6210\u7684\u4fdd\u5b58\u3002\u8981\u6062\u590d\u5df2\u4fdd\u7559\u7684\u5185\u5bb9\u5417\uff1f',
+      restore: '\u6062\u590d',
+      restored: '\u5df2\u6062\u590d\u672a\u4fdd\u5b58\u5185\u5bb9',
     },
     status: {
       editMode: '\u7f16\u8f91\u6a21\u5f0f',

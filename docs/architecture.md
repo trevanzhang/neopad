@@ -136,18 +136,23 @@ the configured workspace.
   completes the reminder. Legacy `@提醒` lines continue to parse.
 - Local keyboard shortcuts:
   - `F1`: open shortcut help.
-  - `F2`: rename the current page.
+  - `F2` / `F3`: switch to the previous / next tab.
   - `F4`: show or hide the note browser.
-  - `F8`: cycle edit, split, and preview editor modes.
+  - `F5`: cycle edit, split, and preview editor modes.
+  - `F6`: toggle the reminder list.
+  - `F7`: toggle window on top.
+  - `F8`: rename the current page.
+  - `F10`: cycle the Markdown preview theme.
   - `Ctrl+,`: open settings.
-  - `F5`: toggle the reminder list.
   - `F9`: toggle the light or dark theme.
   - `F11`: toggle immersive fullscreen.
 - Single and bulk overdue completion operations atomically change `[ ]` to
   `[x]` while preserving the reminder lines.
 - Native reminder notifications while the desktop process remains running.
+- On startup, NeoPad offers to restore any preserved note write left by a
+  failed atomic replacement.
 - New installations start in Edit mode; later launches restore the Default Mode
-  chosen in Settings > General. `F8` is the fixed local shortcut for cycling
+  chosen in Settings > General. `F5` is the fixed local shortcut for cycling
   edit, split, and preview modes.
 - `Ctrl+O`, native file drag and drop, and operating-system file associations
   open external Markdown files in place. Their canonical paths are persisted,

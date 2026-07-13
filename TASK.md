@@ -32,9 +32,11 @@ Implemented MVP capabilities:
   NeoPad notes stored under `~/.neopad/archive/`.
 - Multiple tabs backed by local metadata, including close-without-delete and
   recent-document workflows.
+- Tab and single-note library context menus can reveal Markdown files in the
+  system file manager.
 - Autosave.
 - Edit, split, and preview editor modes with a persisted Default Mode setting
-  and fixed `F8` cycling shortcut; all three modes remain available in
+  and fixed `F5` cycling shortcut; all three modes remain available in
   immersive fullscreen. New installations start in Edit mode, and later
   launches restore the saved default.
 - Page creation with incrementing untitled names, rename, archive, and trash
@@ -50,7 +52,7 @@ Implemented MVP capabilities:
   opens a compact reminder editor, the reminder list derives its rows from
   note content, and due reminders use native notifications while NeoPad is
   running.
-  `F5` toggles the list, list filters can narrow reminders by status, and list
+  `F6` toggles the list, list filters can narrow reminders by status, and list
   actions complete or reopen reminder checkboxes without deleting their
   Markdown lines.
 - Native Save As for exporting the active note to Markdown or all notes to a
@@ -83,7 +85,8 @@ Implemented MVP capabilities:
 - Delete operations move notes into `trash/`.
 - Core filesystem access must go through `neopad-core`.
 - Paths must be validated so callers cannot escape the configured workspace.
-- Atomic writes must be preserved.
+- Atomic writes must be preserved. If Windows leaves a failed note-write
+  temporary file behind, NeoPad must offer a safe restore on the next startup.
 - Navigation and content-replacing actions must stop when the save barrier
   cannot persist pending edits.
 - Full-page updates must keep `expectedUpdatedAt` conflict protection, and

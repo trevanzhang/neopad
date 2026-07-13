@@ -17,6 +17,7 @@ const emit = defineEmits<{
   closeTab: [tabId: string]
   archiveTab: [tabId: string]
   unarchiveTab: [tabId: string]
+  revealTab: [tabId: string]
   updateTabColor: [tabId: string, color: string | null]
   newTab: []
   toggleLibrary: []
@@ -43,7 +44,7 @@ function openContextMenu(event: MouseEvent, tab: NoteTab) {
   contextMenu.value = {
     tabId: tab.id,
     x: Math.min(event.clientX, window.innerWidth - 210),
-    y: Math.min(event.clientY, window.innerHeight - 155),
+    y: Math.min(event.clientY, window.innerHeight - 185),
   }
   void nextTick(() => contextMenuElement.value?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus())
 }
@@ -60,7 +61,7 @@ function closeContextMenuOnEscape(event: KeyboardEvent) {
   contextMenu.value = null
 }
 
-function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'unarchive') {
+function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'unarchive' | 'reveal') {
   const tabId = contextMenu.value?.tabId
   if (!tabId) return
   contextMenu.value = null
@@ -68,7 +69,8 @@ function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'u
   else if (action === 'delete') emit('deleteTab', tabId)
   else if (action === 'close') emit('closeTab', tabId)
   else if (action === 'archive') emit('archiveTab', tabId)
-  else emit('unarchiveTab', tabId)
+  else if (action === 'unarchive') emit('unarchiveTab', tabId)
+  else emit('revealTab', tabId)
 }
 
 function deleteTabWithShortcut(event: KeyboardEvent, tabId: string) {
@@ -141,7 +143,7 @@ function updateColor(color: string | null) {
       @click="$emit('selectTab', tab.id)"
       @dblclick="$emit('titleDoubleClick', tab.id)"
       @contextmenu="openContextMenu($event, tab)"
-      @keydown.f2="renameTabWithShortcut($event, tab.id)"
+      @keydown.f8="renameTabWithShortcut($event, tab.id)"
       @keydown.delete="deleteTabWithShortcut($event, tab.id)"
       @keydown.f12="archiveTabWithShortcut($event, tab.id)"
       @keydown.ctrl.w="closeTabWithShortcut($event, tab.id)"
@@ -167,7 +169,7 @@ function updateColor(color: string | null) {
       role="menu"
       :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
       @contextmenu.prevent
-      @keydown.f2="renameTabWithShortcut($event, contextMenu.tabId)"
+      @keydown.f8="renameTabWithShortcut($event, contextMenu.tabId)"
       @keydown.delete="deleteTabWithShortcut($event, contextMenu.tabId)"
       @keydown.f12="archiveTabWithShortcut($event, contextMenu.tabId)"
       @keydown.ctrl.w="closeTabWithShortcut($event, contextMenu.tabId)"
@@ -179,7 +181,7 @@ function updateColor(color: string | null) {
       @click="runContextAction('rename')"
     >
         <span>{{ messages.rename }}</span>
-        <span class="tab-context-shortcut">{{ messages.f2 }}</span>
+        <span class="tab-context-shortcut">{{ messages.f8 }}</span>
       </button>
       <button
         type="button"
@@ -207,6 +209,9 @@ function updateColor(color: string | null) {
       >
         <span>{{ messages.close }}</span>
         <span class="tab-context-shortcut">{{ messages.ctrlW }}</span>
+      </button>
+      <button type="button" role="menuitem" @click="runContextAction('reveal')">
+        {{ messages.revealInFileManager }}
       </button>
       <div class="menu-separator" role="separator" />
       <span class="tab-context-label">{{ messages.color }}</span>

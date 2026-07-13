@@ -19,12 +19,16 @@ import {
   listTrashedNotes,
   listNotes,
   listRecentNotes,
+  listRecoverableNoteWrites,
   openTrash,
   openNote,
   openExternalMarkdown,
   openExternalMarkdownPaths,
   saveMarkdownFile,
   readExternalMarkdown,
+  restoreRecoverableNoteWrite,
+  revealExternalMarkdownInFileManager,
+  revealNoteInFileManager,
   takePendingExternalMarkdownPaths,
   toggleMainWindowMaximize,
   toggleAlwaysOnTop,
@@ -421,9 +425,30 @@ onMounted(async () => {
   await completeStartup().catch(() => {
     saveState.value = 'Failed'
   })
+  await recoverPendingNoteWrites()
   scheduleNativeSettingsSync()
   await startReminderPolling()
 })
+
+async function recoverPendingNoteWrites() {
+  try {
+    const recoveries = await listRecoverableNoteWrites()
+    for (const recovery of recoveries) {
+      const message = t.value.recovery.message.replace('{fileName}', recovery.targetFileName)
+      const confirmed = await requestConfirmation(
+        t.value.recovery.title,
+        message,
+        t.value.recovery.restore,
+      )
+      if (!confirmed) break
+      await restoreRecoverableNoteWrite(recovery.recoveryFileName)
+      await loadInitialNotes()
+      statusMessage.value = t.value.recovery.restored
+    }
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
 
 function focusEditorAfterPageAction() {
   if (previewMode.value === 'preview') return
@@ -598,6 +623,17 @@ async function openTrashFolder() {
   try {
     await openTrash()
     statusMessage.value = t.value.status.trashOpened
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function revealNoteInExplorer(noteId: string) {
+  if (!isTauriRuntime() || !(await forceSave())) return
+  try {
+    const tab = tabs.value.find((item) => item.id === noteId)
+    if (tab?.externalPath) await revealExternalMarkdownInFileManager(tab.externalPath)
+    else await revealNoteInFileManager(noteId)
   } catch {
     saveState.value = 'Failed'
   }
@@ -1174,6 +1210,8 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @search="showSearchPlaceholder"
         @settings="showSettingsPlaceholder"
         @toggle-pin="togglePin"
+        @previous-tab="cycleTab(-1)"
+        @next-tab="cycleTab(1)"
         @toggle-note-library="toggleNoteLibrary"
         @cycle-editor-mode="cycleEditorMode"
         @format-font="promptEditorFont"
@@ -1200,6 +1238,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         :messages="t.tabs"
         @select-tab="selectTab"
         @title-double-click="handleTabTitleDoubleClick"
+        @reveal-tab="revealNoteInExplorer"
         @rename-tab="renamePageById"
         @delete-tab="deletePageById"
         @close-tab="closePageById"
@@ -1229,6 +1268,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @rename="runLibraryNoteAction($event, 'rename')"
         @archive="runLibraryNoteAction($event, 'archive')"
         @delete="runLibraryNoteAction($event, 'delete')"
+        @reveal="revealNoteInExplorer($event.id)"
         @new-note="createLocalTab"
         @refresh="refreshNoteLibrary"
       />

@@ -73,7 +73,7 @@ export interface KeyboardShortcutContext {
 }
 
 export function matchesEditorModeShortcut(event: KeyboardEvent) {
-  return event.key === 'F8' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
+  return event.key === 'F5' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey
 }
 
 export function matchesDeletePageShortcut(event: KeyboardEvent) {
@@ -106,7 +106,7 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
     if (state.modalOpen() && event.key !== 'Escape') {
       const key = event.key.toLowerCase()
       const blockedCtrl = event.ctrlKey && !event.altKey && !event.metaKey && ['tab', 'n', 'w', 'o', ','].includes(key)
-      const blockedFunction = plainKey(event, event.key) && ['F4', 'F5', 'F7', 'F8', 'F9', 'F11', 'F12'].includes(event.key)
+      const blockedFunction = plainKey(event, event.key) && ['F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12'].includes(event.key)
       if (blockedCtrl || blockedFunction || matchesDeletePageShortcut(event) || matchesEditorModeShortcut(event)) consume(event)
       return
     }
@@ -114,12 +114,14 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
     if (plainKey(event, 'F1') && (!state.editableTarget(event.target) || state.editorFocused()) && !state.menuOrContextOpen()) {
       consume(event, actions.openShortcutHelp); return
     }
+    if (plainKey(event, 'F2')) { consume(event, () => actions.cycleTab(-1)); return }
+    if (plainKey(event, 'F3')) { consume(event, () => actions.cycleTab(1)); return }
     if (event.key === 'Tab' && event.ctrlKey && !event.altKey && !event.metaKey) {
       consume(event, () => actions.cycleTab(event.shiftKey ? -1 : 1)); return
     }
     if (plainKey(event, 'F9')) { consume(event, actions.toggleTheme); return }
-    if (plainKey(event, 'F7')) { consume(event, actions.togglePreviewTheme); return }
-    if (plainKey(event, 'F5')) {
+    if (plainKey(event, 'F10')) { consume(event, actions.togglePreviewTheme); return }
+    if (plainKey(event, 'F6')) {
       consume(event, () => state.reminderListOpen() ? actions.closeReminderList() : void actions.openReminderList()); return
     }
     if (plainKey(event, 'F11')) { consume(event, actions.toggleImmersiveMode); return }
@@ -148,7 +150,7 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
     }
 
     if (matchesEditorModeShortcut(event)) { consume(event, actions.cycleEditorMode); return }
-    if (plainKey(event, 'F2') && workspaceClear()) { consume(event, () => void actions.renameActivePage()); return }
+    if (plainKey(event, 'F8') && workspaceClear()) { consume(event, () => void actions.renameActivePage()); return }
     if (event.key === 'Enter' && event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey) {
       consume(event, () => { if (state.nativeRuntime()) void actions.toggleMainWindowMaximize() }); return
     }
@@ -168,7 +170,7 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
     }
 
     if (state.vimMode() && state.editorFocused()) {
-      const appFunctionKey = ['F3', 'F4', 'F6'].includes(event.key)
+      const appFunctionKey = ['F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F10'].includes(event.key)
       const hideFromNormalMode = event.key === 'Escape' && state.vimNormalMode()
       const preservedCtrl = state.vimUseCtrlShortcuts() && (event.ctrlKey || event.metaKey)
       if (!appFunctionKey && !hideFromNormalMode && !preservedCtrl) return
@@ -190,11 +192,13 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
     if (!state.vimMode() && event.key.toLowerCase() === 'r' && event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
       consume(event, actions.openReplace); return
     }
-    if (plainKey(event, 'F3')) { consume(event, actions.findNext); return }
+    if (event.key.toLowerCase() === 'g' && event.ctrlKey && !event.altKey && !event.metaKey) {
+      consume(event, actions.findNext); return
+    }
     if (event.key === 'Enter' && event.ctrlKey) { consume(event, actions.calculateExpression); return }
     if (event.key === 'Escape' && state.nativeRuntime()) { event.preventDefault(); void actions.hideMainWindow() }
     if (event.key === 'F4') { event.preventDefault(); actions.toggleNoteLibrary() }
-    if (event.key === 'F6') { event.preventDefault(); void actions.togglePin() }
+    if (event.key === 'F7') { event.preventDefault(); void actions.togglePin() }
     if (event.code === 'Minus' && event.ctrlKey && event.shiftKey) { event.preventDefault(); actions.insertDateTimeSeparator() }
     else if (event.code === 'Minus' && event.ctrlKey) { event.preventDefault(); actions.insertSeparator() }
     if (event.key.toLowerCase() === 'd' && event.ctrlKey) { event.preventDefault(); actions.insertDateTime() }

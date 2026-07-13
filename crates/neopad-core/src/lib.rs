@@ -13,9 +13,10 @@ pub use lock::{lock_workspace_for_write, WorkspaceWriteLock};
 pub use note::{
     append_to_clipboard_note, append_to_note, archive_note, clear_trash, close_note, create_note,
     delete_note_to_trash, list_archived_notes, list_notes, list_open_notes, list_recent_notes,
-    list_searchable_notes, list_trashed_notes, open_note, read_note, reconcile_note_metadata,
-    rename_note, restore_note_from_trash, set_note_color, unarchive_note, write_note_atomic,
-    write_note_atomic_checked, NoteContent,
+    list_recoverable_note_writes, list_searchable_notes, list_trashed_notes, note_file_path_for_id,
+    open_note, read_note, reconcile_note_metadata, rename_note, restore_note_from_trash,
+    restore_recoverable_note_write, set_note_color, unarchive_note, write_note_atomic,
+    write_note_atomic_checked, NoteContent, RecoverableNoteWrite,
 };
 pub use reminder::{
     claim_due_reminders, complete_due_reminders, complete_reminder, list_reminders,

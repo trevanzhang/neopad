@@ -40,6 +40,8 @@ const emit = defineEmits<{
   search: []
   settings: []
   togglePin: []
+  previousTab: []
+  nextTab: []
   toggleNoteLibrary: []
   formatFont: []
   formatBackground: []
@@ -262,7 +264,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
         </button>
         <button type="button" class="menu-command" @click="$emit('findNext')">
           <span>{{ messages.findNext }}</span>
-          <span class="menu-shortcut">{{ messages.f3 }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlG }}</span>
         </button>
         <button type="button" class="menu-command" @click="$emit('replace')">
           <span>{{ messages.replace }}</span>
@@ -283,14 +285,22 @@ function handleMenuKeydown(event: KeyboardEvent) {
     <div class="menu-root">
       <button type="button" class="menu-title">{{ messages.view }}</button>
       <div class="menu-popover menu-view-popover">
-        <button type="button" class="menu-command" @click="$emit('cycleEditorMode')">
-          <span>{{ messages.switchEditorMode }}</span>
-          <span class="menu-shortcut">{{ messages.f8 }}</span>
+        <button type="button" class="menu-command" @click="$emit('previousTab')">
+          <span>{{ messages.previousTab }}</span>
+          <span class="menu-shortcut">{{ messages.f2 }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('nextTab')">
+          <span>{{ messages.nextTab }}</span>
+          <span class="menu-shortcut">{{ messages.f3 }}</span>
         </button>
         <div class="menu-separator" role="separator" />
         <button type="button" class="menu-command" @click="$emit('toggleNoteLibrary')">
           <span>{{ messages.openNoteBrowser }}</span>
           <span class="menu-shortcut">{{ messages.f4 }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('cycleEditorMode')">
+          <span>{{ messages.switchEditorMode }}</span>
+          <span class="menu-shortcut">{{ messages.f5 }}</span>
         </button>
       </div>
     </div>
@@ -304,7 +314,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
         </button>
         <button type="button" class="menu-command" :disabled="!pageActionsEnabled" @click="$emit('renamePage')">
           <span>{{ messages.renamePage }}</span>
-          <span class="menu-shortcut">{{ messages.f2 }}</span>
+          <span class="menu-shortcut">{{ messages.f8 }}</span>
         </button>
         <button type="button" class="menu-command" :disabled="!pageActionsEnabled" @click="$emit('deletePage')">
           <span>{{ messages.deletePage }}</span>
@@ -328,7 +338,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
         <button type="button" @click="$emit('formatBackground')">{{ messages.backgroundColor }}</button>
         <button type="button" class="menu-command" @click="$emit('togglePreviewTheme')">
           <span>{{ messages.togglePreviewTheme }}</span>
-          <span class="menu-shortcut">{{ messages.f7 }}</span>
+          <span class="menu-shortcut">{{ messages.f10 }}</span>
         </button>
         <button type="button" class="menu-command" @click="$emit('toggleTheme')">
           <span>{{ messages.toggleTheme }}</span>
@@ -344,7 +354,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
       <div class="menu-popover">
         <button type="button" class="menu-command" :class="{ checked: alwaysOnTop }" @click="$emit('togglePin')">
           <span>{{ messages.keepOnTop }}</span>
-          <span class="menu-shortcut">{{ messages.f6 }}</span>
+          <span class="menu-shortcut">{{ messages.f7 }}</span>
         </button>
         <button type="button" @click="$emit('windowOpacity')">{{ messages.windowOpacity }}</button>
         <div class="menu-separator" role="separator" />
@@ -385,7 +395,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
         </div>
         <button type="button" class="menu-command" @click="$emit('reminderList')">
           <span>{{ messages.reminderList }}</span>
-          <span class="menu-shortcut">{{ messages.f5 }}</span>
+          <span class="menu-shortcut">{{ messages.f6 }}</span>
         </button>
         <div class="menu-separator" role="separator" />
         <button type="button" class="menu-command" @click="$emit('settings')">

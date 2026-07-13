@@ -6,6 +6,23 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.5.1 - 2026-07-13
+
+### Added
+
+- Added contextual Explorer reveal actions for tabs and single note-library selections.
+- Added a startup recovery prompt for a note write preserved after a failed
+  atomic replacement.
+
+### Changed
+
+- Reorganized high-frequency shortcuts for tab navigation, editor modes,
+  reminders, window pinning, renaming, and preview themes, including previous
+  and next page entries in the View menu.
+- Moved the expression-calculation cursor to the next line after a successful result.
+- Retried temporary Windows file locks during atomic note writes and retained
+  pending content if replacement remains blocked.
+
 ## 0.5.0 - 2026-07-12
 
 ### Added
