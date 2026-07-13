@@ -1,6 +1,6 @@
 {
   "name": "neopad-app",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +13,14 @@
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.4",
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.11",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/lang-rust": "^6.0.2",
+    "@codemirror/lang-sql": "^6.10.0",
     "@codemirror/language": "^6.12.3",
     "@codemirror/search": "^6.7.1",
     "@codemirror/state": "^6.7.0",
@@ -22,7 +29,13 @@
     "@replit/codemirror-vim": "6.3.0",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-notification": "^2.0.0",
+    "@vscode/markdown-it-katex": "^1.1.2",
+    "highlight.js": "^11.11.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "katex": "^0.17.0",
     "markdown-it": "^14.2.0",
+    "mermaid": "^11.16.0",
     "vue": "^3.5.0"
   },
   "devDependencies": {

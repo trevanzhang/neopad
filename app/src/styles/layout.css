@@ -924,6 +924,11 @@ body {
   --np-preview-code-bg: #eeeeee;
   --np-preview-pre-bg: #f4f4f4;
   --np-preview-accent: #2b65c8;
+  --np-preview-syntax-keyword: #7c3bb8;
+  --np-preview-syntax-string: #8a4f08;
+  --np-preview-syntax-number: #ad3f57;
+  --np-preview-syntax-function: #126b73;
+  --np-preview-syntax-type: #8a5800;
   min-height: 0;
   overflow: auto;
   padding: 16px 22px;
@@ -1008,6 +1013,93 @@ body {
 
 .markdown-preview a {
   color: var(--np-preview-accent);
+}
+
+.markdown-preview img {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-preview .hljs-comment,
+.markdown-preview .hljs-quote {
+  color: var(--np-preview-muted);
+  font-style: italic;
+}
+
+.markdown-preview .hljs-keyword,
+.markdown-preview .hljs-selector-tag,
+.markdown-preview .hljs-literal,
+.markdown-preview .hljs-section,
+.markdown-preview .hljs-link {
+  color: var(--np-preview-syntax-keyword);
+}
+
+.markdown-preview .hljs-string,
+.markdown-preview .hljs-title,
+.markdown-preview .hljs-name,
+.markdown-preview .hljs-attribute,
+.markdown-preview .hljs-symbol,
+.markdown-preview .hljs-bullet,
+.markdown-preview .hljs-addition {
+  color: var(--np-preview-syntax-string);
+}
+
+.markdown-preview .hljs-number,
+.markdown-preview .hljs-regexp,
+.markdown-preview .hljs-variable,
+.markdown-preview .hljs-template-variable,
+.markdown-preview .hljs-deletion {
+  color: var(--np-preview-syntax-number);
+}
+
+.markdown-preview .hljs-title.function_,
+.markdown-preview .hljs-function .hljs-title,
+.markdown-preview .hljs-built_in {
+  color: var(--np-preview-syntax-function);
+}
+
+.markdown-preview .hljs-type,
+.markdown-preview .hljs-class .hljs-title,
+.markdown-preview .hljs-params {
+  color: var(--np-preview-syntax-type);
+}
+
+.markdown-preview .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.25em;
+}
+
+.markdown-preview .markdown-mermaid {
+  display: grid;
+  place-items: center;
+  max-width: 100%;
+  margin: 0 0 0.9em;
+  overflow-x: auto;
+}
+
+.markdown-preview .markdown-mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-preview .markdown-mermaid-error {
+  border-color: var(--np-danger);
+}
+
+.preview-pane:is(
+  [data-preview-theme="oneDark"],
+  [data-preview-theme="nord"],
+  [data-preview-theme="solarizedDark"],
+  [data-preview-theme="monokai"],
+  [data-preview-theme="dracula"]
+) {
+  --np-preview-syntax-keyword: #c99aff;
+  --np-preview-syntax-string: #e6b86a;
+  --np-preview-syntax-number: #ff9cad;
+  --np-preview-syntax-function: #79d5d1;
+  --np-preview-syntax-type: #f1c66d;
 }
 
 .preview-pane[data-preview-theme="githubLight"] {

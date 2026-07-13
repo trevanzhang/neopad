@@ -6,6 +6,7 @@ import type { NoteTab } from '../types/note'
 defineProps<{
   tabs: NoteTab[]
   activeTabId: string
+  exportingNote: boolean
   messages: AppMessages['tabs']
 }>()
 
@@ -18,6 +19,8 @@ const emit = defineEmits<{
   archiveTab: [tabId: string]
   unarchiveTab: [tabId: string]
   revealTab: [tabId: string]
+  copyTabPath: [tabId: string]
+  exportTab: [tabId: string, format: 'png' | 'pdf']
   updateTabColor: [tabId: string, color: string | null]
   newTab: []
   toggleLibrary: []
@@ -43,8 +46,8 @@ function openContextMenu(event: MouseEvent, tab: NoteTab) {
   emit('selectTab', tab.id)
   contextMenu.value = {
     tabId: tab.id,
-    x: Math.min(event.clientX, window.innerWidth - 210),
-    y: Math.min(event.clientY, window.innerHeight - 185),
+    x: Math.max(4, Math.min(event.clientX, window.innerWidth - 210)),
+    y: Math.max(4, Math.min(event.clientY, window.innerHeight - 305)),
   }
   void nextTick(() => contextMenuElement.value?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus())
 }
@@ -61,7 +64,7 @@ function closeContextMenuOnEscape(event: KeyboardEvent) {
   contextMenu.value = null
 }
 
-function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'unarchive' | 'reveal') {
+function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'unarchive' | 'reveal' | 'copy-path' | 'export-png' | 'export-pdf') {
   const tabId = contextMenu.value?.tabId
   if (!tabId) return
   contextMenu.value = null
@@ -70,6 +73,9 @@ function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'u
   else if (action === 'close') emit('closeTab', tabId)
   else if (action === 'archive') emit('archiveTab', tabId)
   else if (action === 'unarchive') emit('unarchiveTab', tabId)
+  else if (action === 'copy-path') emit('copyTabPath', tabId)
+  else if (action === 'export-png') emit('exportTab', tabId, 'png')
+  else if (action === 'export-pdf') emit('exportTab', tabId, 'pdf')
   else emit('revealTab', tabId)
 }
 
@@ -212,6 +218,16 @@ function updateColor(color: string | null) {
       </button>
       <button type="button" role="menuitem" @click="runContextAction('reveal')">
         {{ messages.revealInFileManager }}
+      </button>
+      <button type="button" role="menuitem" @click="runContextAction('copy-path')">
+        {{ messages.copyFilePath }}
+      </button>
+      <div class="menu-separator" role="separator" />
+      <button type="button" role="menuitem" :disabled="exportingNote" @click="runContextAction('export-png')">
+        {{ messages.exportAsPng }}
+      </button>
+      <button type="button" role="menuitem" :disabled="exportingNote" @click="runContextAction('export-pdf')">
+        {{ messages.exportAsPdf }}
       </button>
       <div class="menu-separator" role="separator" />
       <span class="tab-context-label">{{ messages.color }}</span>

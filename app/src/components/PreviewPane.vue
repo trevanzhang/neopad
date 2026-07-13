@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { openExternalUrl } from '../lib/invoke'
-import { renderMarkdown } from '../lib/markdown'
+import { renderMarkdownInto, type MarkdownRenderTheme } from '../lib/markdown'
 import { isTauriRuntime } from '../lib/runtime'
 import type { PreviewContentWidth, PreviewFontFamily, PreviewLineHeight, PreviewTheme } from '../types/editor'
 
@@ -15,7 +15,7 @@ const props = defineProps<{
   previewContentWidth: PreviewContentWidth
 }>()
 
-const rendered = computed(() => renderMarkdown(props.content))
+const previewContent = ref<HTMLElement | null>(null)
 
 const previewStyle = computed(() => ({
   '--np-preview-font': previewFontFamily(props.previewFontFamily, props.editorFontFamily),
@@ -23,6 +23,28 @@ const previewStyle = computed(() => ({
   '--np-preview-line-height': previewLineHeight(props.previewLineHeight),
   '--np-preview-width': previewContentWidth(props.previewContentWidth),
 }))
+
+const darkPreviewThemes = new Set<PreviewTheme>(['oneDark', 'nord', 'solarizedDark', 'monokai', 'dracula'])
+
+function markdownTheme(): MarkdownRenderTheme {
+  return darkPreviewThemes.has(props.previewTheme) ? 'dark' : 'light'
+}
+
+async function updateRenderedPreview() {
+  if (!previewContent.value) return
+  try {
+    await renderMarkdownInto(previewContent.value, props.content, markdownTheme())
+  } catch {
+    // Keep the synchronously rendered Markdown visible if an optional renderer fails to load.
+  }
+}
+
+onMounted(() => void updateRenderedPreview())
+watch(
+  () => [props.content, props.previewTheme] as const,
+  () => void nextTick().then(updateRenderedPreview),
+  { flush: 'post' },
+)
 
 function previewFontFamily(fontFamily: PreviewFontFamily, editorFontFamily: string) {
   if (fontFamily === 'editor') return editorFontFamily
@@ -61,6 +83,6 @@ function handlePreviewClick(event: MouseEvent) {
 
 <template>
   <section class="preview-pane" :data-preview-theme="previewTheme" :style="previewStyle" aria-label="Markdown preview">
-    <article class="markdown-preview" @click="handlePreviewClick" v-html="rendered" />
+    <article ref="previewContent" class="markdown-preview" @click="handlePreviewClick" />
   </section>
 </template>

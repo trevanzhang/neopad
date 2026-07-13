@@ -17,6 +17,10 @@ const REPLACE_RETRY_DELAYS: [Duration; 8] = [
 ];
 
 pub fn write_atomic(path: &Path, contents: &str) -> Result<()> {
+    write_atomic_bytes(path, contents.as_bytes())
+}
+
+pub fn write_atomic_bytes(path: &Path, contents: &[u8]) -> Result<()> {
     let parent = path
         .parent()
         .with_context(|| format!("target path has no parent: {}", path.display()))?;
@@ -30,7 +34,7 @@ pub fn write_atomic(path: &Path, contents: &str) -> Result<()> {
         .open(&tmp_path)
         .with_context(|| format!("failed to create temp file {}", tmp_path.display()))?;
     tmp_file
-        .write_all(contents.as_bytes())
+        .write_all(contents)
         .with_context(|| format!("failed to write temp file {}", tmp_path.display()))?;
     tmp_file
         .sync_all()

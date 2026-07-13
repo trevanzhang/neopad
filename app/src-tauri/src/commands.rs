@@ -1,11 +1,11 @@
 use neopad_core::{
     append_to_clipboard_note, archive_note, claim_due_reminders, clear_trash, close_note,
-    complete_due_reminders, complete_reminder, create_note, delete_note_to_trash, export_note_file,
-    list_archived_notes, list_notes, list_open_notes, list_recent_notes,
-    list_recoverable_note_writes, list_reminders, list_searchable_notes, list_trashed_notes,
-    load_config, lock_workspace_for_write, read_note, reconcile_note_metadata, rename_note,
-    reopen_reminder, restore_note_from_trash, restore_recoverable_note_write, save_config,
-    search_notes, write_note_atomic_checked, NoteContent, NoteTab, PreviewMode,
+    complete_due_reminders, complete_reminder, create_note, delete_note_to_trash,
+    export_binary_file, export_note_file, list_archived_notes, list_notes, list_open_notes,
+    list_recent_notes, list_recoverable_note_writes, list_reminders, list_searchable_notes,
+    list_trashed_notes, load_config, lock_workspace_for_write, read_note, reconcile_note_metadata,
+    rename_note, reopen_reminder, restore_note_from_trash, restore_recoverable_note_write,
+    save_config, search_notes, write_note_atomic_checked, NoteContent, NoteTab, PreviewMode,
     RecoverableNoteWrite, Reminder, SearchResult, Theme, UiConfig, Workspace,
 };
 use serde::Serialize;
@@ -342,6 +342,38 @@ pub async fn save_markdown_file_command(
 }
 
 #[tauri::command]
+pub async fn save_note_export_command(
+    window: tauri::WebviewWindow,
+    suggested_file_name: String,
+    format: String,
+    data: Vec<u8>,
+) -> Result<bool, String> {
+    let (dialog_title, filter_name, extension) = match format.as_str() {
+        "png" => ("Export note as PNG", "PNG image", "png"),
+        "pdf" => ("Export note as PDF", "PDF document", "pdf"),
+        _ => return Err("unsupported note export format".to_owned()),
+    };
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = rfd::FileDialog::new()
+            .set_parent(&window)
+            .set_title(dialog_title)
+            .set_file_name(&suggested_file_name)
+            .add_filter(filter_name, &[extension])
+            .save_file();
+
+        let Some(path) = path else {
+            return Ok(false);
+        };
+
+        export_binary_file(&path, &data).map_err(display_error)?;
+        Ok(true)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 pub async fn open_external_markdown_command(
     window: tauri::WebviewWindow,
     state: State<'_, AppState>,
@@ -553,6 +585,11 @@ pub fn open_trash_command(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn open_archive_in_file_manager_command(state: State<'_, AppState>) -> Result<(), String> {
+    open_path(&state.workspace.archive_dir).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 pub fn reveal_note_in_file_manager_command(
     state: State<'_, AppState>,
     note_id: String,
@@ -570,6 +607,32 @@ pub fn reveal_external_markdown_in_file_manager_command(
     let path = approved_external_markdown_path(&state.workspace, std::path::Path::new(&path))
         .map_err(display_error)?;
     reveal_path(&path).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn copy_note_path_to_clipboard_command(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    note_id: String,
+) -> Result<(), String> {
+    let path =
+        neopad_core::note_file_path_for_id(&state.workspace, &note_id).map_err(display_error)?;
+    app.clipboard()
+        .write_text(path.to_string_lossy().into_owned())
+        .map_err(|error| format!("failed to copy note path: {error}"))
+}
+
+#[tauri::command]
+pub fn copy_external_markdown_path_to_clipboard_command(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<(), String> {
+    let path = approved_external_markdown_path(&state.workspace, std::path::Path::new(&path))
+        .map_err(display_error)?;
+    app.clipboard()
+        .write_text(path.to_string_lossy().into_owned())
+        .map_err(|error| format!("failed to copy external Markdown path: {error}"))
 }
 
 #[tauri::command]

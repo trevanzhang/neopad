@@ -8,6 +8,7 @@ const props = defineProps<{
   alwaysOnTop: boolean
   pageActionsEnabled: boolean
   activeTabArchived: boolean
+  exportingNote: boolean
   recentNotes: NoteTab[]
   messages: AppMessages['menu']
 }>()
@@ -23,8 +24,9 @@ const emit = defineEmits<{
   saveClipboard: []
   loadFile: []
   saveAsFile: []
+  exportNote: [format: 'png' | 'pdf']
   exportAll: []
-  viewArchive: []
+  revealArchive: []
   openTrash: []
   hideWindow: []
   exitApp: []
@@ -224,9 +226,23 @@ function handleMenuKeydown(event: KeyboardEvent) {
         </div>
         <button type="button" @click="$emit('saveAsFile')">{{ messages.saveAsFile }}</button>
         <div class="menu-separator" role="separator" />
+        <div class="menu-subroot">
+          <button type="button" class="menu-command" :disabled="exportingNote">
+            <span>{{ messages.exportCurrentNote }}</span>
+            <span class="menu-arrow">&rsaquo;</span>
+          </button>
+          <div class="menu-popover menu-subpopover">
+            <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png')">
+              {{ messages.exportAsPng }}
+            </button>
+            <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'pdf')">
+              {{ messages.exportAsPdf }}
+            </button>
+          </div>
+        </div>
         <button type="button" @click="$emit('exportAll')">{{ messages.exportAll }}</button>
         <div class="menu-separator" role="separator" />
-        <button type="button" @click="$emit('viewArchive')">{{ messages.viewArchive }}</button>
+        <button type="button" @click="$emit('revealArchive')">{{ messages.revealArchive }}</button>
         <button type="button" @click="$emit('openTrash')">{{ messages.trash }}</button>
         <div class="menu-separator" role="separator" />
         <button type="button" class="menu-command" @click="$emit('hideWindow')">

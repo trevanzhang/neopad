@@ -11,6 +11,8 @@ import {
   createNote,
   clearTrash,
   completeStartup,
+  copyExternalMarkdownPathToClipboard,
+  copyNotePathToClipboard,
   exportAllNotesZip,
   getAppVersion,
   getShortcutWarnings,
@@ -20,6 +22,7 @@ import {
   listNotes,
   listRecentNotes,
   listRecoverableNoteWrites,
+  openArchiveInFileManager,
   openTrash,
   openNote,
   openExternalMarkdown,
@@ -46,6 +49,7 @@ import { useArchiveState } from './composables/useArchiveState'
 import { usePreferenceState } from './composables/usePreferenceState'
 import { useNativeSettings } from './composables/useNativeSettings'
 import { useNoteLifecycle } from './composables/useNoteLifecycle'
+import { useNoteExport } from './composables/useNoteExport'
 import { useWindowLifecycle } from './composables/useWindowLifecycle'
 import { editorBackgroundForTheme } from './lib/theme'
 import { normalizeShortcutInput } from './lib/shortcut'
@@ -161,6 +165,7 @@ const t = computed(() => messages[language.value])
 const {
   content,
   saveState,
+  isLoadingNote,
   nextNoteLoadGeneration,
   isCurrentNoteLoad,
   loadActiveNote,
@@ -174,6 +179,16 @@ const {
   statusMessage,
   failedMessage: () => t.value.status.failed,
   rememberExternalDocument,
+})
+const { exportingNote, exportNote } = useNoteExport({
+  tabs,
+  activeTabId,
+  content,
+  isLoadingNote,
+  statusMessage,
+  forceSave,
+  text: () => t.value.status,
+  safeFileName,
 })
 const {
   searchOpen,
@@ -628,12 +643,39 @@ async function openTrashFolder() {
   }
 }
 
+async function revealArchiveInExplorer() {
+  if (!isTauriRuntime()) return
+  try {
+    await openArchiveInFileManager()
+    statusMessage.value = t.value.status.archiveOpened
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
 async function revealNoteInExplorer(noteId: string) {
   if (!isTauriRuntime() || !(await forceSave())) return
   try {
     const tab = tabs.value.find((item) => item.id === noteId)
     if (tab?.externalPath) await revealExternalMarkdownInFileManager(tab.externalPath)
     else await revealNoteInFileManager(noteId)
+  } catch {
+    saveState.value = 'Failed'
+  }
+}
+
+async function copyNoteFilePath(noteId: string) {
+  const tab = tabs.value.find((item) => item.id === noteId)
+  if (!tab) return
+
+  try {
+    if (isTauriRuntime()) {
+      if (tab.externalPath) await copyExternalMarkdownPathToClipboard(tab.externalPath)
+      else await copyNotePathToClipboard(noteId)
+    } else {
+      await navigator.clipboard.writeText(tab.externalPath ?? tab.fileName)
+    }
+    statusMessage.value = t.value.status.notePathCopied
   } catch {
     saveState.value = 'Failed'
   }
@@ -1181,6 +1223,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         :always-on-top="alwaysOnTop"
         :page-actions-enabled="Boolean(activeTab && activeTab.id !== 'inbox' && activeTab.id !== 'clipboard')"
         :active-tab-archived="Boolean(activeTab?.archived)"
+        :exporting-note="exportingNote"
         :recent-notes="recentNotes"
         :messages="t.menu"
         @new-note="createLocalTab"
@@ -1193,8 +1236,9 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @save-clipboard="saveCurrentClipboard"
         @load-file="triggerLoadFile"
         @save-as-file="saveAsFile"
+        @export-note="exportNote(activeTabId, $event)"
         @export-all="exportAllNotes"
-        @view-archive="openArchiveList"
+        @reveal-archive="revealArchiveInExplorer"
         @open-trash="openTrashFolder"
         @hide-window="hideMainWindow"
         @exit-app="exitApp"
@@ -1235,10 +1279,13 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       <TabBar
         :tabs="displayTabs"
         :active-tab-id="activeTabId"
+        :exporting-note="exportingNote"
         :messages="t.tabs"
         @select-tab="selectTab"
         @title-double-click="handleTabTitleDoubleClick"
         @reveal-tab="revealNoteInExplorer"
+        @copy-tab-path="copyNoteFilePath"
+        @export-tab="exportNote"
         @rename-tab="renamePageById"
         @delete-tab="deletePageById"
         @close-tab="closePageById"

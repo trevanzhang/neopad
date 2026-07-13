@@ -33,6 +33,8 @@ state machine. Domain behavior is split into focused Vue composables:
   from Tauri-native settings synchronization.
 - `useSearchState`, `useReminderState`, `useArchiveState`, and `useMcpService`
   own their respective async state and failure boundaries.
+- `useNoteExport` resolves the requested tab safely, enforces the active-note
+  save barrier, and coordinates rendered PNG/PDF generation and native saving.
 - `useDialogs` serializes input and confirmation requests.
 - `keyboard-shortcuts.ts` is a pure priority router with explicit state getters
   and application actions; characterization tests protect modal blocking,
@@ -123,10 +125,16 @@ the configured workspace.
   Insert-mode exit sequence, visible mode status, and an option to preserve
   NeoPad Ctrl shortcuts when Vim mappings conflict.
 - Markdown preview and split mode.
+- A shared safe Markdown renderer with raw HTML disabled, highlighted fenced
+  code, KaTeX formulas, and strict-mode Mermaid diagrams. Export uses the same
+  renderer so preview and saved output do not drift.
+- Content-focused PNG and A4 PDF export. Screenshot and PDF engines are loaded
+  on demand, and binary files are saved atomically through `neopad-core`.
 - Persistent light and dark themes.
 - Native Windows whole-window opacity controlled through a Tauri command and
   `SetLayeredWindowAttributes`; CSS opacity is not used for the app shell.
-- Tab context actions for rename, trash, and persistent color selection.
+- Tab context actions for rename, trash, persistent color selection, file
+  manager reveal, absolute-path copying, and PNG/PDF export.
 - Compact settings dialog with independently scrollable content. Optional Vim
   controls live under Vim settings, while MCP service controls have their
   own MCP tab.

@@ -1,4 +1,22 @@
+import { HighlightStyle } from '@codemirror/language'
 import { EditorView } from '@codemirror/view'
+import { tags } from '@lezer/highlight'
+
+export const neopadHighlightStyle = HighlightStyle.define([
+  { tag: tags.heading, color: 'var(--np-syntax-heading)', fontWeight: '650' },
+  { tag: [tags.strong, tags.emphasis], color: 'var(--np-syntax-emphasis)' },
+  { tag: tags.strong, fontWeight: '700' },
+  { tag: tags.emphasis, fontStyle: 'italic' },
+  { tag: [tags.link, tags.url], color: 'var(--np-syntax-link)', textDecoration: 'underline' },
+  { tag: [tags.monospace, tags.string], color: 'var(--np-syntax-string)' },
+  { tag: [tags.keyword, tags.controlKeyword, tags.operatorKeyword], color: 'var(--np-syntax-keyword)' },
+  { tag: [tags.number, tags.bool, tags.null], color: 'var(--np-syntax-number)' },
+  { tag: [tags.function(tags.variableName), tags.labelName], color: 'var(--np-syntax-function)' },
+  { tag: [tags.typeName, tags.className], color: 'var(--np-syntax-type)' },
+  { tag: [tags.comment, tags.quote], color: 'var(--np-syntax-comment)', fontStyle: 'italic' },
+  { tag: [tags.meta, tags.processingInstruction], color: 'var(--np-syntax-meta)' },
+  { tag: tags.invalid, color: 'var(--np-danger)', textDecoration: 'underline wavy' },
+])
 
 export function baseEditorTheme() {
   return EditorView.theme({

@@ -33,6 +33,16 @@ use std::path::Path;
 /// NeoPad workspace. Workspace-relative paths remain subject to the stricter
 /// note path validation in `path`.
 pub fn export_note_file(path: &Path, contents: &str) -> Result<()> {
+    validate_export_path(path)?;
+    atomic_write::write_atomic(path, contents)
+}
+
+pub fn export_binary_file(path: &Path, contents: &[u8]) -> Result<()> {
+    validate_export_path(path)?;
+    atomic_write::write_atomic_bytes(path, contents)
+}
+
+fn validate_export_path(path: &Path) -> Result<()> {
     if !path.is_absolute() {
         bail!("export path must be absolute");
     }
@@ -40,7 +50,7 @@ pub fn export_note_file(path: &Path, contents: &str) -> Result<()> {
         bail!("export path must include a file name");
     }
 
-    atomic_write::write_atomic(path, contents)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -66,5 +76,16 @@ mod export_tests {
             .expect_err("relative export path must fail");
 
         assert!(error.to_string().contains("must be absolute"));
+    }
+
+    #[test]
+    fn export_binary_file_preserves_bytes() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let path = temp.path().join("exported.png");
+        let bytes = [0_u8, 1, 2, 127, 255];
+
+        export_binary_file(&path, &bytes).expect("export binary file");
+
+        assert_eq!(std::fs::read(path).expect("read export"), bytes);
     }
 }

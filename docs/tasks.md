@@ -23,9 +23,10 @@ This file tracks the implemented MVP relative to the original task plan.
   immediately and is restored at startup. New installations start in Edit mode.
 - Page rename and trash actions with UI and core protection for default pages.
 - Tab context menu with rename, archive, trash, persistent color selection,
-  and an external-file marker.
+  an external-file marker, Explorer reveal, and absolute-path copying.
 - Localized system page labels that preserve stable storage IDs and user titles.
-- CodeMirror 6 Markdown editor.
+- CodeMirror 6 Markdown editor with Markdown and common fenced-code language
+  highlighting.
 - Optional persisted Vim key bindings with Normal, Insert, and Visual status,
   plus a configurable Insert exit sequence in Vim settings.
 - Persistent light and dark themes with a destination-state status-bar toggle.
@@ -42,6 +43,10 @@ This file tracks the implemented MVP relative to the original task plan.
   and native due notifications.
 - ZIP export for active and archived NeoPad notes, preserving each note as its
   own Markdown file.
+- Current-note PNG and multi-page PDF export from the File and tab context
+  menus, sharing the preview renderer for highlighted code, KaTeX, and Mermaid.
+- Direct local archive-folder access from the File menu without removing the
+  archive management surface in the note browser.
 - Native picker, drag-and-drop, and operating-system file-association opening
   with in-place autosave for external Markdown files; content-revision
   conflicts, persistent recent-document list, and copy-to-archive behavior.

@@ -6,6 +6,21 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.5.2 - 2026-07-13
+
+### Added
+
+- Added Markdown source and fenced-code syntax highlighting, KaTeX formulas,
+  and Mermaid diagrams to the editor and preview workflow.
+- Added current-note PNG and PDF export actions to the File menu and tab
+  context menu, with atomic binary writes through `neopad-core`.
+- Added a tab action that copies the current Markdown file's absolute path.
+
+### Changed
+
+- Clarified the File menu archive action and made it open the archive directory
+  in the system file manager.
+
 ## 0.5.1 - 2026-07-13
 
 ### Added

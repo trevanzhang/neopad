@@ -118,6 +118,7 @@ Relevant files:
 ```text
 app/src/composables/*.test.ts  Document, lifecycle, and preference state tests
 app/src/lib/*.test.ts          Autosave, shortcuts, search, editor, and text tests
+app/src/lib/note-export.test.ts PDF pagination boundary tests
 mcp-server/tests/http.rs       MCP HTTP child-process protocol tests
 e2e/wdio.conf.ts               Desktop WebDriver configuration
 e2e/specs/                     Desktop interaction specifications

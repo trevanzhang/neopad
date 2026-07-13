@@ -26,6 +26,16 @@
   --np-danger-contrast: #ffffff;
   --np-vim-cursor: #2b65c8;
   --np-vim-cursor-text: #ffffff;
+  --np-syntax-heading: #1f55ad;
+  --np-syntax-emphasis: #27364a;
+  --np-syntax-link: #2563b8;
+  --np-syntax-string: #8a4f08;
+  --np-syntax-keyword: #7c3bb8;
+  --np-syntax-number: #ad3f57;
+  --np-syntax-function: #126b73;
+  --np-syntax-type: #8a5800;
+  --np-syntax-comment: #718096;
+  --np-syntax-meta: #5f6f82;
 }
 
 .theme-dark {
@@ -57,4 +67,14 @@
   --np-danger-contrast: #171a1f;
   --np-vim-cursor: #ffd166;
   --np-vim-cursor-text: #171a1f;
+  --np-syntax-heading: #8fb5ff;
+  --np-syntax-emphasis: #e8edf6;
+  --np-syntax-link: #78a9ff;
+  --np-syntax-string: #e6b86a;
+  --np-syntax-keyword: #c99aff;
+  --np-syntax-number: #ff9cad;
+  --np-syntax-function: #79d5d1;
+  --np-syntax-type: #f1c66d;
+  --np-syntax-comment: #8995a7;
+  --np-syntax-meta: #a9b4c4;
 }

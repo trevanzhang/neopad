@@ -23,7 +23,8 @@ Implemented MVP capabilities:
 
 - Tauri 2 desktop app.
 - Vue 3 + TypeScript frontend.
-- CodeMirror 6 Markdown editor.
+- CodeMirror 6 Markdown editor with Markdown and common fenced-code language
+  highlighting.
 - Optional Vim key bindings with an explicit mode indicator. Vim support stays
   an editor input mode rather than a plugin or Vim runtime system; its small
   set of options lives under Advanced settings, including whether NeoPad Ctrl
@@ -33,7 +34,8 @@ Implemented MVP capabilities:
 - Multiple tabs backed by local metadata, including close-without-delete and
   recent-document workflows.
 - Tab and single-note library context menus can reveal Markdown files in the
-  system file manager.
+  system file manager. Tab menus can also copy the current note's absolute file
+  path, while the File menu opens the local archive directory directly.
 - Autosave.
 - Edit, split, and preview editor modes with a persisted Default Mode setting
   and fixed `F5` cycling shortcut; all three modes remain available in
@@ -57,6 +59,9 @@ Implemented MVP capabilities:
   Markdown lines.
 - Native Save As for exporting the active note to Markdown or all notes to a
   ZIP archive with one Markdown file per tab.
+- White-background PNG and multi-page PDF export for the current tab, including
+  rendered code highlighting, KaTeX formulas, and Mermaid diagrams. Export
+  rendering stays content-focused and loads its heavier engines on demand.
 - `Ctrl+O`, native file drag and drop, and operating-system file associations
   open external Markdown files in place and autosave changes back to their
   original paths. Writes use content revisions to detect out-of-band edits.

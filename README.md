@@ -39,6 +39,8 @@ The repository currently contains a working Windows-focused MVP:
 - Markdown preview appearance settings with well-known theme presets, including
   One Dark, Nord, Solarized, Monokai, GitHub Light, and Dracula, plus preview
   typography controls.
+- Markdown source and fenced-code syntax highlighting, KaTeX math formulas,
+  and asynchronously rendered Mermaid diagrams in split and preview modes.
 - A compact editor font dialog with preset font choices, font-size control, and
   live preview.
 - Lightweight Markdown reminders using
@@ -53,7 +55,8 @@ The repository currently contains a working Windows-focused MVP:
   it keeps everyday note actions close to the editor without turning NeoPad
   into a knowledge-base suite.
 - Right-click a tab or a single note in the note library to reveal its Markdown
-  file in the system file manager.
+  file in the system file manager. The tab menu can also copy the absolute
+  Markdown file path for use with terminals and local agents.
 - The reorganized Settings center groups General, Editor, Preview, Vim,
   Shortcuts, and MCP controls in a focused dialog, including configurable
   visibility and clipboard-capture shortcuts.
@@ -61,8 +64,8 @@ The repository currently contains a working Windows-focused MVP:
   context menu also provides explicit archive and trash actions, while recent
   documents provide a quick way to reopen closed or archived notes.
 - Archived notes move to `~/.neopad/archive/`, remain available to full-text
-  search, and can be listed and restored from File > View Archive without using
-  the trash.
+  search, and can be listed and restored from the note browser without using
+  the trash. File > Open Archive Folder opens the archive directory directly.
 - If a non-default note file is removed outside NeoPad, its stale tab and recent
   document record are removed on the next refresh; NeoPad does not recreate the
   missing file.
@@ -75,8 +78,9 @@ The repository currently contains a working Windows-focused MVP:
   Changes autosave back to the original path with a SHA-256 content-revision
   conflict check. External files can be copied into the NeoPad archive without
   moving or deleting their originals. Native Save As dialogs export the active
-  note as Markdown or all notes as a ZIP archive containing one Markdown file
-  per tab.
+  note as Markdown, PNG, or multi-page PDF, or export all notes as a ZIP archive
+  containing one Markdown file per tab. PNG and PDF actions are available from
+  both the File menu and the tab context menu.
 - Standalone local HTTP `neopad-mcp` service managed from Settings, with bearer
   token access for local agents. The dedicated MCP settings page can start or
   stop the service, show the local URL and token, regenerate the token, and copy
@@ -181,7 +185,7 @@ NSIS.
 The Windows MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.5.1_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.5.2_x64_en-US.msi
 ```
 
 Cross-platform release builds also run automatically in GitHub Actions when a
@@ -267,6 +271,7 @@ Ctrl+Shift+V    Append current clipboard text to clipboard.md
 - [中文说明](README_CN.md)
 - [Architecture](docs/architecture.md)
 - [Development](docs/development.md)
+- [Markdown preview and export](docs/export.md)
 - [MCP](docs/mcp.md)
 - [Tasks](docs/tasks.md)
 - [Changelog](CHANGELOG.md)

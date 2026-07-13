@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
-import { bracketMatching } from '@codemirror/language'
+import { bracketMatching, syntaxHighlighting } from '@codemirror/language'
 import {
   closeSearchPanel,
   findNext,
@@ -19,8 +19,9 @@ import {
 } from '@codemirror/view'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { evaluateExpressionLine, formatCalculationResult } from '../lib/editor-calculation'
+import { editorCodeLanguages } from '../lib/editor-code-languages'
 import { createNeopadSearchPanel } from '../lib/editor-search-panel'
-import { baseEditorTheme, editorAppearance } from '../lib/editor-theme'
+import { baseEditorTheme, editorAppearance, neopadHighlightStyle } from '../lib/editor-theme'
 
 const props = defineProps<{
   title: string
@@ -67,7 +68,8 @@ const extensions = [
   dropCursor(),
   bracketMatching(),
   highlightActiveLine(),
-  markdown(),
+  markdown({ codeLanguages: editorCodeLanguages }),
+  syntaxHighlighting(neopadHighlightStyle),
   search({ top: true, createPanel: createNeopadSearchPanel }),
   keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
   editable.of(EditorView.editable.of(true)),

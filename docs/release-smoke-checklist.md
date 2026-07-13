@@ -15,3 +15,8 @@ or publishing a release.
    losing content.
 8. If a simulated save remains blocked, restart NeoPad and verify the recovery
    prompt can restore the preserved note content.
+9. Preview a note containing a fenced JavaScript block, a KaTeX formula, and a
+   Mermaid diagram, then export it from both the File menu and tab context menu.
+   Open the PNG and PDF and verify all three rendered elements are present.
+10. Use File > Open Archive Folder, then copy the file path from an
+    internal and an external Markdown tab and verify each absolute path.

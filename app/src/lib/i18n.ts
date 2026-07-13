@@ -15,6 +15,9 @@ export type AppMessages = {
     next: string
     library: string
     revealInFileManager: string
+    copyFilePath: string
+    exportAsPng: string
+    exportAsPdf: string
     f8: string
     altDel: string
     f12: string
@@ -35,8 +38,11 @@ export type AppMessages = {
     loadFromFile: string
     recentDocuments: string
     saveAsFile: string
+    exportCurrentNote: string
+    exportAsPng: string
+    exportAsPdf: string
     exportAll: string
-    viewArchive: string
+    revealArchive: string
     trash: string
     hide: string
     exit: string
@@ -345,6 +351,13 @@ export type AppMessages = {
     loadedFromFile: string
     savedAsFile: string
     exported: string
+    exportingNote: string
+    exportedPng: string
+    exportedPdf: string
+    exportTooLong: string
+    exportFailed: string
+    archiveOpened: string
+    notePathCopied: string
     trashOpened: string
     noteFileMissing: string
     fontUpdated: string
@@ -386,6 +399,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       next: 'Next tab',
       library: 'Open note browser',
       revealInFileManager: 'Show in Explorer',
+      copyFilePath: 'Copy Page File Path',
+      exportAsPng: 'Export as PNG...',
+      exportAsPdf: 'Export as PDF...',
       f8: 'F8',
       altDel: 'Alt+Del',
       f12: 'F12',
@@ -406,8 +422,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       loadFromFile: 'Load from File(L)',
       recentDocuments: 'Recent Documents',
       saveAsFile: 'Save As File(S)',
+      exportCurrentNote: 'Export Current Note',
+      exportAsPng: 'As PNG Image...',
+      exportAsPdf: 'As PDF Document...',
       exportAll: 'Export All(E)...',
-      viewArchive: 'View Archive(A)...',
+      revealArchive: 'Open Archive Folder(A)',
       trash: 'Trash(R)...',
       hide: 'Hide(H)',
       exit: 'Exit(X)',
@@ -716,6 +735,13 @@ export const messages: Record<AppLanguage, AppMessages> = {
       loadedFromFile: 'Loaded from file',
       savedAsFile: 'Saved as file',
       exported: 'Exported',
+      exportingNote: 'Exporting note...',
+      exportedPng: 'PNG exported',
+      exportedPdf: 'PDF exported',
+      exportTooLong: 'This note is too long to export safely',
+      exportFailed: 'Note export failed',
+      archiveOpened: 'Archive opened in Explorer',
+      notePathCopied: 'Page file path copied',
       trashOpened: 'Trash opened',
       noteFileMissing: 'Note file does not exist',
       fontUpdated: 'Font updated',
@@ -755,6 +781,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       next: '\u4e0b\u4e00\u4e2a\u6807\u7b7e\u9875',
       library: '\u6253\u5f00\u7b14\u8bb0\u6d4f\u89c8\u5668',
       revealInFileManager: '\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u663e\u793a',
+      copyFilePath: '\u590d\u5236\u5f53\u524d\u9875\u9762\u6587\u4ef6\u5730\u5740',
+      exportAsPng: '\u5bfc\u51fa\u4e3a PNG...',
+      exportAsPdf: '\u5bfc\u51fa\u4e3a PDF...',
       f8: 'F8',
       altDel: 'Alt+Del',
       f12: 'F12',
@@ -775,8 +804,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       loadFromFile: '\u4ece\u6587\u4ef6\u8f7d\u5165(L)',
       recentDocuments: '\u6700\u8fd1\u6253\u5f00\u7684\u6587\u6863',
       saveAsFile: '\u53e6\u5b58\u5230\u6587\u4ef6(S)',
+      exportCurrentNote: '\u5bfc\u51fa\u5f53\u524d\u7b14\u8bb0',
+      exportAsPng: '\u5bfc\u51fa\u4e3a PNG \u56fe\u7247...',
+      exportAsPdf: '\u5bfc\u51fa\u4e3a PDF \u6587\u4ef6...',
       exportAll: '\u5168\u90e8\u5bfc\u51fa(E)...',
-      viewArchive: '\u67e5\u770b\u5b58\u6863(A)...',
+      revealArchive: '\u672c\u5730\u67e5\u770b\u5b58\u6863(A)',
       trash: '\u56de\u6536\u7ad9(R)...',
       hide: '\u9690\u85cf(H)',
       exit: '\u9000\u51fa(X)',
@@ -1085,6 +1117,13 @@ export const messages: Record<AppLanguage, AppMessages> = {
       loadedFromFile: '\u5df2\u4ece\u6587\u4ef6\u8f7d\u5165',
       savedAsFile: '\u5df2\u53e6\u5b58\u5230\u6587\u4ef6',
       exported: '\u5df2\u5168\u90e8\u5bfc\u51fa',
+      exportingNote: '\u6b63\u5728\u5bfc\u51fa\u7b14\u8bb0...',
+      exportedPng: '\u5df2\u5bfc\u51fa PNG',
+      exportedPdf: '\u5df2\u5bfc\u51fa PDF',
+      exportTooLong: '\u7b14\u8bb0\u8fc7\u957f\uff0c\u65e0\u6cd5\u5b89\u5168\u5bfc\u51fa',
+      exportFailed: '\u7b14\u8bb0\u5bfc\u51fa\u5931\u8d25',
+      archiveOpened: '\u5df2\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u6253\u5f00\u5b58\u6863',
+      notePathCopied: '\u5df2\u590d\u5236\u5f53\u524d\u9875\u9762\u6587\u4ef6\u5730\u5740',
       trashOpened: '\u5df2\u6253\u5f00\u56de\u6536\u7ad9',
       noteFileMissing: '\u7b14\u8bb0\u6587\u4ef6\u4e0d\u5b58\u5728',
       fontUpdated: '\u5df2\u66f4\u65b0\u5b57\u4f53',

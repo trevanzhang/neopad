@@ -208,6 +208,18 @@ export function saveMarkdownFile(suggestedFileName: string, content: string): Pr
   return invoke('save_markdown_file_command', { suggestedFileName, content })
 }
 
+export function saveNoteExport(
+  suggestedFileName: string,
+  format: 'png' | 'pdf',
+  data: Uint8Array,
+): Promise<boolean> {
+  return invoke('save_note_export_command', {
+    suggestedFileName,
+    format,
+    data: Array.from(data),
+  })
+}
+
 export function exportAllNotesZip(): Promise<boolean> {
   return invoke('export_all_notes_zip_command')
 }
@@ -260,12 +272,24 @@ export function openTrash(): Promise<void> {
   return invoke('open_trash_command')
 }
 
+export function openArchiveInFileManager(): Promise<void> {
+  return invoke('open_archive_in_file_manager_command')
+}
+
 export function revealNoteInFileManager(noteId: string): Promise<void> {
   return invoke('reveal_note_in_file_manager_command', { noteId })
 }
 
 export function revealExternalMarkdownInFileManager(path: string): Promise<void> {
   return invoke('reveal_external_markdown_in_file_manager_command', { path })
+}
+
+export function copyNotePathToClipboard(noteId: string): Promise<void> {
+  return invoke('copy_note_path_to_clipboard_command', { noteId })
+}
+
+export function copyExternalMarkdownPathToClipboard(path: string): Promise<void> {
+  return invoke('copy_external_markdown_path_to_clipboard_command', { path })
 }
 
 export function openExternalUrl(url: string): Promise<void> {
