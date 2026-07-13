@@ -845,7 +845,9 @@ fn reveal_path(path: &std::path::Path) -> anyhow::Result<()> {
 
     #[cfg(all(unix, not(target_os = "macos")))]
     let mut command = {
-        let parent = path.parent().context("note path has no parent directory")?;
+        let parent = path
+            .parent()
+            .ok_or_else(|| anyhow::anyhow!("note path has no parent directory"))?;
         let mut command = Command::new("xdg-open");
         command.arg(parent);
         command
