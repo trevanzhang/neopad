@@ -11,12 +11,13 @@ export function useSearchState(onError: () => void) {
   const searchResultLimit = ref(100)
   const searchHasMore = ref(false)
   let searchTimer: number | null = null
+  let searchGeneration = 0
 
   watch(searchQuery, () => {
     searchResultLimit.value = 100
     searchHasMore.value = false
     if (!searchOpen.value || !isTauriRuntime()) {
-      searchResults.value = []
+      clearSearch()
       return
     }
     scheduleSearch()
@@ -24,14 +25,16 @@ export function useSearchState(onError: () => void) {
 
   function scheduleSearch() {
     clearSearchTimer()
+    const generation = ++searchGeneration
     searching.value = true
-    searchTimer = window.setTimeout(() => void runSearch(), 200)
+    searchTimer = window.setTimeout(() => void runSearch(generation), 200)
   }
 
-  async function runSearch() {
+  async function runSearch(generation = ++searchGeneration) {
     clearSearchTimer()
     const query = searchQuery.value.trim()
     if (!query) {
+      if (generation !== searchGeneration) return
       searchResults.value = []
       searchHasMore.value = false
       searching.value = false
@@ -39,12 +42,13 @@ export function useSearchState(onError: () => void) {
     }
     try {
       const results = await searchNotes(query, searchResultLimit.value)
+      if (generation !== searchGeneration) return
       searchResults.value = results
       searchHasMore.value = results.length === searchResultLimit.value
     } catch {
-      onError()
+      if (generation === searchGeneration) onError()
     } finally {
-      searching.value = false
+      if (generation === searchGeneration) searching.value = false
     }
   }
 
@@ -55,8 +59,10 @@ export function useSearchState(onError: () => void) {
   }
 
   function clearSearch() {
+    searchGeneration += 1
     searchResults.value = []
     searchHasMore.value = false
+    searching.value = false
     clearSearchTimer()
   }
 
@@ -76,6 +82,6 @@ export function useSearchState(onError: () => void) {
     scheduleSearch,
     loadMoreSearchResults,
     clearSearch,
-    disposeSearchState: clearSearchTimer,
+    disposeSearchState: clearSearch,
   }
 }

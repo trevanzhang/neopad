@@ -120,10 +120,13 @@ Important files and directories:
   meta/reminders.json Notification delivery state
   config.json         App settings
   trash/              Deleted notes are moved here
-  backups/            Reserved for future backup support
 ```
 
-Note content lives in `notes/*.md`. Metadata files do not contain note bodies.
+Active note content lives in `notes/*.md`. Emptying NeoPad's Trash moves its
+Markdown files to the operating system's Recycle Bin or Trash before removing
+their entries from NeoPad's library. Files restored to NeoPad's `trash/`
+directory by the operating system are rediscovered on refresh. Metadata files
+do not contain note bodies.
 
 ## Development
 

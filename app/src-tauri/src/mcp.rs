@@ -6,7 +6,7 @@ use serde::Serialize;
 use std::{
     net::IpAddr,
     path::PathBuf,
-    process::{Command, Stdio},
+    process::{Child, Command, Stdio},
     sync::{Arc, Mutex},
     thread,
     time::Duration,
@@ -18,6 +18,41 @@ use std::os::windows::process::CommandExt;
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+#[derive(Debug)]
+pub struct OwnedMcpProcess {
+    child: Option<Child>,
+}
+
+impl OwnedMcpProcess {
+    fn new(child: Child) -> Self {
+        Self { child: Some(child) }
+    }
+
+    fn stop(&mut self) {
+        if let Some(mut child) = self.child.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+
+    fn is_running(&mut self) -> Result<bool> {
+        let Some(child) = self.child.as_mut() else {
+            return Ok(false);
+        };
+        if child.try_wait()?.is_none() {
+            return Ok(true);
+        }
+        self.child = None;
+        Ok(false)
+    }
+}
+
+impl Drop for OwnedMcpProcess {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -101,9 +136,8 @@ pub fn stop_owned_process(state: &AppState) -> Result<()> {
         .mcp_process
         .lock()
         .map_err(|error| anyhow::anyhow!("failed to lock MCP process state: {error}"))?;
-    if let Some(mut child) = process.take() {
-        let _ = child.kill();
-        let _ = child.wait();
+    if let Some(mut process) = process.take() {
+        process.stop();
     }
     Ok(())
 }
@@ -208,7 +242,7 @@ fn start_owned_process(state: &AppState, config: &McpConfig) -> Result<()> {
         .mcp_process
         .lock()
         .map_err(|error| anyhow::anyhow!("failed to lock MCP process state: {error}"))?;
-    *process = Some(child);
+    *process = Some(OwnedMcpProcess::new(child));
     Ok(())
 }
 
@@ -218,7 +252,7 @@ fn is_running(state: &AppState) -> Result<bool> {
         .lock()
         .map_err(|error| anyhow::anyhow!("failed to lock MCP process state: {error}"))?;
     if let Some(child) = process.as_mut() {
-        if child.try_wait()?.is_none() {
+        if child.is_running()? {
             return Ok(true);
         }
         *process = None;

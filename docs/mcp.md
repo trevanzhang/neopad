@@ -96,6 +96,8 @@ moved to NeoPad's trash directory instead of being physically deleted.
 - The default bind address is `127.0.0.1`.
 - Non-loopback bind addresses are rejected.
 - HTTP requests require `Authorization: Bearer <local-token>`.
+- Authentication is checked before JSON request parsing.
+- Request bodies are limited to 2 MiB.
 - Browser-originated requests must use a local origin.
 - CLI and agent requests without an `Origin` header are allowed when the bearer
   token is valid.

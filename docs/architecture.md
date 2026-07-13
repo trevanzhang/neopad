@@ -83,8 +83,14 @@ The default workspace is `~/.neopad/`.
     reminders.json
   config.json
   trash/
-  backups/
 ```
+
+Deleting a note moves its Markdown file to `trash/`. Emptying the visible Trash
+moves those files to the operating system's Recycle Bin or Trash before
+deleted-tab metadata is removed. If an operating-system Trash operation fails,
+the affected file and its metadata remain in NeoPad's Trash. Metadata
+reconciliation also recreates deleted-tab entries for NeoPad-formatted files
+that the operating system restores to `trash/`.
 
 The app presents notes as tabs. The durable source of note content is always a
 Markdown file in `notes/`. `tabs.json` stores tab metadata such as title, file
@@ -185,8 +191,8 @@ rejects duplicate window and clipboard shortcut combinations.
 ## MCP Responsibilities
 
 `neopad-mcp` owns the local HTTP MCP protocol surface. It validates bearer
-tokens and local browser origins, then delegates note operations to
-`neopad-core`.
+tokens before parsing request bodies, validates local browser origins, caps
+request bodies at 2 MiB, then delegates note operations to `neopad-core`.
 
 The service is off by default in the desktop app. When enabled, local agents
 with the token can read and write notes. The desktop process owns lifecycle:

@@ -20,7 +20,7 @@ import {
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { evaluateExpressionLine, formatCalculationResult } from '../lib/editor-calculation'
 import { editorCodeLanguages } from '../lib/editor-code-languages'
-import { createNeopadSearchPanel } from '../lib/editor-search-panel'
+import { createNeopadSearchPanel, type EditorSearchLabels } from '../lib/editor-search-panel'
 import { baseEditorTheme, editorAppearance, neopadHighlightStyle } from '../lib/editor-theme'
 
 const props = defineProps<{
@@ -31,6 +31,7 @@ const props = defineProps<{
   backgroundColor: string
   vimMode: boolean
   vimInsertExitKey: string
+  searchLabels: EditorSearchLabels
 }>()
 
 const emit = defineEmits<{
@@ -45,6 +46,7 @@ const editable = new Compartment()
 const wrap = new Compartment()
 const appearance = new Compartment()
 const vimSupport = new Compartment()
+const searchSupport = new Compartment()
 let vimModeChangeHandler: ((event: { mode: string; subMode?: string }) => void) | null = null
 let mappedInsertExitKey = ''
 function registerNeopadVimTabMappings() {
@@ -70,7 +72,7 @@ const extensions = [
   highlightActiveLine(),
   markdown({ codeLanguages: editorCodeLanguages }),
   syntaxHighlighting(neopadHighlightStyle),
-  search({ top: true, createPanel: createNeopadSearchPanel }),
+  searchSupport.of(createSearchExtension()),
   keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
   editable.of(EditorView.editable.of(true)),
   wrap.of(props.wordWrap ? EditorView.lineWrapping : []),
@@ -133,6 +135,18 @@ watch(
   () => props.vimInsertExitKey,
   (key) => updateInsertExitMapping(key),
 )
+
+watch(
+  () => props.searchLabels,
+  () => editorView?.dispatch({ effects: searchSupport.reconfigure(createSearchExtension()) }),
+)
+
+function createSearchExtension() {
+  return search({
+    top: true,
+    createPanel: (view) => createNeopadSearchPanel(view, props.searchLabels),
+  })
+}
 
 function updateInsertExitMapping(key: string) {
   if (mappedInsertExitKey) {
@@ -307,7 +321,7 @@ function openEditorReplace() {
     const toggle = panel?.querySelector<HTMLButtonElement>('.np-find-replace-toggle')
     toggle?.setAttribute('aria-pressed', 'true')
     if (toggle) {
-      toggle.title = '隐藏替换'
+      toggle.title = props.searchLabels.hideReplace
     }
     const replaceField = editorRoot.value?.querySelector<HTMLInputElement>('.cm-search input[name="replace"]')
     replaceField?.focus()

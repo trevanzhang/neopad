@@ -27,7 +27,7 @@ pub struct AppState {
     pub workspace: Workspace,
     pub pending_external_markdown_paths: Mutex<Vec<String>>,
     pub shortcut_warnings: Mutex<Vec<String>>,
-    pub mcp_process: Mutex<Option<std::process::Child>>,
+    pub mcp_process: Mutex<Option<crate::mcp::OwnedMcpProcess>>,
     pub mcp_error: Arc<Mutex<Option<String>>>,
     pub is_quitting: AtomicBool,
     pub always_on_top: AtomicBool,
@@ -46,7 +46,6 @@ pub struct WorkspaceInfo {
     pub notes_dir: String,
     pub meta_dir: String,
     pub trash_dir: String,
-    pub backups_dir: String,
     pub config_path: String,
     pub tabs_path: String,
 }
@@ -729,7 +728,6 @@ impl From<&Workspace> for WorkspaceInfo {
             notes_dir: path_to_string(&workspace.notes_dir),
             meta_dir: path_to_string(&workspace.meta_dir),
             trash_dir: path_to_string(&workspace.trash_dir),
-            backups_dir: path_to_string(&workspace.backups_dir),
             config_path: path_to_string(&workspace.config_path),
             tabs_path: path_to_string(&workspace.tabs_path),
         }

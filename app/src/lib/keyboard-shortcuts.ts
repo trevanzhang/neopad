@@ -103,6 +103,8 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
   const workspaceClear = () => overlaysClear() && !state.menuOrContextOpen()
 
   return function handleKeydown(event: KeyboardEvent) {
+    if (event.isComposing) return
+
     if (state.modalOpen() && event.key !== 'Escape') {
       const key = event.key.toLowerCase()
       const blockedCtrl = event.ctrlKey && !event.altKey && !event.metaKey && ['tab', 'n', 'w', 'o', ','].includes(key)

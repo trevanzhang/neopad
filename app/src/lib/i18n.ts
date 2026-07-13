@@ -1,3 +1,5 @@
+import type { EditorSearchLabels } from './editor-search-panel'
+
 export type AppLanguage = 'en' | 'zh'
 
 export type AppMessages = {
@@ -26,6 +28,7 @@ export type AppMessages = {
     confirmDeleteMessage: string
     confirmArchiveMessage: string
   }
+  editorFind: EditorSearchLabels
   menu: {
     file: string
     edit: string
@@ -329,6 +332,9 @@ export type AppMessages = {
     archiveAction: string
     delete: string
     clearTrash: string
+    clearTrashTitle: string
+    clearTrashMessage: string
+    clearTrashConfirm: string
     revealInFileManager: string
     help: string
   }
@@ -409,6 +415,25 @@ export const messages: Record<AppLanguage, AppMessages> = {
       confirmDeleteTitle: 'Delete tab?',
       confirmDeleteMessage: 'Delete "{title}"? The note will be moved to Trash.',
       confirmArchiveMessage: 'Archive "{title}"? The note will be moved to Archive.',
+    },
+    editorFind: {
+      findPlaceholder: 'Find in current note',
+      previous: 'Previous match',
+      next: 'Next match',
+      selectAllMatches: 'Select all matches',
+      selectAll: 'All',
+      caseSensitive: 'Match case',
+      regexp: 'Use regular expression',
+      wholeWord: 'Match whole word',
+      showReplace: 'Show replace',
+      hideReplace: 'Hide replace',
+      replace: 'Replace',
+      close: 'Close find',
+      replacePlaceholder: 'Replace with',
+      replaceCurrent: 'Replace current match',
+      replaceAllMatches: 'Replace all matches',
+      replaceAll: 'Replace all',
+      noResults: 'No results',
     },
     menu: {
       file: 'File(F)',
@@ -713,6 +738,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       archiveAction: 'Archive',
       delete: 'Delete',
       clearTrash: 'Empty Trash',
+      clearTrashTitle: 'Empty Trash?',
+      clearTrashMessage: 'Move all notes in NeoPad Trash to the system Recycle Bin or Trash? You can restore them there.',
+      clearTrashConfirm: 'Empty Trash',
       revealInFileManager: 'Show in Explorer',
       help: 'Browse local notes, archived notes, and Trash. Ctrl-click selects individual notes; Shift-click selects a range. Right-click to manage the selection.',
     },
@@ -791,6 +819,25 @@ export const messages: Record<AppLanguage, AppMessages> = {
       confirmDeleteTitle: '\u5220\u9664\u6807\u7b7e\u9875\uff1f',
       confirmDeleteMessage: '\u786e\u5b9a\u5220\u9664\u201c{title}\u201d\u5417\uff1f\u7b14\u8bb0\u5c06\u79fb\u81f3\u56de\u6536\u7ad9\u3002',
       confirmArchiveMessage: '\u786e\u5b9a\u5f52\u6863\u201c{title}\u201d\u5417\uff1f\u7b14\u8bb0\u5c06\u79fb\u81f3\u5b58\u6863\u3002',
+    },
+    editorFind: {
+      findPlaceholder: '\u67e5\u627e\u5f53\u524d\u7b14\u8bb0',
+      previous: '\u4e0a\u4e00\u4e2a',
+      next: '\u4e0b\u4e00\u4e2a',
+      selectAllMatches: '\u9009\u62e9\u5168\u90e8\u5339\u914d',
+      selectAll: '\u5168\u90e8',
+      caseSensitive: '\u533a\u5206\u5927\u5c0f\u5199',
+      regexp: '\u4f7f\u7528\u6b63\u5219\u8868\u8fbe\u5f0f',
+      wholeWord: '\u5168\u8bcd\u5339\u914d',
+      showReplace: '\u663e\u793a\u66ff\u6362',
+      hideReplace: '\u9690\u85cf\u66ff\u6362',
+      replace: '\u66ff\u6362',
+      close: '\u5173\u95ed\u67e5\u627e',
+      replacePlaceholder: '\u66ff\u6362\u4e3a',
+      replaceCurrent: '\u66ff\u6362\u5f53\u524d\u5339\u914d',
+      replaceAllMatches: '\u66ff\u6362\u5168\u90e8\u5339\u914d',
+      replaceAll: '\u5168\u90e8\u66ff\u6362',
+      noResults: '\u65e0\u7ed3\u679c',
     },
     menu: {
       file: '\u6587\u4ef6(F)',
@@ -1095,6 +1142,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       archiveAction: '\u5b58\u6863',
       delete: '\u5220\u9664',
       clearTrash: '\u6e05\u7a7a\u56de\u6536\u7ad9',
+      clearTrashTitle: '\u6e05\u7a7a\u56de\u6536\u7ad9\uff1f',
+      clearTrashMessage: '\u8981\u5c06 NeoPad \u56de\u6536\u7ad9\u4e2d\u7684\u5168\u90e8\u7b14\u8bb0\u79fb\u81f3\u7cfb\u7edf\u56de\u6536\u7ad9\u5417\uff1f\u4ecd\u53ef\u4ece\u7cfb\u7edf\u56de\u6536\u7ad9\u6062\u590d\u3002',
+      clearTrashConfirm: '\u6e05\u7a7a\u56de\u6536\u7ad9',
       revealInFileManager: '\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u663e\u793a',
       help: '\u6d4f\u89c8\u672c\u5730\u7b14\u8bb0\u3001\u5b58\u6863\u548c\u56de\u6536\u7ad9\u3002Ctrl+\u70b9\u51fb\u53ef\u591a\u9009\uff0cShift+\u70b9\u51fb\u53ef\u8fde\u7eed\u9009\u4e2d\uff1b\u53f3\u952e\u7ba1\u7406\u5f53\u524d\u9009\u533a\u3002',
     },

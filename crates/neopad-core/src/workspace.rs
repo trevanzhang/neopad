@@ -12,7 +12,6 @@ pub struct Workspace {
     pub meta_dir: PathBuf,
     pub archive_dir: PathBuf,
     pub trash_dir: PathBuf,
-    pub backups_dir: PathBuf,
     pub config_path: PathBuf,
     pub tabs_path: PathBuf,
     pub reminders_path: PathBuf,
@@ -25,7 +24,6 @@ impl Workspace {
             meta_dir: root.join("meta"),
             archive_dir: root.join("archive"),
             trash_dir: root.join("trash"),
-            backups_dir: root.join("backups"),
             config_path: root.join("config.json"),
             tabs_path: root.join("meta").join("tabs.json"),
             reminders_path: root.join("meta").join("reminders.json"),
@@ -86,13 +84,6 @@ pub fn ensure_workspace_layout(workspace: &Workspace) -> Result<()> {
             workspace.trash_dir.display()
         )
     })?;
-    fs::create_dir_all(&workspace.backups_dir).with_context(|| {
-        format!(
-            "failed to create backups directory at {}",
-            workspace.backups_dir.display()
-        )
-    })?;
-
     write_file_if_missing(&workspace.config_path, &default_config_json(workspace)?)?;
     write_file_if_missing(&workspace.tabs_path, &default_tabs_json()?)?;
     write_file_if_missing(&workspace.reminders_path, default_reminders_json())?;
@@ -174,7 +165,6 @@ mod tests {
         assert!(workspace.meta_dir.is_dir());
         assert!(workspace.archive_dir.is_dir());
         assert!(workspace.trash_dir.is_dir());
-        assert!(workspace.backups_dir.is_dir());
         assert_eq!(
             fs::read_to_string(workspace.inbox_path()).expect("inbox"),
             "# Inbox\n\n"

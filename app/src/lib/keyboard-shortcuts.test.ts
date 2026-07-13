@@ -35,6 +35,14 @@ function keyEvent(key: string, modifiers: Partial<KeyboardEvent> = {}) {
 }
 
 describe('keyboard shortcut routing', () => {
+  it('ignores application shortcuts during IME composition', () => {
+    const { spies, handler } = harness()
+    const event = keyEvent('F2', { isComposing: true })
+    handler(event)
+    expect(spies.cycleTab).toBeUndefined()
+    expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
   it('blocks navigation shortcuts while a modal is open', () => {
     const { flags, spies, handler } = harness()
     flags.set('modalOpen', true)

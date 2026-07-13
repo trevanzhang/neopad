@@ -63,10 +63,12 @@ Markdown 文件，用户数据不需要账号，也不依赖云服务。
   meta/reminders.json 提醒投递状态
   config.json         应用设置
   trash/              删除的笔记会移动到这里
-  backups/            预留备份目录
 ```
 
-笔记正文只保存在 `notes/*.md` 中。元数据文件不会保存笔记正文。
+活动笔记正文只保存在 `notes/*.md` 中。清空 NeoPad 回收站时，Markdown
+文件会先移至操作系统回收站，再从 NeoPad 的笔记库中移除对应条目。通过
+操作系统恢复到 NeoPad `trash/` 目录的文件，会在刷新时重新出现在 NeoPad
+回收站中。元数据文件不会保存笔记正文。
 
 ## 常用快捷键
 

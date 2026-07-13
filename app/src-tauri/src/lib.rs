@@ -135,7 +135,7 @@ pub fn run() {
         }));
     }
 
-    builder
+    let app = builder
         .plugin(
             tauri_plugin_window_state::Builder::new()
                 .with_state_flags(StateFlags::POSITION)
@@ -226,8 +226,19 @@ pub fn run() {
             mcp::regenerate_mcp_token_command,
             tray::set_tray_language_command
         ])
-        .run(tauri::generate_context!())
-        .expect("failed to run NeoPad");
+        .build(tauri::generate_context!())
+        .expect("failed to build NeoPad");
+
+    app.run(|app_handle, event| {
+        if matches!(
+            event,
+            tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }
+        ) {
+            if let Err(error) = mcp::stop_owned_process(app_handle.state::<AppState>().inner()) {
+                eprintln!("failed to stop MCP service during app exit: {error:#}");
+            }
+        }
+    });
 }
 
 #[cfg(test)]

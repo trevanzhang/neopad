@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::fs;
+use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -90,23 +91,67 @@ pub fn restore_recoverable_note_write(
 }
 
 pub fn clear_trash(workspace: &Workspace) -> Result<()> {
-    for entry in fs::read_dir(&workspace.trash_dir).with_context(|| {
-        format!(
-            "failed to read trash directory {}",
-            workspace.trash_dir.display()
-        )
-    })? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            fs::remove_file(&path)
-                .with_context(|| format!("failed to remove trashed note {}", path.display()))?;
+    clear_trash_with(workspace, move_to_system_trash)
+}
+
+fn clear_trash_with<F>(workspace: &Workspace, mut move_to_trash: F) -> Result<()>
+where
+    F: FnMut(&Path) -> Result<()>,
+{
+    ensure_workspace_layout(workspace)?;
+    let mut trashed_files = fs::read_dir(&workspace.trash_dir)
+        .with_context(|| {
+            format!(
+                "failed to read trash directory {}",
+                workspace.trash_dir.display()
+            )
+        })?
+        .filter_map(|entry| match entry {
+            Ok(entry) if entry.path().is_file() => Some(Ok(entry.path())),
+            Ok(_) => None,
+            Err(error) => Some(Err(error)),
+        })
+        .collect::<std::io::Result<Vec<_>>>()?;
+    trashed_files.sort();
+
+    let mut tabs = load_tabs(workspace)?;
+    if trashed_files.is_empty() {
+        tabs.tabs.retain(|tab| !tab.deleted);
+        return save_tabs(workspace, &tabs);
+    }
+
+    let mut failures = Vec::new();
+    for source in trashed_files {
+        if let Err(error) = move_to_trash(&source) {
+            failures.push(format!("{}: {error:#}", source.display()));
         }
     }
 
-    let mut tabs = load_tabs(workspace)?;
-    tabs.tabs.retain(|tab| !tab.deleted);
-    save_tabs(workspace, &tabs)
+    let mut remaining_deleted_ids = HashSet::new();
+    for tab in tabs.tabs.iter().filter(|tab| tab.deleted) {
+        if find_trashed_note_path(workspace, &tab.file_name)?.is_some() {
+            remaining_deleted_ids.insert(tab.id.clone());
+        }
+    }
+    tabs.tabs
+        .retain(|tab| !tab.deleted || remaining_deleted_ids.contains(&tab.id));
+    save_tabs(workspace, &tabs)?;
+
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        bail!(
+            "failed to move {} trashed note(s) to the system Trash: {}",
+            failures.len(),
+            failures.join("; ")
+        )
+    }
+}
+
+fn move_to_system_trash(path: &Path) -> Result<()> {
+    trash::delete(path)
+        .map_err(anyhow::Error::msg)
+        .with_context(|| format!("failed to move {} to the system Trash", path.display()))
 }
 
 pub fn list_open_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
@@ -622,6 +667,7 @@ fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result
 
     changed |= reconcile_orphaned_notes(workspace, tabs, false)?;
     changed |= reconcile_orphaned_notes(workspace, tabs, true)?;
+    changed |= reconcile_orphaned_trashed_notes(workspace, tabs)?;
 
     let active_is_available = tabs
         .tabs
@@ -635,6 +681,101 @@ fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result
     }
 
     Ok(changed)
+}
+
+fn reconcile_orphaned_trashed_notes(workspace: &Workspace, tabs: &mut TabsState) -> Result<bool> {
+    let mut referenced = tabs
+        .tabs
+        .iter()
+        .filter(|tab| tab.deleted)
+        .map(|tab| tab.file_name.clone())
+        .collect::<HashSet<_>>();
+    let mut candidates = Vec::new();
+
+    for entry in fs::read_dir(&workspace.trash_dir).with_context(|| {
+        format!(
+            "failed to read trash directory {}",
+            workspace.trash_dir.display()
+        )
+    })? {
+        let entry = entry?;
+        let path = entry.path();
+        let Some(trashed_file_name) = path.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        let Some(original_file_name) = original_file_name_from_trashed(trashed_file_name) else {
+            continue;
+        };
+        if path.is_file()
+            && !matches!(original_file_name, "inbox.md" | "clipboard.md")
+            && note_file_path(workspace, original_file_name).is_ok()
+        {
+            candidates.push((original_file_name.to_owned(), path));
+        }
+    }
+
+    candidates.sort_by(|left, right| right.1.cmp(&left.1));
+    let mut changed = false;
+    for (file_name, path) in candidates {
+        if !referenced.insert(file_name.clone()) {
+            continue;
+        }
+
+        let content = fs::read_to_string(&path)
+            .with_context(|| format!("failed to read restored trashed note {}", path.display()))?;
+        let base_id = Path::new(&file_name)
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or("recovered")
+            .to_owned();
+        let mut id = base_id.clone();
+        let mut suffix = 1;
+        while tabs.tabs.iter().any(|tab| tab.id == id) {
+            id = format!("{base_id}-recovered-{suffix}");
+            suffix += 1;
+        }
+        let title = content
+            .lines()
+            .next()
+            .and_then(|line| line.strip_prefix("# "))
+            .filter(|title| !title.trim().is_empty())
+            .unwrap_or(&base_id)
+            .trim()
+            .to_owned();
+        let now = fs::metadata(&path)
+            .and_then(|metadata| metadata.modified())
+            .ok()
+            .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+            .map_or(now_ms()?, |duration| duration.as_millis() as i64);
+        tabs.tabs.push(NoteTab {
+            id,
+            title,
+            file_name,
+            created_at: now,
+            updated_at: now,
+            pinned: false,
+            deleted: true,
+            archived: false,
+            open: false,
+            last_opened_at: None,
+            system_title: false,
+            color: None,
+            content_revision: Some(content_revision(&content)),
+        });
+        changed = true;
+    }
+
+    Ok(changed)
+}
+
+fn original_file_name_from_trashed(file_name: &str) -> Option<&str> {
+    let remainder = file_name.strip_prefix("deleted-")?;
+    let (deleted_at, original_file_name) = remainder.split_once('-')?;
+    (!deleted_at.is_empty()
+        && deleted_at
+            .chars()
+            .all(|character| character.is_ascii_digit()))
+    .then_some(original_file_name)
 }
 
 fn reconcile_orphaned_notes(
@@ -972,13 +1113,19 @@ mod tests {
     }
 
     #[test]
-    fn clear_trash_removes_files_and_deleted_metadata() {
+    fn clear_trash_moves_files_out_of_workspace_and_removes_deleted_metadata() {
         let temp_dir = tempfile::tempdir().expect("temp dir");
         let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
         let created = create_note(&workspace, Some("Clear me".to_owned())).expect("create");
         delete_note_to_trash(&workspace, &created.id).expect("delete");
+        let system_trash = temp_dir.path().join("system-trash");
+        fs::create_dir(&system_trash).expect("system trash");
 
-        clear_trash(&workspace).expect("clear trash");
+        clear_trash_with(&workspace, |source| {
+            let target = system_trash.join(source.file_name().expect("trashed file name"));
+            fs::rename(source, target).context("fake system trash move")
+        })
+        .expect("clear trash");
 
         assert!(fs::read_dir(&workspace.trash_dir)
             .expect("trash dir")
@@ -992,6 +1139,89 @@ mod tests {
             .tabs
             .iter()
             .all(|tab| tab.id != created.id));
+        let moved_files = fs::read_dir(&system_trash)
+            .expect("system trash")
+            .map(|entry| entry.expect("moved entry").path())
+            .collect::<Vec<_>>();
+        assert_eq!(moved_files.len(), 1);
+        assert!(fs::read_to_string(&moved_files[0])
+            .expect("preserved note")
+            .contains("Clear me"));
+    }
+
+    #[test]
+    fn reconciliation_rediscovers_notes_restored_from_the_system_trash() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Restore me".to_owned())).expect("create");
+        delete_note_to_trash(&workspace, &created.id).expect("delete");
+        let system_trash = temp_dir.path().join("system-trash");
+        fs::create_dir(&system_trash).expect("system trash");
+
+        clear_trash_with(&workspace, |source| {
+            let target = system_trash.join(source.file_name().expect("trashed file name"));
+            fs::rename(source, target).context("fake system trash move")
+        })
+        .expect("clear trash");
+        assert!(list_trashed_notes(&workspace)
+            .expect("empty NeoPad trash")
+            .is_empty());
+
+        let system_trashed_path = fs::read_dir(&system_trash)
+            .expect("system trash")
+            .next()
+            .expect("system trash entry")
+            .expect("system trash file")
+            .path();
+        let restored_path = workspace
+            .trash_dir
+            .join(system_trashed_path.file_name().expect("restored file name"));
+        fs::rename(system_trashed_path, &restored_path).expect("restore from system trash");
+
+        assert!(reconcile_note_metadata(&workspace).expect("reconcile restored trash"));
+        let trashed = list_trashed_notes(&workspace).expect("list restored trash");
+        assert_eq!(trashed.len(), 1);
+        assert_eq!(trashed[0].title, "Restore me");
+        assert_eq!(trashed[0].file_name, created.file_name);
+        assert!(trashed[0].deleted);
+
+        let restored = restore_note_from_trash(&workspace, &trashed[0].id)
+            .expect("restore note through NeoPad");
+        assert_eq!(restored.file_name, created.file_name);
+        assert!(note_file_path(&workspace, &created.file_name)
+            .expect("restored note path")
+            .is_file());
+    }
+
+    #[test]
+    fn clear_trash_keeps_failed_files_and_metadata_visible() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let moved = create_note(&workspace, Some("Move me".to_owned())).expect("first note");
+        let failed = create_note(&workspace, Some("Keep me".to_owned())).expect("second note");
+        delete_note_to_trash(&workspace, &moved.id).expect("delete first");
+        delete_note_to_trash(&workspace, &failed.id).expect("delete second");
+        let failed_path = trashed_note_path(&workspace, &failed.file_name).expect("failed path");
+        let system_trash = temp_dir.path().join("system-trash");
+        fs::create_dir(&system_trash).expect("system trash");
+
+        let error = clear_trash_with(&workspace, |source| {
+            if source == failed_path {
+                bail!("simulated system Trash failure");
+            }
+            let target = system_trash.join(source.file_name().expect("trashed file name"));
+            fs::rename(source, target).context("fake system trash move")
+        })
+        .expect_err("partial failure");
+
+        assert!(error.to_string().contains("failed to move 1 trashed note"));
+        assert!(trashed_note_path(&workspace, &failed.file_name)
+            .expect("failed note remains")
+            .is_file());
+        let trashed = list_trashed_notes(&workspace).expect("list trash");
+        assert_eq!(trashed.len(), 1);
+        assert_eq!(trashed[0].id, failed.id);
+        assert!(trashed.iter().all(|tab| tab.id != moved.id));
     }
 
     #[test]

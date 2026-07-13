@@ -1,9 +1,9 @@
 use crate::{auth::Auth, protocol::Server};
 use anyhow::{Context, Result};
 use axum::{
-    body::Body,
-    extract::State,
-    http::{HeaderMap, StatusCode},
+    extract::{DefaultBodyLimit, Request, State},
+    http::StatusCode,
+    middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::post,
     Json, Router,
@@ -12,6 +12,8 @@ use neopad_core::Workspace;
 use serde_json::Value;
 use std::{net::IpAddr, sync::Arc};
 use tokio::net::TcpListener;
+
+const MAX_MCP_BODY_BYTES: usize = 2 * 1024 * 1024;
 
 #[derive(Debug, Clone)]
 pub struct ServerOptions {
@@ -46,37 +48,34 @@ pub async fn serve(workspace: Workspace, options: ServerOptions) -> Result<()> {
 }
 
 fn app(workspace: Workspace, token: String) -> Router {
+    let state = AppState {
+        auth: Auth::new(token),
+        server: Arc::new(Server::new(workspace)),
+    };
     Router::new()
         .route("/mcp", post(handle_mcp))
-        .with_state(AppState {
-            auth: Auth::new(token),
-            server: Arc::new(Server::new(workspace)),
-        })
+        .route_layer(middleware::from_fn_with_state(
+            state.auth.clone(),
+            require_auth,
+        ))
+        .layer(DefaultBodyLimit::max(MAX_MCP_BODY_BYTES))
+        .with_state(state)
 }
 
-async fn handle_mcp(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Json(request): Json<Value>,
-) -> Response {
-    if let Err(error) = state.auth.validate(&headers) {
+async fn require_auth(State(auth): State<Auth>, request: Request, next: Next) -> Response {
+    if let Err(error) = auth.validate(request.headers()) {
         return error.into_response();
     }
+    next.run(request).await
+}
 
+async fn handle_mcp(State(state): State<AppState>, Json(request): Json<Value>) -> Response {
     let response = state.server.handle_request(request);
     if response.is_null() {
         StatusCode::ACCEPTED.into_response()
     } else {
         Json(response).into_response()
     }
-}
-
-#[allow(dead_code)]
-fn plain(status: StatusCode, message: &'static str) -> Response<Body> {
-    Response::builder()
-        .status(status)
-        .body(Body::from(message))
-        .expect("response")
 }
 
 #[cfg(test)]
@@ -130,6 +129,35 @@ mod tests {
         let response = app.oneshot(request).await.expect("response");
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn authentication_runs_before_json_body_parsing() {
+        let (_temp, app) = test_app();
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri("/mcp")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from("not-json"))
+            .expect("request");
+        let response = app.oneshot(request).await.expect("response");
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn authenticated_malformed_json_is_rejected_as_bad_request() {
+        let (_temp, app) = test_app();
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri("/mcp")
+            .header(header::CONTENT_TYPE, "application/json")
+            .header(header::AUTHORIZATION, "Bearer secret")
+            .body(Body::from("not-json"))
+            .expect("request");
+        let response = app.oneshot(request).await.expect("response");
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]

@@ -13,7 +13,27 @@ import type { Panel } from '@codemirror/view'
 import type { EditorView } from '@codemirror/view'
 import type { EditorState } from '@codemirror/state'
 
-export function createNeopadSearchPanel(view: EditorView): Panel {
+export interface EditorSearchLabels {
+  findPlaceholder: string
+  previous: string
+  next: string
+  selectAllMatches: string
+  selectAll: string
+  caseSensitive: string
+  regexp: string
+  wholeWord: string
+  showReplace: string
+  hideReplace: string
+  replace: string
+  close: string
+  replacePlaceholder: string
+  replaceCurrent: string
+  replaceAllMatches: string
+  replaceAll: string
+  noResults: string
+}
+
+export function createNeopadSearchPanel(view: EditorView, labels: EditorSearchLabels): Panel {
   const dom = document.createElement('div')
   dom.className = 'cm-search np-find-panel'
 
@@ -22,8 +42,8 @@ export function createNeopadSearchPanel(view: EditorView): Panel {
   const searchField = document.createElement('input')
   searchField.type = 'search'
   searchField.name = 'search'
-  searchField.placeholder = '查找当前笔记'
-  searchField.setAttribute('aria-label', '查找当前笔记')
+  searchField.placeholder = labels.findPlaceholder
+  searchField.setAttribute('aria-label', labels.findPlaceholder)
   searchField.setAttribute('main-field', 'true')
 
   const countLabel = document.createElement('span')
@@ -32,20 +52,20 @@ export function createNeopadSearchPanel(view: EditorView): Panel {
 
   const nav = document.createElement('div')
   nav.className = 'np-find-nav'
-  const previousButton = findButton('上一个', '↑', () => findPrevious(view))
-  const nextButton = findButton('下一个', '↓', () => findNext(view))
-  const allButton = findButton('选择全部匹配', '全部', () => selectMatches(view))
+  const previousButton = findButton(labels.previous, '↑', () => findPrevious(view))
+  const nextButton = findButton(labels.next, '↓', () => findNext(view))
+  const allButton = findButton(labels.selectAllMatches, labels.selectAll, () => selectMatches(view))
   allButton.classList.add('np-find-action')
   nav.append(previousButton, nextButton, allButton)
 
   const options = document.createElement('div')
   options.className = 'np-find-options'
-  const caseButton = toggleButton('区分大小写', 'Aa')
-  const regexpButton = toggleButton('使用正则表达式', '.*')
-  const wordButton = toggleButton('全词匹配', '词')
+  const caseButton = toggleButton(labels.caseSensitive, 'Aa')
+  const regexpButton = toggleButton(labels.regexp, '.*')
+  const wordButton = toggleButton(labels.wholeWord, 'W')
   options.append(caseButton.button, regexpButton.button, wordButton.button)
 
-  const replaceToggle = findButton('显示替换', '替换', () => {
+  const replaceToggle = findButton(labels.showReplace, labels.replace, () => {
     const nextOpen = !dom.classList.contains('is-replace-open')
     setReplaceOpen(nextOpen)
     if (nextOpen) {
@@ -57,7 +77,7 @@ export function createNeopadSearchPanel(view: EditorView): Panel {
   replaceToggle.classList.add('np-find-replace-toggle')
   replaceToggle.setAttribute('aria-pressed', 'false')
 
-  const closeButton = findButton('关闭查找', '×', () => closeSearchPanel(view))
+  const closeButton = findButton(labels.close, '×', () => closeSearchPanel(view))
   closeButton.classList.add('np-find-close')
   const actions = document.createElement('div')
   actions.className = 'np-find-actions'
@@ -69,11 +89,11 @@ export function createNeopadSearchPanel(view: EditorView): Panel {
   const replaceField = document.createElement('input')
   replaceField.type = 'text'
   replaceField.name = 'replace'
-  replaceField.placeholder = '替换为'
-  replaceField.setAttribute('aria-label', '替换为')
-  const replaceOneButton = findButton('替换当前匹配', '替换', () => replaceNext(view))
+  replaceField.placeholder = labels.replacePlaceholder
+  replaceField.setAttribute('aria-label', labels.replacePlaceholder)
+  const replaceOneButton = findButton(labels.replaceCurrent, labels.replace, () => replaceNext(view))
   replaceOneButton.classList.add('np-find-action')
-  const replaceAllButton = findButton('替换全部匹配', '全部替换', () => replaceAll(view))
+  const replaceAllButton = findButton(labels.replaceAllMatches, labels.replaceAll, () => replaceAll(view))
   replaceAllButton.classList.add('np-find-action')
   replaceRow.append(replaceField, replaceOneButton, replaceAllButton)
   dom.append(findRow, replaceRow)
@@ -84,7 +104,7 @@ export function createNeopadSearchPanel(view: EditorView): Panel {
       countLabel.textContent = ''
       countLabel.classList.add('is-empty')
     } else if (total === 0) {
-      countLabel.textContent = '无结果'
+      countLabel.textContent = labels.noResults
       countLabel.classList.remove('is-empty')
     } else {
       countLabel.textContent = `${active}/${total}`
@@ -114,7 +134,7 @@ export function createNeopadSearchPanel(view: EditorView): Panel {
   const setReplaceOpen = (open: boolean) => {
     dom.classList.toggle('is-replace-open', open)
     replaceToggle.setAttribute('aria-pressed', String(open))
-    replaceToggle.title = open ? '隐藏替换' : '显示替换'
+    replaceToggle.title = open ? labels.hideReplace : labels.showReplace
   }
 
   searchField.addEventListener('input', commit)

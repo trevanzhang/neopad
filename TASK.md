@@ -88,6 +88,10 @@ Implemented MVP capabilities:
   `meta/reminders.json`. Reminder content must remain in `notes/*.md`; the
   reminder metadata file stores notification delivery state only.
 - Delete operations move notes into `trash/`.
+- Emptying Trash moves its Markdown files into the operating system's Recycle
+  Bin or Trash before removing deleted-tab metadata; it must not unlink note
+  files. Files restored by the operating system must be rediscovered on the
+  next metadata reconciliation.
 - Core filesystem access must go through `neopad-core`.
 - Paths must be validated so callers cannot escape the configured workspace.
 - Atomic writes must be preserved. If Windows leaves a failed note-write
@@ -102,6 +106,8 @@ Implemented MVP capabilities:
 - `neopad-mcp` communicates over local Streamable HTTP at `/mcp`.
 - The service is off by default and binds to `127.0.0.1` by default.
 - Bearer token authentication is required for HTTP requests.
+- Authentication must run before request-body parsing, and request bodies must
+  remain bounded.
 - Desktop-managed bearer tokens must be passed through the child environment,
   not command-line arguments.
 - Browser-originated requests must pass local Origin validation.

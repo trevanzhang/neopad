@@ -6,6 +6,26 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+### Changed
+
+- Emptying NeoPad's Trash now asks for confirmation and moves Markdown files
+  to the operating system's Recycle Bin or Trash instead of maintaining a
+  second application backup directory. Files restored by the operating system
+  are rediscovered in NeoPad's Trash on refresh.
+- Localized the current-note find and replace panel so its controls follow the
+  selected application language.
+
+### Fixed
+
+- Prevented an older global-search request from replacing results returned by
+  a newer query.
+- Ignored application shortcuts during IME composition and disposed frontend
+  listeners and composable state when the application view is unmounted.
+- Required MCP bearer authentication before JSON parsing, limited request
+  bodies to 2 MiB, and kept malformed-request responses consistent.
+- Ensured the desktop-owned MCP sidecar is stopped and reaped when disabled or
+  when the desktop application exits.
+
 ## 0.5.2 - 2026-07-13
 
 ### Added

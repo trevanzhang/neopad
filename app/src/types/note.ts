@@ -39,7 +39,6 @@ export type WorkspaceInfo = {
   notesDir: string
   metaDir: string
   trashDir: string
-  backupsDir: string
   configPath: string
   tabsPath: string
 }

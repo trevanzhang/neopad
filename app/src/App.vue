@@ -445,6 +445,17 @@ onMounted(async () => {
   await startReminderPolling()
 })
 
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown, true)
+  window.removeEventListener('beforeunload', forceSaveOnExit)
+  document.removeEventListener('visibilitychange', forceSaveOnHide)
+  disposeReminderState()
+  disposeNativeSettings()
+  disposeSearchState()
+  disposeDocumentSession()
+  disposeWindowLifecycle()
+})
+
 async function recoverPendingNoteWrites() {
   try {
     const recoveries = await listRecoverableNoteWrites()
@@ -778,10 +789,18 @@ async function restoreTrashedLibraryNotes(notes: NoteTab[]) {
 
 async function clearLibraryTrash() {
   try {
+    const confirmed = await requestConfirmation(
+      t.value.library.clearTrashTitle,
+      t.value.library.clearTrashMessage,
+      t.value.library.clearTrashConfirm,
+      true,
+    )
+    if (!confirmed) return
     if (isTauriRuntime()) await clearTrash()
     else tabs.value = tabs.value.filter((tab) => !tab.deleted)
     await refreshNoteLibrary()
   } catch {
+    await refreshNoteLibrary().catch(() => undefined)
     saveState.value = 'Failed'
   }
 }
@@ -1347,6 +1366,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         :background-color="effectiveEditorBackground"
         :vim-mode="vimMode"
         :vim-insert-exit-key="vimInsertExitKey"
+        :search-labels="t.editorFind"
         @vim-mode-change="activeVimMode = $event"
         @vim-tab-switch="cycleTab"
       />
