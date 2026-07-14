@@ -30,6 +30,7 @@ function keyEvent(key: string, modifiers: Partial<KeyboardEvent> = {}) {
     target: null,
     preventDefault: vi.fn(),
     stopPropagation: vi.fn(),
+    stopImmediatePropagation: vi.fn(),
     ...modifiers,
   } as unknown as KeyboardEvent
 }
@@ -172,6 +173,17 @@ describe('keyboard shortcut routing', () => {
     flags.set('nativeRuntime', true)
     handler(keyEvent('Escape'))
     expect(spies[actionKey]).toHaveBeenCalledOnce()
+    expect(spies.hideMainWindow).toBeUndefined()
+  })
+
+  it('stops other window listeners after Escape closes help', () => {
+    const { flags, spies, handler } = harness()
+    flags.set('helpOpen', true)
+    flags.set('nativeRuntime', true)
+    const event = keyEvent('Escape')
+    handler(event)
+    expect(spies.closeHelp).toHaveBeenCalledOnce()
+    expect(event.stopImmediatePropagation).toHaveBeenCalledOnce()
     expect(spies.hideMainWindow).toBeUndefined()
   })
 

@@ -27,6 +27,13 @@ export function baseEditorTheme() {
     '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--np-muted)', border: '0' },
     '.cm-activeLine': { backgroundColor: 'transparent' },
     '.cm-focused': { outline: '0' },
+    '.cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
+      backgroundColor: 'var(--np-selection) !important',
+    },
+    '.cm-content ::selection': {
+      color: 'var(--np-selection-text)',
+      backgroundColor: 'var(--np-selection)',
+    },
     '.cm-fat-cursor': {
       backgroundColor: 'var(--np-vim-cursor) !important',
       color: 'var(--np-vim-cursor-text) !important',

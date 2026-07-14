@@ -148,6 +148,7 @@ export type AppMessages = {
     settings: string
     f1: string
     softwareHelp: string
+    aiGuide: string
     markdownGuide: string
     shortcutList: string
     expressionGuide: string
@@ -319,6 +320,10 @@ export type AppMessages = {
     inserted: string
     replaced: string
     shortcutHint: string
+    selectionActions: string
+    selectionPolish: string
+    selectionSummarize: string
+    selectionTranslate: string
     polishCommand: string
     summarizeCommand: string
     translateCommand: string
@@ -616,6 +621,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       settings: 'Settings',
       f1: 'F1',
       softwareHelp: 'Software Help(R)...',
+      aiGuide: 'AI Collaboration Guide(A)...',
       markdownGuide: 'Markdown Quick Guide(M)...',
       shortcutList: 'Shortcut List(S)...',
       expressionGuide: 'Expression Guide(E)...',
@@ -787,14 +793,18 @@ export const messages: Record<AppLanguage, AppMessages> = {
       inserted: 'AI result inserted',
       replaced: 'AI context replaced',
       shortcutHint: 'Ctrl+K',
+      selectionActions: 'AI actions for selection',
+      selectionPolish: 'Polish',
+      selectionSummarize: 'Summarize',
+      selectionTranslate: 'Translate',
       polishCommand: 'Polish',
       summarizeCommand: 'Summarize the current context',
       translateCommand: 'Translate the current context',
       continueCommand: 'Continue writing',
-      polishPrompt: 'Polish this text for clarity, fluency, and consistency while preserving its meaning and Markdown structure. Return only the polished text.',
-      summarizePrompt: 'Summarize this text concisely in Markdown.',
-      translatePrompt: 'Detect whether this text is primarily Chinese or English. Translate Chinese into natural English and English into natural Chinese. Return only the translation.',
-      continuePrompt: 'Continue this text naturally in the same tone and format. Return only the continuation.',
+      polishPrompt: 'Use <note_reference> only to understand tone and terminology. Polish only <operation_target> for clarity, fluency, and consistency while preserving its meaning and Markdown structure. Return only the polished target text.',
+      summarizePrompt: 'Summarize only <operation_target> concisely in Markdown. Return only the summary.',
+      translatePrompt: 'Use <note_reference> only to understand context and terminology. Translate only <operation_target>: Chinese into natural English, or English into natural Chinese. Return only the translated target text.',
+      continuePrompt: 'Use <note_reference> to understand the whole note. Continue naturally at <insertion_point>, following the tone and format of <operation_target>. Return only the new text to insert.',
       inlineEmptyContext: 'There is no text here for this command.',
       inlineFailed: 'AI command failed',
     },
@@ -1082,6 +1092,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       settings: '\u8bbe\u7f6e',
       f1: 'F1',
       softwareHelp: '\u8f6f\u4ef6\u8bf4\u660e(R)...',
+      aiGuide: 'AI \u534f\u4f5c\u6307\u5357(A)...',
       markdownGuide: 'Markdown \u7b80\u660e\u6307\u5357(M)...',
       shortcutList: '\u5feb\u6377\u952e\u5217\u8868(S)...',
       expressionGuide: '\u8868\u8fbe\u5f0f\u8ba1\u7b97\u6307\u5357(E)...',
@@ -1253,14 +1264,18 @@ export const messages: Record<AppLanguage, AppMessages> = {
       inserted: '已插入 AI 结果',
       replaced: '已替换 AI 上下文',
       shortcutHint: 'Ctrl+K',
+      selectionActions: 'AI 处理选中文字',
+      selectionPolish: '润色',
+      selectionSummarize: '总结',
+      selectionTranslate: '翻译',
       polishCommand: '润色',
       summarizeCommand: '总结当前上下文',
       translateCommand: '翻译当前上下文',
       continueCommand: '继续写作',
-      polishPrompt: '在保留原意和 Markdown 结构的前提下润色这段文字，使表达清晰、流畅且风格一致。只返回润色后的正文。',
-      summarizePrompt: '用简洁的 Markdown 总结这段内容。',
-      translatePrompt: '判断文本的主要语言：中文翻译为自然英文，英文翻译为自然中文。只返回译文。',
-      continuePrompt: '使用相同语气和格式自然续写。只返回续写内容。',
+      polishPrompt: '仅将 <note_reference> 用于理解语气和术语。只润色 <operation_target>，在保留原意和 Markdown 结构的前提下使表达清晰、流畅且风格一致。只返回润色后的目标文本。',
+      summarizePrompt: '只总结 <operation_target>，使用简洁的 Markdown。只返回总结结果。',
+      translatePrompt: '仅将 <note_reference> 用于理解语境和术语。只翻译 <operation_target>：中文译为自然英文，英文译为自然中文。只返回目标文本的译文。',
+      continuePrompt: '使用 <note_reference> 理解整篇笔记，在 <insertion_point> 处自然续写，并延续 <operation_target> 的语气和格式。只返回需要插入的新内容。',
       inlineEmptyContext: '当前位置没有可供处理的文本。',
       inlineFailed: 'AI 处理失败',
     },

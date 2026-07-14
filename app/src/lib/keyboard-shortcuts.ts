@@ -98,6 +98,7 @@ function plainKey(event: KeyboardEvent, key: string) {
 function consume(event: KeyboardEvent, action?: () => void) {
   event.preventDefault()
   event.stopPropagation()
+  event.stopImmediatePropagation()
   action?.()
 }
 

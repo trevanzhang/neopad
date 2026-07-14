@@ -11,7 +11,8 @@
 }
 
 ::selection {
-  background: var(--np-accent-soft);
+  color: var(--np-selection-text);
+  background: var(--np-selection);
 }
 
 @media (prefers-reduced-motion: reduce) {

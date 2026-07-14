@@ -202,6 +202,13 @@ then the result is applied directly as one undoable transaction. A replacement
 first checks that its mapped source text still matches the captured text. Note
 switches and `Esc` cancel pending commands.
 
+Inline AI plans keep the editable target separate from request context. The
+target remains a selection, paragraph, or note range used for guarded writeback.
+Continue, polish, and translate additionally send a bounded current-note
+reference: full text for ordinary notes, or the note opening plus a target-local
+window for long notes. This improves tone and terminology consistency without
+broadening the range that AI may replace.
+
 The Rust shell validates the configured URL, refuses remote plain HTTP,
 disables redirects, bounds responses, and calls the configured
 `/chat/completions` endpoint. Non-secret provider settings are stored in

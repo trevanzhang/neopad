@@ -58,7 +58,7 @@ const emit = defineEmits<{
   windowOpacity: []
   reminderList: []
   processText: [action: string]
-  helpTopic: [topic: 'software' | 'markdown' | 'shortcuts' | 'expression' | 'about']
+  helpTopic: [topic: 'software' | 'ai' | 'markdown' | 'shortcuts' | 'expression' | 'about']
   cycleEditorMode: []
 }>()
 
@@ -450,6 +450,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
       <button type="button" class="menu-title">{{ messages.help }}</button>
       <div class="menu-popover">
         <button type="button" @click="$emit('helpTopic', 'software')">{{ messages.softwareHelp }}</button>
+        <button type="button" @click="$emit('helpTopic', 'ai')">{{ messages.aiGuide }}</button>
         <button type="button" class="menu-command" @click="$emit('helpTopic', 'shortcuts')">
           <span>{{ messages.shortcutList }}</span>
           <span class="menu-shortcut">{{ messages.f1 }}</span>

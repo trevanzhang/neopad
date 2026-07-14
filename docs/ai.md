@@ -1,5 +1,8 @@
 # AI collaboration
 
+The same workflow is available inside NeoPad from **Help > AI Collaboration
+Guide**.
+
 NeoPad includes optional, user-initiated AI collaboration inside the editor.
 It combines a lightweight note chat opened with `Ctrl+K` and independent
 one-shot editing commands opened with `//`. It does not add a permanent chat
@@ -67,11 +70,21 @@ same trigger. A single `/` or `、` has no AI behavior. The focused command set 
 - `//summarize`
 - `//translate`
 
+Right-click a text selection to polish, summarize, or translate that exact
+selection without typing a Slash command.
+
 These commands are separate from `Ctrl+K` chat: they do not use chat history,
 the prompt library, or all-note context. Polish and translate target the
 selection or nearby paragraph. Summarize targets the selection or current
 note. Continue uses the nearby paragraph. Translation defaults to automatic
 Chinese-English switching.
+
+The operation target and model reference context are separate. Continue,
+polish, and translate keep their precise paragraph or selection write range,
+while the model also receives the current note as read-only reference context.
+Ordinary notes are included in full. Long notes keep the opening and a window
+around the operation target, with omitted sections marked explicitly. Summarize
+continues to use the complete note as its operation target.
 
 Completion does not activate inside Markdown code nodes, URLs, paths, longer
 slash runs, or ordinary single-slash text. Selecting a command removes its

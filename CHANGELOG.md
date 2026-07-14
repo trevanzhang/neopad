@@ -8,6 +8,16 @@ patch versions are reserved for compatible fixes.
 
 ### Added
 
+- Added a selection-aware editor context menu with standard clipboard actions
+  and direct AI polish, summarize, and translate commands.
+- Added an in-app AI collaboration guide covering setup, quick commands,
+  selection actions, note chat, prompt files, and privacy boundaries.
+- Rebuilt the in-app Software Help as a structured product overview covering
+  notes, editing, search, reminders, capture, export, AI, MCP, data safety, and
+  NeoPad's deliberately lightweight scope.
+- Expanded the Markdown and Expression guides into grouped reference tables
+  with NeoPad-specific rendering syntax, calculation examples, and clear
+  behavior boundaries.
 - Added optional inline AI editing with secure OpenAI-compatible provider
   settings, a compact `Ctrl+K` note chat, in-memory per-note sessions, reusable
   Markdown prompts, bounded all-note context search, explicit chat result
@@ -16,6 +26,11 @@ patch versions are reserved for compatible fixes.
   translation.
 
 ### Changed
+
+- Reorganized the in-app shortcut reference into grouped tables with clearer
+  descriptions and the current shortcut set.
+- Slash commands now separate their precise edit target from current-note
+  reference context, using bounded target-aware context for long notes.
 
 - Emptying NeoPad's Trash now asks for confirmation and moves Markdown files
   to the operating system's Recycle Bin or Trash instead of maintaining a
@@ -26,6 +41,9 @@ patch versions are reserved for compatible fixes.
 
 ### Fixed
 
+- Prevented Escape from hiding the NeoPad window after closing an open Help
+  dialog, including when duplicate same-target listeners exist during hot reload.
+- Improved text-selection contrast in both light and dark editor themes.
 - Prevented an older global-search request from replacing results returned by
   a newer query.
 - Ignored application shortcuts during IME composition and disposed frontend

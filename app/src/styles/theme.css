@@ -6,6 +6,8 @@
   --np-text: #1d2733;
   --np-accent: #2b65c8;
   --np-accent-soft: #d9e8ff;
+  --np-selection: #b9d5ff;
+  --np-selection-text: #14233a;
   --np-shadow: 0 18px 46px rgba(22, 34, 51, 0.18);
   --np-shadow-panel: 0 4px 16px rgba(15, 23, 42, 0.12);
   --np-window: #ffffff;
@@ -51,6 +53,8 @@
   --np-text: #e7eaf0;
   --np-accent: #5b8def;
   --np-accent-soft: #293d66;
+  --np-selection: #365a88;
+  --np-selection-text: #f5f8ff;
   --np-shadow: 0 18px 46px rgba(0, 0, 0, 0.5);
   --np-shadow-panel: 0 4px 16px rgba(0, 0, 0, 0.4);
   --np-window: #1b1e23;

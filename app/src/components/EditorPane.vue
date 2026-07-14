@@ -17,7 +17,7 @@ import {
   highlightActiveLine,
   keymap,
 } from '@codemirror/view'
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { evaluateExpressionLine, formatCalculationResult } from '../lib/editor-calculation'
 import { editorCodeLanguages } from '../lib/editor-code-languages'
 import { createNeopadSearchPanel, type EditorSearchLabels } from '../lib/editor-search-panel'
@@ -44,6 +44,16 @@ const props = defineProps<{
   vimInsertExitKey: string
   searchLabels: EditorSearchLabels
   aiSlashLabels: AiSlashLabels
+  contextMenuLabels: {
+    cut: string
+    copy: string
+    paste: string
+    selectAll: string
+    aiActions: string
+    polish: string
+    summarize: string
+    translate: string
+  }
 }>()
 
 const emit = defineEmits<{
@@ -54,6 +64,10 @@ const emit = defineEmits<{
 
 const model = defineModel<string>({ required: true })
 const editorRoot = ref<HTMLDivElement | null>(null)
+const contextMenuElement = ref<HTMLElement | null>(null)
+const aiSubmenuTrigger = ref<HTMLButtonElement | null>(null)
+const aiSubmenuOpen = ref(false)
+const contextMenu = ref<{ x: number; y: number; openSubmenuLeft: boolean } | null>(null)
 let editorView: EditorView | null = null
 const editable = new Compartment()
 const wrap = new Compartment()
@@ -123,11 +137,15 @@ onMounted(() => {
   connectVimModeListener()
   editorRoot.value.addEventListener('neopad-vim-tab-switch', handleVimTabSwitch)
   editorRoot.value.addEventListener('neopad-ai-command', handleAiCommand)
+  window.addEventListener('pointerdown', closeContextMenu)
+  window.addEventListener('keydown', handleContextMenuKeydown, { capture: true })
 })
 
 onBeforeUnmount(() => {
   editorRoot.value?.removeEventListener('neopad-vim-tab-switch', handleVimTabSwitch)
   editorRoot.value?.removeEventListener('neopad-ai-command', handleAiCommand)
+  window.removeEventListener('pointerdown', closeContextMenu)
+  window.removeEventListener('keydown', handleContextMenuKeydown, { capture: true })
   disconnectVimModeListener()
   updateInsertExitMapping('')
   editorView?.destroy()
@@ -141,6 +159,98 @@ function handleVimTabSwitch(event: Event) {
 
 function handleAiCommand(event: Event) {
   emit('aiCommand', (event as CustomEvent<AiInlineCommandName>).detail)
+}
+
+function openContextMenu(event: MouseEvent) {
+  if (!editorView) return
+  const selection = editorView.state.selection.main
+  const position = editorView.posAtCoords({ x: event.clientX, y: event.clientY })
+  if (selection.empty || position === null || position < selection.from || position > selection.to) {
+    contextMenu.value = null
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+  aiSubmenuOpen.value = false
+  const x = Math.max(4, Math.min(event.clientX, window.innerWidth - 212))
+  contextMenu.value = {
+    x,
+    y: Math.max(4, Math.min(event.clientY, window.innerHeight - 240)),
+    openSubmenuLeft: x + 384 > window.innerWidth && x >= 180,
+  }
+  void nextTick(() => contextMenuElement.value?.querySelector<HTMLButtonElement>('button')?.focus())
+}
+
+function closeContextMenu(event?: Event) {
+  if (event && contextMenuElement.value?.contains(event.target as Node)) return
+  contextMenu.value = null
+  aiSubmenuOpen.value = false
+}
+
+function handleContextMenuKeydown(event: KeyboardEvent) {
+  if (!contextMenu.value || !contextMenuElement.value) return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    contextMenu.value = null
+    aiSubmenuOpen.value = false
+    editorView?.focus()
+    return
+  }
+  if (event.key === 'ArrowRight' && document.activeElement === aiSubmenuTrigger.value) {
+    event.preventDefault()
+    openAiSubmenu(true)
+    return
+  }
+  const activeElement = document.activeElement as HTMLElement | null
+  const submenu = activeElement?.closest<HTMLElement>('.editor-context-submenu')
+  if (event.key === 'ArrowLeft' && submenu) {
+    event.preventDefault()
+    aiSubmenuOpen.value = false
+    void nextTick(() => aiSubmenuTrigger.value?.focus())
+    return
+  }
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+
+  const activeMenu = activeElement?.closest<HTMLElement>('[role="menu"]') ?? contextMenuElement.value
+  const selector = activeMenu.classList.contains('editor-context-submenu')
+    ? ':scope > button:not(:disabled)'
+    : ':scope > button:not(:disabled), :scope > .editor-context-ai-menu > button:not(:disabled)'
+  const items = Array.from(activeMenu.querySelectorAll<HTMLButtonElement>(selector))
+  if (!items.length) return
+  event.preventDefault()
+  const current = items.indexOf(document.activeElement as HTMLButtonElement)
+  const next = event.key === 'Home'
+    ? 0
+    : event.key === 'End'
+      ? items.length - 1
+      : event.key === 'ArrowDown'
+        ? (current + 1 + items.length) % items.length
+        : (current - 1 + items.length) % items.length
+  items[next]?.focus()
+}
+
+function openAiSubmenu(focusFirst = false) {
+  aiSubmenuOpen.value = true
+  if (focusFirst) {
+    void nextTick(() => contextMenuElement.value
+      ?.querySelector<HTMLButtonElement>('.editor-context-submenu > button')
+      ?.focus())
+  }
+}
+
+async function runContextAction(action: 'cut' | 'copy' | 'paste' | 'select-all' | AiInlineCommandName) {
+  contextMenu.value = null
+  aiSubmenuOpen.value = false
+  if (action === 'cut') await cutSelection()
+  else if (action === 'copy') await copySelection()
+  else if (action === 'paste') await pasteClipboard()
+  else if (action === 'select-all') selectAllText()
+  else {
+    editorView?.focus()
+    emit('aiCommand', action)
+  }
 }
 
 watch(
@@ -558,6 +668,71 @@ defineExpose({
 
 <template>
   <section class="editor-pane" :aria-label="`${title} editor`">
-    <div ref="editorRoot" class="code-editor" role="textbox" aria-label="Markdown note editor" />
+    <div
+      ref="editorRoot"
+      class="code-editor"
+      role="textbox"
+      aria-label="Markdown note editor"
+      @contextmenu="openContextMenu"
+    />
+    <div
+      v-if="contextMenu"
+      ref="contextMenuElement"
+      class="editor-context-menu"
+      role="menu"
+      :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
+      @contextmenu.prevent
+    >
+      <button type="button" role="menuitem" @click="runContextAction('copy')">
+        <span>{{ contextMenuLabels.copy }}</span>
+        <span class="editor-context-shortcut">Ctrl+C</span>
+      </button>
+      <button type="button" role="menuitem" @click="runContextAction('cut')">
+        <span>{{ contextMenuLabels.cut }}</span>
+        <span class="editor-context-shortcut">Ctrl+X</span>
+      </button>
+      <button type="button" role="menuitem" @click="runContextAction('paste')">
+        <span>{{ contextMenuLabels.paste }}</span>
+        <span class="editor-context-shortcut">Ctrl+V</span>
+      </button>
+      <button type="button" role="menuitem" @click="runContextAction('select-all')">
+        <span>{{ contextMenuLabels.selectAll }}</span>
+        <span class="editor-context-shortcut">Ctrl+A</span>
+      </button>
+      <div class="menu-separator" role="separator" />
+      <div
+        class="editor-context-ai-menu"
+        @pointerenter="openAiSubmenu()"
+        @pointerleave="aiSubmenuOpen = false"
+      >
+        <button
+          ref="aiSubmenuTrigger"
+          type="button"
+          role="menuitem"
+          aria-haspopup="menu"
+          :aria-expanded="aiSubmenuOpen"
+          @click="openAiSubmenu(true)"
+        >
+          <span>{{ contextMenuLabels.aiActions }}</span>
+          <span class="editor-context-arrow" aria-hidden="true">›</span>
+        </button>
+        <div
+          v-if="aiSubmenuOpen"
+          class="editor-context-submenu"
+          :class="{ left: contextMenu.openSubmenuLeft }"
+          role="menu"
+        >
+          <button type="button" role="menuitem" @click="runContextAction('polish')">
+            {{ contextMenuLabels.polish }}
+          </button>
+          <button type="button" role="menuitem" @click="runContextAction('summarize')">
+            {{ contextMenuLabels.summarize }}
+          </button>
+          <button type="button" role="menuitem" @click="runContextAction('translate')">
+            {{ contextMenuLabels.translate }}
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>

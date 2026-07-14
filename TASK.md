@@ -82,7 +82,15 @@ Implemented MVP capabilities:
 - Optional AI collaboration with a compact `Ctrl+K` note chat and independent
   `//` continue, polish, summarize, and Chinese-English translation commands.
   Selecting a `//` command applies generated Markdown as one undoable edit;
-  chat results remain explicit insert, replace, or copy actions.
+  chat results remain explicit insert, replace, or copy actions. Right-clicking
+  an editor selection exposes direct polish, summarize, and translate actions.
+  The Help menu documents setup, all three entry points, prompts, and privacy.
+- Structured in-app Software Help that introduces NeoPad's product direction,
+  core note workflows, editor and search tools, capture and export paths,
+  reminders, AI and MCP boundaries, and local-first data guarantees.
+- Grouped in-app Markdown and expression references that document supported
+  rendering syntax, NeoPad reminders, calculation operators, examples, and
+  unsupported expression behavior.
 - Windows MSI packaging with branded installer assets.
 
 ## Data Rules
@@ -134,6 +142,9 @@ Implemented MVP capabilities:
 - AI chat responses must not modify a note automatically. Selecting a `//`
   quick command is the explicit action that authorizes one undoable insert or
   replacement transaction.
+- Slash command write ranges remain selection/paragraph scoped, while the
+  current note is provided as read-only model context; long note references are
+  bounded around the operation target.
 - Replacements must verify that their captured source text is still current.
 - `Ctrl+K` conversations are kept in memory per note and never persisted.
 - Whole-workspace context uses local text relevance search and sends only a

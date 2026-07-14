@@ -56,7 +56,7 @@ import { editorBackgroundForTheme } from './lib/theme'
 import { normalizeShortcutInput } from './lib/shortcut'
 import { downloadText, renderInsertTemplate, safeFileName, titleFromFileName } from './lib/document-utils'
 import { transformText } from './lib/text-transform'
-import { getHelpContent, type HelpTopic } from './lib/help-content'
+import { getHelpContent, getReferenceHelp, getShortcutHelpGroups, type HelpTopic } from './lib/help-content'
 import { createKeyboardHandler, isEditableElement } from './lib/keyboard-shortcuts'
 import { createAiInlinePlan, type AiInlinePlan } from './lib/ai-inline-command'
 import { isCurrentAiRequest } from './lib/ai-request-state'
@@ -355,7 +355,7 @@ const {
 })
 const handleKeydown = createKeyboardHandler({
   state: {
-    modalOpen: () => Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value || aiPanelSession.value || aiInlineSession.value),
+    modalOpen: () => Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value || aiPanelSession.value || aiInlineSession.value || helpTopic.value),
     reminderDialogOpen: () => reminderDialogOpen.value,
     reminderListOpen: () => reminderListOpen.value,
     archiveListOpen: () => archiveListOpen.value,
@@ -373,7 +373,7 @@ const handleKeydown = createKeyboardHandler({
     vimNormalMode: () => activeVimMode.value === 'normal',
     editorFocused: () => Boolean(editorPane.value?.isEditorFocused()),
     editableTarget: isEditableElement,
-    menuOrContextOpen: () => Boolean(document.querySelector('.menu-root:focus-within, .tab-context-menu')),
+    menuOrContextOpen: () => Boolean(document.querySelector('.menu-root:focus-within, .tab-context-menu, .editor-context-menu')),
     tabContextOpen: () => Boolean(document.querySelector('.tab-context-menu')),
     findPanelOpen: () => Boolean(document.querySelector('.np-find-panel')),
     nativeRuntime: isTauriRuntime,
@@ -453,6 +453,16 @@ const helpContent = computed(() => getHelpContent(helpTopic.value, language.valu
   clipboardShortcutBaseKey: clipboardShortcutBaseKey.value,
   clipboardShortcutModifiers: clipboardShortcutModifiers.value,
 }))
+const shortcutHelpGroups = computed(() => getShortcutHelpGroups(language.value, {
+  appVersion: appVersion.value,
+  shortcutBaseKey: shortcutBaseKey.value,
+  shortcutModifiers: shortcutModifiers.value,
+  clipboardShortcutBaseKey: clipboardShortcutBaseKey.value,
+  clipboardShortcutModifiers: clipboardShortcutModifiers.value,
+}))
+const referenceHelp = computed(() => helpTopic.value === 'markdown' || helpTopic.value === 'expression'
+  ? getReferenceHelp(helpTopic.value, language.value)
+  : null)
 const editorModeLabel = computed(() => {
   if (previewMode.value === 'preview') return t.value.status.previewMode
   if (previewMode.value === 'split') return t.value.status.hybridMode
@@ -1134,7 +1144,7 @@ async function requestAiInlineResult(session: AiInlineSession) {
 
   try {
     const response = await requestAiText(
-      session.plan.context.text,
+      session.plan.requestContext,
       [{ role: 'user', content: aiInlinePrompts.value[session.command] }],
       { searchLibrary: false, currentNoteId: session.noteId, maxTokens: 800 },
     )
@@ -1194,7 +1204,7 @@ function runAiInlineCommand(command: AiInlineCommandName) {
   aiInlineSession.value = session
   editorPane.value?.startAiInlineCommand(
     requestId,
-    snapshot.cursor,
+    plan.action === 'insert' && plan.context.kind === 'selection' ? plan.context.to : snapshot.cursor,
     t.value.ai.thinking,
     plan.action === 'replace' ? plan.context : undefined,
   )
@@ -1611,6 +1621,16 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         :vim-insert-exit-key="vimInsertExitKey"
         :search-labels="t.editorFind"
         :ai-slash-labels="aiSlashLabels"
+        :context-menu-labels="{
+          cut: t.menu.cut,
+          copy: t.menu.copy,
+          paste: t.menu.paste,
+          selectAll: t.menu.selectAll,
+          aiActions: t.ai.selectionActions,
+          polish: t.ai.selectionPolish,
+          summarize: t.ai.selectionSummarize,
+          translate: t.ai.selectionTranslate,
+        }"
         @vim-mode-change="activeVimMode = $event"
         @vim-tab-switch="cycleTab"
         @ai-command="runAiInlineCommand"
@@ -1803,13 +1823,58 @@ function createLocalTabFromContent(title: string, nextContent: string) {
     />
 
     <div v-if="helpTopic" class="input-dialog-backdrop" role="presentation" @mousedown.self="closeHelp()">
-      <section class="input-dialog help-panel" role="dialog" aria-modal="true" :aria-label="helpContent.title">
+      <section class="input-dialog help-panel" :class="{ 'guide-help-panel': helpTopic !== 'about' }" role="dialog" aria-modal="true" :aria-label="helpContent.title">
         <header class="input-dialog-header">
           <strong>{{ helpContent.title }}</strong>
           <button type="button" :aria-label="t.settings.close" :title="t.settings.close" @click="closeHelp()"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg></button>
         </header>
-        <div class="input-dialog-body help-body">
-          <p v-for="line in helpContent.lines" :key="line">{{ line }}</p>
+        <div v-if="helpTopic === 'shortcuts'" class="input-dialog-body help-body reference-help-body">
+          <section v-for="group in shortcutHelpGroups" :key="group.title" class="reference-help-group">
+            <h3>{{ group.title }}</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{{ language === 'zh' ? '\u5feb\u6377\u952e' : 'Shortcut' }}</th>
+                  <th scope="col">{{ language === 'zh' ? '\u529f\u80fd' : 'Action' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in group.rows" :key="row.keys">
+                  <td><kbd>{{ row.keys }}</kbd></td>
+                  <td>{{ row.description }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+        <div v-else-if="referenceHelp" class="input-dialog-body help-body reference-help-body">
+          <p class="reference-help-intro">{{ referenceHelp.intro }}</p>
+          <section v-for="group in referenceHelp.groups" :key="group.title" class="reference-help-group">
+            <h3>{{ group.title }}</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{{ referenceHelp.valueLabel }}</th>
+                  <th scope="col">{{ referenceHelp.descriptionLabel }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in group.rows" :key="row.value">
+                  <td><code>{{ row.value }}</code></td>
+                  <td>{{ row.description }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+        <div v-else class="input-dialog-body help-body">
+          <p
+            v-for="line in helpContent.lines"
+            :key="line"
+            :class="{ 'help-section-title': line.startsWith('## ') }"
+          >
+            {{ line.startsWith('## ') ? line.slice(3) : line }}
+          </p>
         </div>
       </section>
     </div>
