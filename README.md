@@ -55,9 +55,11 @@ The repository currently contains a working Windows-focused MVP:
   plus reusable AI prompts. Active notes remain a flat work area, while
   archived notes and prompts can be organized into local folders. Files and
   whole folders can be moved by drag and drop; right-click a folder to rename
-  it or move all of its contents to NeoPad Trash. Prompt Markdown files can be created, renamed,
-  duplicated, restored, or moved to Trash there, and open in the normal editor
-  as clearly marked prompt tabs.
+  it or move all of its contents to NeoPad Trash. Selecting an archived note
+  opens it without restoring it to the active work area; restoration stays an
+  explicit action. Prompt Markdown files can be created, renamed, duplicated,
+  restored, or moved to Trash there, and open in the normal editor as clearly
+  marked prompt tabs.
 - Right-click a tab or a single note or prompt in the file browser to reveal
   its Markdown file in the system file manager. The tab menu can also copy the
   absolute Markdown file path for use with terminals and local agents.

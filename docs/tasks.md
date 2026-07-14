@@ -52,7 +52,8 @@ This file tracks the implemented MVP relative to the original task plan.
   conflicts, persistent recent-document list, and copy-to-archive behavior.
 - Compact `F4` file browser with flat active notes, categorized archive and
   prompt folders, drag-and-drop movement for files and complete folder trees,
-  safe folder rename/delete actions, and marked prompt editor tabs.
+  safe folder rename/delete actions, directly openable archived notes that
+  remain archived until explicitly restored, and marked prompt editor tabs.
 - Modernized desktop chrome, unified dialogs, and a reorganized Settings center
   with configurable global shortcuts.
 - Manual clipboard capture to `clipboard.md`.

@@ -103,7 +103,9 @@ The app presents notes as tabs. Active note content stays in the flat
 `notes/*.md` work area. Archived notes may be categorized under
 `archive/**/*.md`; `tabs.json` stores stable note identity and archive relative
 paths in addition to title, file name, timestamps, pinned state, active tab,
-and optional tab color. Reusable prompts may be categorized under
+and optional tab color. Archived notes can be opened for inspection or editing
+without moving them back to `notes/`; restoring remains an explicit operation.
+Reusable prompts may be categorized under
 `prompts/**/*.md`; `prompts.json` keeps prompt identity stable when files move.
 Moving or renaming an archive or prompt directory rewrites every managed
 descendant path while retaining those stable identities. Deleting a directory

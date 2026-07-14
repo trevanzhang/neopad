@@ -90,8 +90,10 @@ Implemented MVP capabilities:
 - Prompt Markdown files are organized under `prompts/**/*.md` and managed from
   the compact `F4` file browser with local folders. Files and complete folder
   trees can be moved by drag and drop; folders can be renamed or deleted, with
-  their managed Markdown files retained in NeoPad Trash.
-  open in the main editor as prompt tabs. They use the normal save barrier and
+  their managed Markdown files retained in NeoPad Trash. Archived notes can
+  likewise be organized into folders and opened without restoring them to the
+  flat `notes/` work area; restoration is explicit. Prompts open in the main
+  editor as marked tabs. They use the normal save barrier and
   content-revision conflict checks, but remain outside note search, archive,
   reminders, recent notes, and MCP note operations.
 - Structured in-app Software Help that introduces NeoPad's product direction,

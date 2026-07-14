@@ -56,8 +56,9 @@ Reusable user prompts live as UTF-8 Markdown files in:
 The file name is the prompt name, folders provide local categories, and the
 Markdown body is the instruction. Use
 the `+` button in the `Ctrl+K` composer to search and attach one prompt. The
-prompt remains visible as a removable chip and is sent only when the user sends
-a message.
+picker shows the prompt title, its folder category, and a one-line content
+preview. The selected prompt remains visible as a removable chip and is sent
+only when the user sends a message.
 
 Press `F4` to manage prompts beside notes in the compact file browser. Create,
 rename (`F8` while its tab is active), duplicate, reveal, move to Trash, and
