@@ -1,10 +1,12 @@
 use neopad_core::{
-    append_to_clipboard_note, archive_note, claim_due_reminders, clear_trash, close_note,
-    complete_due_reminders, complete_reminder, create_note, delete_note_to_trash,
-    export_binary_file, export_note_file, list_archived_notes, list_notes, list_open_notes,
+    append_to_clipboard_note, archive_note, archive_note_to_directory, claim_due_reminders,
+    clear_trash, close_note, complete_due_reminders, complete_reminder, create_archive_directory,
+    create_note, delete_archive_directory_to_trash, delete_note_to_trash, export_binary_file,
+    export_note_file, list_archive_directories, list_archived_notes, list_notes, list_open_notes,
     list_recent_notes, list_recoverable_note_writes, list_reminders, list_searchable_notes,
-    list_trashed_notes, load_config, lock_workspace_for_write, read_note, reconcile_note_metadata,
-    rename_note, reopen_reminder, restore_note_from_trash, restore_recoverable_note_write,
+    list_trashed_notes, load_config, lock_workspace_for_write, move_archive_directory,
+    move_archived_note, read_note, reconcile_note_metadata, rename_archive_directory, rename_note,
+    reopen_reminder, reorder_open_notes, restore_note_from_trash, restore_recoverable_note_write,
     save_config, search_notes, write_note_atomic_checked, NoteContent, NoteTab, PreviewMode,
     RecoverableNoteWrite, Reminder, SearchResult, Theme, UiConfig, Workspace,
 };
@@ -135,6 +137,49 @@ pub fn list_archived_notes_command(state: State<'_, AppState>) -> Result<Vec<Not
 }
 
 #[tauri::command]
+pub fn list_archive_directories_command(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    list_archive_directories(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn create_archive_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+) -> Result<String, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    create_archive_directory(&state.workspace, &relative_path).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn move_archive_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+    target_parent: String,
+) -> Result<String, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    move_archive_directory(&state.workspace, &relative_path, &target_parent).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn rename_archive_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+    new_name: String,
+) -> Result<String, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    rename_archive_directory(&state.workspace, &relative_path, &new_name).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn delete_archive_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+) -> Result<usize, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    delete_archive_directory_to_trash(&state.workspace, &relative_path).map_err(display_error)
+}
+
+#[tauri::command]
 pub fn list_trashed_notes_command(state: State<'_, AppState>) -> Result<Vec<NoteTab>, String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     reconcile_note_metadata(&state.workspace).map_err(display_error)?;
@@ -241,6 +286,35 @@ pub fn archive_note_command(
 ) -> Result<NoteTab, String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     archive_note(&state.workspace, &note_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn archive_note_to_directory_command(
+    state: State<'_, AppState>,
+    note_id: String,
+    directory: String,
+) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    archive_note_to_directory(&state.workspace, &note_id, &directory).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn move_archived_note_command(
+    state: State<'_, AppState>,
+    note_id: String,
+    directory: String,
+) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    move_archived_note(&state.workspace, &note_id, &directory).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn reorder_open_notes_command(
+    state: State<'_, AppState>,
+    ordered_note_ids: Vec<String>,
+) -> Result<(), String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reorder_open_notes(&state.workspace, &ordered_note_ids).map_err(display_error)
 }
 
 #[tauri::command]

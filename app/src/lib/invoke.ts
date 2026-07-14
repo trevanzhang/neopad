@@ -136,8 +136,32 @@ export function readAiPrompt(promptId: string): Promise<AiPromptEntry> {
   return invoke('read_ai_prompt_command', { promptId })
 }
 
-export function createAiPrompt(name: string): Promise<AiPromptEntry> {
-  return invoke('create_ai_prompt_command', { name })
+export function createAiPrompt(name: string, directory?: string): Promise<AiPromptEntry> {
+  return invoke('create_ai_prompt_command', { name, directory })
+}
+
+export function listAiPromptDirectories(): Promise<string[]> {
+  return invoke('list_ai_prompt_directories_command')
+}
+
+export function createAiPromptDirectory(relativePath: string): Promise<string> {
+  return invoke('create_ai_prompt_directory_command', { relativePath })
+}
+
+export function moveAiPromptDirectory(relativePath: string, targetParent: string): Promise<string> {
+  return invoke('move_ai_prompt_directory_command', { relativePath, targetParent })
+}
+
+export function renameAiPromptDirectory(relativePath: string, newName: string): Promise<string> {
+  return invoke('rename_ai_prompt_directory_command', { relativePath, newName })
+}
+
+export function deleteAiPromptDirectory(relativePath: string): Promise<number> {
+  return invoke('delete_ai_prompt_directory_command', { relativePath })
+}
+
+export function moveAiPrompt(promptId: string, directory: string): Promise<AiPromptEntry> {
+  return invoke('move_ai_prompt_command', { promptId, directory })
 }
 
 export function writeAiPrompt(
@@ -182,6 +206,26 @@ export function listLibraryNotes(): Promise<NoteTab[]> {
 
 export function listArchivedNotes(): Promise<NoteTab[]> {
   return invoke('list_archived_notes_command')
+}
+
+export function listArchiveDirectories(): Promise<string[]> {
+  return invoke('list_archive_directories_command')
+}
+
+export function createArchiveDirectory(relativePath: string): Promise<string> {
+  return invoke('create_archive_directory_command', { relativePath })
+}
+
+export function moveArchiveDirectory(relativePath: string, targetParent: string): Promise<string> {
+  return invoke('move_archive_directory_command', { relativePath, targetParent })
+}
+
+export function renameArchiveDirectory(relativePath: string, newName: string): Promise<string> {
+  return invoke('rename_archive_directory_command', { relativePath, newName })
+}
+
+export function deleteArchiveDirectory(relativePath: string): Promise<number> {
+  return invoke('delete_archive_directory_command', { relativePath })
 }
 
 export function listTrashedNotes(): Promise<NoteTab[]> {
@@ -234,6 +278,18 @@ export function openNote(noteId: string): Promise<NoteTab> {
 
 export function archiveNote(noteId: string): Promise<NoteTab> {
   return invoke('archive_note_command', { noteId })
+}
+
+export function archiveNoteToDirectory(noteId: string, directory: string): Promise<NoteTab> {
+  return invoke('archive_note_to_directory_command', { noteId, directory })
+}
+
+export function moveArchivedNote(noteId: string, directory: string): Promise<NoteTab> {
+  return invoke('move_archived_note_command', { noteId, directory })
+}
+
+export function reorderOpenNotes(orderedNoteIds: string[]): Promise<void> {
+  return invoke('reorder_open_notes_command', { orderedNoteIds })
 }
 
 export function unarchiveNote(noteId: string): Promise<NoteTab> {

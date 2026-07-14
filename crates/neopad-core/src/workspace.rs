@@ -1,4 +1,4 @@
-use crate::{AppConfig, TabsState};
+use crate::{AppConfig, PromptState, TabsState};
 use anyhow::{Context, Result};
 use std::fs;
 use std::io::Write;
@@ -15,6 +15,7 @@ pub struct Workspace {
     pub prompts_dir: PathBuf,
     pub config_path: PathBuf,
     pub tabs_path: PathBuf,
+    pub prompts_meta_path: PathBuf,
     pub reminders_path: PathBuf,
 }
 
@@ -28,6 +29,7 @@ impl Workspace {
             prompts_dir: root.join("prompts"),
             config_path: root.join("config.json"),
             tabs_path: root.join("meta").join("tabs.json"),
+            prompts_meta_path: root.join("meta").join("prompts.json"),
             reminders_path: root.join("meta").join("reminders.json"),
             root,
         }
@@ -94,6 +96,7 @@ pub fn ensure_workspace_layout(workspace: &Workspace) -> Result<()> {
     })?;
     write_file_if_missing(&workspace.config_path, &default_config_json(workspace)?)?;
     write_file_if_missing(&workspace.tabs_path, &default_tabs_json()?)?;
+    write_file_if_missing(&workspace.prompts_meta_path, &default_prompts_json()?)?;
     write_file_if_missing(&workspace.reminders_path, default_reminders_json())?;
     write_file_if_missing(&workspace.inbox_path(), "# Inbox\n\n")?;
     write_file_if_missing(&workspace.clipboard_path(), "# Clipboard\n\n")?;
@@ -134,6 +137,11 @@ fn default_config_json(workspace: &Workspace) -> Result<String> {
 fn default_tabs_json() -> Result<String> {
     let tabs = TabsState::default_with_timestamp(now_ms()?);
     serde_json::to_string_pretty(&tabs).context("failed to serialize default tabs")
+}
+
+fn default_prompts_json() -> Result<String> {
+    serde_json::to_string_pretty(&PromptState::default())
+        .context("failed to serialize default prompt metadata")
 }
 
 fn default_reminders_json() -> &'static str {
@@ -211,6 +219,7 @@ mod tests {
         assert_eq!(tabs.tabs[1].file_name, "clipboard.md");
         assert!(tabs.tabs[1].pinned);
         assert!(workspace.reminders_path.is_file());
+        assert!(workspace.prompts_meta_path.is_file());
     }
 
     #[test]

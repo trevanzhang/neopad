@@ -64,8 +64,12 @@ const selectedPrompt = computed(() => props.prompts.find((item) => item.id === s
 const filteredPrompts = computed(() => {
   const query = promptQuery.value.trim().toLowerCase()
   if (!query) return props.prompts
-  return props.prompts.filter((item) => `${item.name} ${item.content}`.toLowerCase().includes(query))
+  return props.prompts.filter((item) => `${item.relativePath} ${item.content}`.toLowerCase().includes(query))
 })
+function promptCategory(prompt: AiPromptEntry) {
+  const index = prompt.relativePath.lastIndexOf('/')
+  return index < 0 ? '' : prompt.relativePath.slice(0, index)
+}
 const selectionContext = computed(() => props.session.snapshot.contexts.find((item) => item.kind === 'selection'))
 onMounted(() => {
   void nextTick(async () => {
@@ -398,11 +402,14 @@ function handleMarkdownClick(event: MouseEvent) {
                 v-else
                 :key="item.id"
                 type="button"
-                :class="{ selected: item.id === selectedPromptId }"
-                @click="selectPrompt(item)"
-              >
-                <strong>{{ item.name }}</strong>
-                <span>{{ item.content }}</span>
+              :class="{ selected: item.id === selectedPromptId }"
+              @click="selectPrompt(item)"
+            >
+                <span class="ai-prompt-item-heading">
+                  <strong class="ai-prompt-item-title">{{ item.name }}</strong>
+                  <small v-if="promptCategory(item)" class="ai-prompt-item-category">{{ promptCategory(item) }}</small>
+                </span>
+                <span class="ai-prompt-item-preview">{{ item.content }}</span>
               </button>
               <p v-if="!promptsLoading && filteredPrompts.length === 0">{{ messages.noPrompts }}</p>
             </div>

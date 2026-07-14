@@ -14,17 +14,23 @@ pub use config::{
 };
 pub use lock::{lock_workspace_for_write, WorkspaceWriteLock};
 pub use note::{
-    append_to_clipboard_note, append_to_note, archive_note, clear_trash, close_note, create_note,
-    delete_note_to_trash, list_archived_notes, list_notes, list_open_notes, list_recent_notes,
-    list_recoverable_note_writes, list_searchable_notes, list_trashed_notes, note_file_path_for_id,
-    open_note, read_note, reconcile_note_metadata, rename_note, restore_note_from_trash,
-    restore_recoverable_note_write, set_note_color, unarchive_note, write_note_atomic,
-    write_note_atomic_checked, NoteContent, RecoverableNoteWrite,
+    append_to_clipboard_note, append_to_note, archive_note, archive_note_to_directory, clear_trash,
+    close_note, create_archive_directory, create_note, delete_archive_directory_to_trash,
+    delete_note_to_trash, list_archive_directories, list_archived_notes, list_notes,
+    list_open_notes, list_recent_notes, list_recoverable_note_writes, list_searchable_notes,
+    list_trashed_notes, move_archive_directory, move_archived_note, note_file_path_for_id,
+    open_note, read_note, reconcile_note_metadata, rename_archive_directory, rename_note,
+    reorder_open_notes, restore_note_from_trash, restore_recoverable_note_write, set_note_color,
+    unarchive_note, write_note_atomic, write_note_atomic_checked, NoteContent,
+    RecoverableNoteWrite,
 };
 pub use prompt::{
-    create_prompt, list_prompt_files, list_prompts, list_trashed_prompts, prompt_file_path,
-    read_prompt, rename_prompt, restore_prompt_from_trash, trash_prompt,
-    write_prompt_atomic_checked, PromptEntry, TrashedPromptEntry,
+    create_prompt, create_prompt_directory, create_prompt_in_directory,
+    delete_prompt_directory_to_trash, list_prompt_directories, list_prompt_files, list_prompts,
+    list_trashed_prompts, move_prompt, move_prompt_directory, prompt_file_path, read_prompt,
+    reconcile_prompt_metadata, rename_prompt, rename_prompt_directory, restore_prompt_from_trash,
+    trash_prompt, write_prompt_atomic_checked, PromptEntry, PromptRecord, PromptState,
+    TrashedPromptEntry,
 };
 pub use reminder::{
     claim_due_reminders, complete_due_reminders, complete_reminder, list_reminders,

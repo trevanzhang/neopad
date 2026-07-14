@@ -22,6 +22,7 @@ export interface AiPromptEntry {
   id: string
   name: string
   fileName: string
+  relativePath: string
   content: string
   updatedAt: number
   revision: string
@@ -32,6 +33,7 @@ export interface AiTrashedPromptEntry {
   name: string
   fileName: string
   originalFileName: string
+  originalRelativePath: string
   deletedAt: number
 }
 

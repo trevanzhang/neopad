@@ -25,11 +25,12 @@ docs/                 Human-facing project docs
 
 - Use `neopad-core` for all note, workspace, path, search, and write behavior.
 - Do not duplicate filesystem access logic in the Tauri shell or MCP server.
-- Note content must stay in `~/.neopad/notes/*.md`.
-- Metadata belongs in `config.json`, `meta/tabs.json`, and
+- Active note content must stay in the flat `~/.neopad/notes/*.md` work area.
+  Archived notes may be categorized under `~/.neopad/archive/**/*.md`.
+- Metadata belongs in `config.json`, `meta/tabs.json`, `meta/prompts.json`, and
   `meta/reminders.json`. The reminder file stores delivery state only; reminder
   content remains in Markdown notes.
-- User-authored reusable AI prompts belong in `prompts/*.md`; they are not note
+- User-authored reusable AI prompts belong in `prompts/**/*.md`; they are not note
   content and must not be mixed into `notes/`.
 - Never physically delete user notes. Move notes to `trash/`.
 - Keep path safety strict. Reject absolute paths, `..`, and file names that
@@ -189,6 +190,9 @@ it is retained only for legacy Windows-local workflows.
 ## Frontend Guidelines
 
 - Keep the UI compact and utility-focused.
+- Keep the main window `dragDropEnabled` setting disabled. NeoPad's tab and
+  library reordering use HTML drag events, which Tauri's native Windows file
+  drop handling intercepts when enabled.
 - Do not add a landing page.
 - Prefer existing component and CSS patterns.
 - Keep text within fixed UI controls from overflowing.

@@ -27,11 +27,14 @@ const emit = defineEmits<{
   toggleLibrary: []
   previousTab: []
   nextTab: []
+  reorderTabs: [orderedTabIds: string[]]
 }>()
 
 const contextMenu = ref<{ tabId: string; x: number; y: number } | null>(null)
 const contextMenuElement = ref<HTMLElement | null>(null)
 const colors = ['#F4B8B8', '#F6D58A', '#BFE3A4', '#A9DCEB', '#BFC7F3', '#DCB8ED']
+const draggedTabId = ref<string | null>(null)
+const dragTargetTabId = ref<string | null>(null)
 
 onMounted(() => {
   window.addEventListener('pointerdown', closeContextMenu)
@@ -107,8 +110,10 @@ function archiveTabWithShortcut(event: KeyboardEvent, tabId: string) {
   event.preventDefault()
   event.stopPropagation()
   contextMenu.value = null
-  if (isPromptTab(props.tabs.find((tab) => tab.id === tabId))) return
-  emit('archiveTab', tabId)
+  const tab = props.tabs.find((item) => item.id === tabId)
+  if (isPromptTab(tab)) return
+  if (tab?.archived) emit('unarchiveTab', tabId)
+  else emit('archiveTab', tabId)
 }
 
 function closeTabWithShortcut(event: KeyboardEvent, tabId: string) {
@@ -138,7 +143,35 @@ function canRenameOrDelete(tab: NoteTab | undefined) {
 
 function tabTitle(tab: NoteTab) {
   if (isPromptTab(tab)) return `prompts/${tab.fileName}`
+  if (tab.archived) return `${props.messages.archive}: ${tab.title}`
   return tab.externalPath ?? tab.title
+}
+
+function startTabDrag(event: DragEvent, tabId: string) {
+  draggedTabId.value = tabId
+  dragTargetTabId.value = tabId
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/neopad-tab', tabId)
+  }
+}
+
+function dropTab(targetTabId: string) {
+  const sourceId = draggedTabId.value
+  if (!sourceId || sourceId === targetTabId) return endTabDrag()
+  const ordered = props.tabs.map((tab) => tab.id)
+  const sourceIndex = ordered.indexOf(sourceId)
+  const targetIndex = ordered.indexOf(targetTabId)
+  if (sourceIndex < 0 || targetIndex < 0) return endTabDrag()
+  ordered.splice(sourceIndex, 1)
+  ordered.splice(targetIndex, 0, sourceId)
+  emit('reorderTabs', ordered)
+  endTabDrag()
+}
+
+function endTabDrag() {
+  draggedTabId.value = null
+  dragTargetTabId.value = null
 }
 </script>
 
@@ -157,13 +190,24 @@ function tabTitle(tab: NoteTab) {
       v-for="tab in tabs"
       :key="tab.id"
       class="tab-item"
-      :class="{ active: tab.id === activeTabId }"
+      :class="{
+        active: tab.id === activeTabId,
+        archived: tab.archived,
+        dragging: tab.id === draggedTabId,
+        'drag-target': tab.id === dragTargetTabId && tab.id !== draggedTabId,
+      }"
       type="button"
+      draggable="true"
+      :aria-grabbed="tab.id === draggedTabId"
       :title="tabTitle(tab)"
       :style="tab.color ? { '--tab-color': tab.color } : undefined"
       @click="$emit('selectTab', tab.id)"
       @dblclick="$emit('titleDoubleClick', tab.id)"
       @contextmenu="openContextMenu($event, tab)"
+      @dragstart="startTabDrag($event, tab.id)"
+      @dragover.prevent="dragTargetTabId = tab.id"
+      @drop.prevent="dropTab(tab.id)"
+      @dragend="endTabDrag"
       @keydown.f8="renameTabWithShortcut($event, tab.id)"
       @keydown.delete="deleteTabWithShortcut($event, tab.id)"
       @keydown.f12="archiveTabWithShortcut($event, tab.id)"
@@ -171,6 +215,7 @@ function tabTitle(tab: NoteTab) {
     >
       <span v-if="isExternalTab(tab)" class="tab-external-icon" aria-hidden="true" />
       <span v-else-if="isPromptTab(tab)" class="tab-prompt-icon" aria-hidden="true">P</span>
+      <svg v-else-if="tab.archived" class="tab-archive-icon" aria-hidden="true" viewBox="0 0 16 16"><path d="M1.75 5.25h12.5v8.5H1.75zM1.25 2.5h13.5v2.75H1.25zM6.25 8.75h3.5" /></svg>
       <span class="tab-label">{{ tab.title }}</span>
     </button>
     <button class="tab-add" type="button" title="New note" aria-label="New note" @click="$emit('newTab')">
@@ -199,9 +244,9 @@ function tabTitle(tab: NoteTab) {
       <button
         type="button"
         role="menuitem"
-      :disabled="!canRenameOrDelete(contextTab())"
-      @click="runContextAction('rename')"
-    >
+        :disabled="!canRenameOrDelete(contextTab())"
+        @click="runContextAction('rename')"
+      >
         <span>{{ messages.rename }}</span>
         <span class="tab-context-shortcut">{{ messages.f8 }}</span>
       </button>
@@ -215,6 +260,16 @@ function tabTitle(tab: NoteTab) {
         <span class="tab-context-shortcut">{{ messages.altDel }}</span>
       </button>
       <button
+        v-if="isNoteTab(contextTab()) && contextTab()?.archived"
+        type="button"
+        role="menuitem"
+        @click="runContextAction('unarchive')"
+      >
+        <span>{{ messages.restore }}</span>
+        <span class="tab-context-shortcut">{{ messages.f12 }}</span>
+      </button>
+      <button
+        v-else
         type="button"
         role="menuitem"
         :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard' || isPromptTab(contextTab())"

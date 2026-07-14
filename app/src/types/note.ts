@@ -9,6 +9,7 @@ export type NoteTab = {
   pinned: boolean
   deleted: boolean
   archived: boolean
+  archiveRelativePath?: string
   open: boolean
   lastOpenedAt?: number
   external?: boolean

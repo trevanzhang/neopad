@@ -12,6 +12,8 @@ pub struct NoteTab {
     pub deleted: bool,
     #[serde(default)]
     pub archived: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archive_relative_path: Option<String>,
     #[serde(default = "default_open")]
     pub open: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -51,6 +53,7 @@ impl TabsState {
                     pinned: true,
                     deleted: false,
                     archived: false,
+                    archive_relative_path: None,
                     open: true,
                     last_opened_at: Some(now_ms),
                     system_title: false,
@@ -66,6 +69,7 @@ impl TabsState {
                     pinned: true,
                     deleted: false,
                     archived: false,
+                    archive_relative_path: None,
                     open: true,
                     last_opened_at: Some(now_ms),
                     system_title: false,

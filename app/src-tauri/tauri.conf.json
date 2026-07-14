@@ -21,7 +21,7 @@
         "center": false,
         "visible": false,
         "decorations": true,
-        "dragDropEnabled": true,
+        "dragDropEnabled": false,
         "zoomHotkeysEnabled": false
       }
     ],
