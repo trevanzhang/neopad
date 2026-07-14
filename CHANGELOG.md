@@ -6,6 +6,8 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.5.3 - 2026-07-14
+
 ### Added
 
 - Added a selection-aware editor context menu with standard clipboard actions

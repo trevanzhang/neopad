@@ -61,8 +61,12 @@ This file tracks the implemented MVP relative to the original task plan.
 - Optional AI collaboration with secure provider settings, a compact `Ctrl+K`
   note chat, in-memory per-note sessions, a Markdown prompt library, bounded
   whole-workspace context search, explicit chat result actions, and independent
-  auto-applying `//continue`, `//polish`, `//summarize`, and `//translate`
-  commands with inline progress.
+  auto-applying `//` commands for continue, polish, summarize, and translate
+  with inline progress. Exact editor selections also expose direct AI actions
+  from the context menu, while ordinary Slash operations retain current-note
+  reference context without expanding their write range.
+- Structured in-app Software, shortcut, Markdown, expression, and AI help
+  references that reflect the current local-first workflows and boundaries.
 - MCP HTTP child-process integration tests.
 - Windows Tauri WebDriver smoke tests for the critical note workflow.
 - Windows icon, tray/taskbar icon, MSI branding, desktop shortcut icon, bundled
