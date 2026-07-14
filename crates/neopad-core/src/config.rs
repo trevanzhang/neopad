@@ -23,6 +23,8 @@ pub struct AppConfig {
     pub max_search_results: usize,
     pub mcp: McpConfig,
     #[serde(default)]
+    pub ai: AiConfig,
+    #[serde(default)]
     pub approved_external_markdown_paths: Vec<String>,
     #[serde(default)]
     pub ui: UiConfig,
@@ -232,6 +234,17 @@ pub struct McpConfig {
     pub token: String,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AiConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub base_url: String,
+    #[serde(default)]
+    pub model: String,
+}
+
 fn default_mcp_host() -> String {
     "127.0.0.1".to_owned()
 }
@@ -279,6 +292,7 @@ impl AppConfig {
                 port: default_mcp_port(),
                 token: String::new(),
             },
+            ai: AiConfig::default(),
             approved_external_markdown_paths: Vec::new(),
             ui: UiConfig::default(),
         }
@@ -339,6 +353,7 @@ mod tests {
         assert_eq!(config.mcp.host, "127.0.0.1");
         assert_eq!(config.mcp.port, 8765);
         assert_eq!(config.mcp.token, "");
+        assert_eq!(config.ai, AiConfig::default());
         assert!(!config.ui.run_at_startup);
         assert!(!config.ui.start_hidden);
         assert_eq!(config.ui.shortcut_base_key, "Z");
@@ -425,5 +440,15 @@ mod tests {
         let loaded = load_config(&workspace).expect("reload config");
         assert_eq!(loaded.ui.language, "zh");
         assert_eq!(loaded.ui.window_opacity, 0.75);
+    }
+
+    #[test]
+    fn old_config_without_ai_uses_disabled_defaults() {
+        let mut value = serde_json::to_value(AppConfig::default_for_workspace("~/.neopad"))
+            .expect("serialize config");
+        value.as_object_mut().expect("config object").remove("ai");
+
+        let config: AppConfig = serde_json::from_value(value).expect("legacy config");
+        assert_eq!(config.ai, AiConfig::default());
     }
 }

@@ -29,6 +29,8 @@ docs/                 Human-facing project docs
 - Metadata belongs in `config.json`, `meta/tabs.json`, and
   `meta/reminders.json`. The reminder file stores delivery state only; reminder
   content remains in Markdown notes.
+- User-authored reusable AI prompts belong in `prompts/*.md`; they are not note
+  content and must not be mixed into `notes/`.
 - Never physically delete user notes. Move notes to `trash/`.
 - Keep path safety strict. Reject absolute paths, `..`, and file names that
   escape the workspace.
@@ -38,8 +40,9 @@ docs/                 Human-facing project docs
 - MCP HTTP requests must require `Authorization: Bearer <token>`.
 - Browser-originated MCP requests must pass local Origin validation.
 - MCP diagnostics and startup errors must go to stderr, not protocol responses.
-- Do not introduce cloud sync, accounts, RAG, vector search, backlinks, or an AI
-  chat panel unless the task explicitly changes scope.
+- Do not introduce cloud sync, accounts, RAG, vector search, backlinks,
+  persistent AI chat history, or an AI chat sidebar unless the task explicitly
+  changes scope. Keep inline AI user-initiated and reviewable.
 
 ## Build Commands
 

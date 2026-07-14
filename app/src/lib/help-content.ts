@@ -31,6 +31,7 @@ export function getHelpContent(topic: HelpTopic | null, language: AppLanguage, c
         `Ctrl+F - ${zh ? '查找' : 'Find'}`,
         `Ctrl+G - ${zh ? '查找下一个' : 'Find next'}`,
         `Ctrl+Shift+F - ${zh ? '全局搜索' : 'Global search'}`,
+        `Ctrl+K - ${zh ? '打开 AI 笔记对话' : 'Open AI note chat'}`,
         `Ctrl+D - ${zh ? '插入日期时间' : 'Insert date time'}`,
         `Ctrl+- - ${zh ? '插入分隔行' : 'Insert separator'}`,
         `Ctrl+Shift+- - ${zh ? '插入日期时间分隔行' : 'Insert date time separator'}`,

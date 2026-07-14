@@ -6,6 +6,7 @@ export interface KeyboardState {
   confirmationOpen: () => boolean
   inputOpen: () => boolean
   fontDialogOpen: () => boolean
+  aiPanelOpen: () => boolean
   immersiveMode: () => boolean
   settingsOpen: () => boolean
   helpOpen: () => boolean
@@ -36,6 +37,7 @@ export interface KeyboardActions {
   cancelConfirmation: () => void
   cancelInput: () => void
   closeFontDialog: () => void
+  closeAiPanel: () => void
   exitImmersiveMode: () => void | Promise<void>
   closeSettings: () => void
   closeHelp: () => void
@@ -60,6 +62,7 @@ export interface KeyboardActions {
   toggleNoteLibrary: () => void
   togglePin: () => void | Promise<void>
   openSettings: () => void
+  openAiPanel: () => void
   insertDateTimeSeparator: () => void
   insertSeparator: () => void
   insertDateTime: () => void
@@ -105,6 +108,10 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
   return function handleKeydown(event: KeyboardEvent) {
     if (event.isComposing) return
 
+    if (event.key === 'Escape' && (event.target as Element | null)?.closest?.('.ai-prompt-picker')) {
+      return
+    }
+
     if (state.modalOpen() && event.key !== 'Escape') {
       const key = event.key.toLowerCase()
       const blockedCtrl = event.ctrlKey && !event.altKey && !event.metaKey && ['tab', 'n', 'w', 'o', ','].includes(key)
@@ -140,6 +147,7 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
         [state.confirmationOpen(), actions.cancelConfirmation],
         [state.inputOpen(), actions.cancelInput],
         [state.fontDialogOpen(), actions.closeFontDialog],
+        [state.aiPanelOpen(), actions.closeAiPanel],
         [state.immersiveMode(), () => void actions.exitImmersiveMode()],
         [state.settingsOpen(), actions.closeSettings],
         [state.helpOpen(), actions.closeHelp],
@@ -159,6 +167,10 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
 
     if (event.code === 'Comma' && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
       consume(event, actions.openSettings); return
+    }
+
+    if (event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && state.editorFocused() && workspaceClear()) {
+      consume(event, actions.openAiPanel); return
     }
 
     if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {

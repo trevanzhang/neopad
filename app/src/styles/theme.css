@@ -36,6 +36,10 @@
   --np-syntax-type: #8a5800;
   --np-syntax-comment: #718096;
   --np-syntax-meta: #5f6f82;
+  --np-ai-accent: var(--np-accent);
+  --np-ai-accent-soft: var(--np-accent-soft);
+  --np-ai-accent-text: var(--np-accent-contrast);
+  --np-ai-focus-ring: var(--np-accent-soft);
 }
 
 .theme-dark {
@@ -77,4 +81,8 @@
   --np-syntax-type: #f1c66d;
   --np-syntax-comment: #8995a7;
   --np-syntax-meta: #a9b4c4;
+  --np-ai-accent: #466da8;
+  --np-ai-accent-soft: #283650;
+  --np-ai-accent-text: #dce8ff;
+  --np-ai-focus-ring: #2b3b58;
 }

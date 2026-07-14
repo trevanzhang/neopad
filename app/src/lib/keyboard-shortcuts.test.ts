@@ -119,6 +119,13 @@ describe('keyboard shortcut routing', () => {
     expect(spies.openSettings).toHaveBeenCalledOnce()
   })
 
+  it('opens inline AI with Ctrl+K while the editor is focused', () => {
+    const { flags, spies, handler } = harness()
+    flags.set('editorFocused', true)
+    handler(keyEvent('k', { ctrlKey: true }))
+    expect(spies.openAiPanel).toHaveBeenCalledOnce()
+  })
+
   it('honors Escape surface precedence', () => {
     const { flags, spies, handler } = harness()
     flags.set('confirmationOpen', true)
@@ -126,6 +133,15 @@ describe('keyboard shortcut routing', () => {
     handler(keyEvent('Escape'))
     expect(spies.cancelConfirmation).toHaveBeenCalledOnce()
     expect(spies.cancelInput).not.toHaveBeenCalled()
+  })
+
+  it('lets the AI prompt picker handle Escape before the panel', () => {
+    const { flags, spies, handler } = harness()
+    flags.set('aiPanelOpen', true)
+    handler(keyEvent('Escape', {
+      target: { closest: (selector: string) => selector === '.ai-prompt-picker' ? {} : null } as unknown as EventTarget,
+    }))
+    expect(spies.closeAiPanel).toBeUndefined()
   })
 
   it('closes settings before requesting native window hiding', () => {
@@ -144,6 +160,7 @@ describe('keyboard shortcut routing', () => {
     ['confirmation dialog', 'confirmationOpen', 'cancelConfirmation'],
     ['input dialog', 'inputOpen', 'cancelInput'],
     ['font dialog', 'fontDialogOpen', 'closeFontDialog'],
+    ['AI panel', 'aiPanelOpen', 'closeAiPanel'],
     ['settings', 'settingsOpen', 'closeSettings'],
     ['help', 'helpOpen', 'closeHelp'],
     ['search', 'searchOpen', 'closeSearch'],

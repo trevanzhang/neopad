@@ -8,6 +8,12 @@ import type {
   PreviewLineHeight,
   PreviewTheme,
 } from '../types/editor'
+import type {
+  AiConfig,
+  AiConversationMessage,
+  AiGenerateResponse,
+  AiPromptEntry,
+} from '../types/ai'
 
 export interface UiConfig {
   language: string
@@ -74,6 +80,50 @@ export function getUiConfig(): Promise<{ initialized: boolean; ui: UiConfig; pre
 
 export function saveUiConfig(ui: UiConfig, previewMode: EditorMode, theme: AppTheme): Promise<void> {
   return invoke('save_ui_config_command', { ui, previewMode, theme })
+}
+
+export function getAiConfig(): Promise<AiConfig> {
+  return invoke('get_ai_config_command')
+}
+
+export function saveAiConfig(config: Omit<AiConfig, 'apiKeyConfigured'>): Promise<void> {
+  return invoke('save_ai_config_command', { config })
+}
+
+export function saveAiApiKey(apiKey: string): Promise<void> {
+  return invoke('save_ai_api_key_command', { apiKey })
+}
+
+export function clearAiApiKey(): Promise<void> {
+  return invoke('clear_ai_api_key_command')
+}
+
+export function testAiConnection(): Promise<void> {
+  return invoke('test_ai_connection_command')
+}
+
+export function generateAiText(
+  context: string,
+  messages: AiConversationMessage[],
+  options: { searchLibrary: boolean; currentNoteId: string; prompt?: string },
+): Promise<AiGenerateResponse> {
+  return invoke('generate_ai_text_command', {
+    request: {
+      context,
+      messages,
+      searchLibrary: options.searchLibrary,
+      currentNoteId: options.currentNoteId,
+      prompt: options.prompt,
+    },
+  })
+}
+
+export function listAiPrompts(): Promise<AiPromptEntry[]> {
+  return invoke('list_ai_prompts_command')
+}
+
+export function openAiPromptsFolder(): Promise<void> {
+  return invoke('open_ai_prompts_folder_command')
 }
 
 export function listNotes(): Promise<NoteTab[]> {

@@ -58,6 +58,10 @@ This file tracks the implemented MVP relative to the original task plan.
 - Standalone Streamable HTTP `neopad-mcp` read and write tools.
 - Dedicated MCP settings page with service start/stop, status, token display,
   token regeneration, and copyable client configuration.
+- Optional AI collaboration with secure provider settings, a compact `Ctrl+K`
+  note chat, in-memory per-note sessions, a Markdown prompt library, bounded
+  whole-workspace context search, explicit result insertion, and `/rewrite`,
+  `/summarize`, `/translate`, `/continue`, and `/ask` commands.
 - MCP HTTP child-process integration tests.
 - Windows Tauri WebDriver smoke tests for the critical note workflow.
 - Windows icon, tray/taskbar icon, MSI branding, desktop shortcut icon, bundled
@@ -91,7 +95,7 @@ This file tracks the implemented MVP relative to the original task plan.
 
 - Cloud sync.
 - Accounts.
-- AI chat UI.
+- Persistent AI chat sidebar or chat history.
 - RAG or vector database.
 - Backlinks or graph view.
 - Plugin system.

@@ -79,6 +79,8 @@ Implemented MVP capabilities:
 - Close-to-hide behavior.
 - Standalone Streamable HTTP MCP server managed from a dedicated MCP settings
   page.
+- Optional AI collaboration with a compact `Ctrl+K` note chat and Slash
+  commands. Users explicitly insert, replace, or copy generated Markdown.
 - Windows MSI packaging with branded installer assets.
 
 ## Data Rules
@@ -87,6 +89,8 @@ Implemented MVP capabilities:
 - Metadata belongs in `config.json`, `meta/tabs.json`, and
   `meta/reminders.json`. Reminder content must remain in `notes/*.md`; the
   reminder metadata file stores notification delivery state only.
+- User-authored reusable AI prompts live in `prompts/*.md` and remain separate
+  from note content.
 - Delete operations move notes into `trash/`.
 - Emptying Trash moves its Markdown files into the operating system's Recycle
   Bin or Trash before removing deleted-tab metadata; it must not unlink note
@@ -116,6 +120,23 @@ Implemented MVP capabilities:
 - The MCP server must not read the system clipboard.
 - The MCP server must not access files outside the workspace.
 - Installed builds must include `neopad-mcp.exe` as a sidecar.
+
+## AI Rules
+
+- AI is off by default and runs only after an explicit user action.
+- The desktop shell calls an OpenAI-compatible service configured by the user.
+- Remote service URLs require HTTPS; loopback HTTP remains available for local
+  model servers.
+- The service URL and model belong in `config.json`. API keys must remain in
+  platform secure storage and must not be returned to the webview after save.
+- AI responses must not modify a note automatically. Insert and replace remain
+  explicit, undoable editor transactions.
+- Replacements must verify that their captured source text is still current.
+- `Ctrl+K` conversations are kept in memory per note and never persisted.
+- Whole-workspace context uses local text relevance search and sends only a
+  bounded set of excerpts rather than concatenating every note.
+- User-authored reusable prompts live in `~/.neopad/prompts/*.md`.
+- AI request bodies, credentials, and note text must not be written to logs.
 
 ## Packaging Rules
 
@@ -157,7 +178,7 @@ cargo build -p neopad-mcp --release
 
 - Cloud sync.
 - Accounts.
-- AI chat UI.
+- Persistent AI chat sidebar or chat history.
 - RAG.
 - Vector database.
 - Backlinks.

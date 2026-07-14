@@ -44,6 +44,7 @@ import { useDocumentSession } from './composables/useDocumentSession'
 import { useSearchState } from './composables/useSearchState'
 import { useReminderState } from './composables/useReminderState'
 import { useMcpService } from './composables/useMcpService'
+import { useAiAssistant } from './composables/useAiAssistant'
 import { useDialogs } from './composables/useDialogs'
 import { useArchiveState } from './composables/useArchiveState'
 import { usePreferenceState } from './composables/usePreferenceState'
@@ -59,6 +60,14 @@ import { getHelpContent, type HelpTopic } from './lib/help-content'
 import { createKeyboardHandler, isEditableElement } from './lib/keyboard-shortcuts'
 import { initialJsonSetting } from './lib/preferences'
 import type { NoteTab, Reminder, SearchResult } from './types/note'
+import type {
+  AiChatState,
+  AiCommandName,
+  AiContextKind,
+  AiContextScope,
+  AiConversationMessage,
+  AiPanelSession,
+} from './types/ai'
 import {
   nextEditorMode,
   previewThemes,
@@ -75,6 +84,7 @@ const PreviewPane = defineAsyncComponent(() => import('./components/PreviewPane.
 const ReminderDialog = defineAsyncComponent(() => import('./components/ReminderDialog.vue'))
 const ReminderList = defineAsyncComponent(() => import('./components/ReminderList.vue'))
 const SettingsPanel = defineAsyncComponent(() => import('./components/SettingsPanel.vue'))
+const AiAssistantPanel = defineAsyncComponent(() => import('./components/AiAssistantPanel.vue'))
 
 const now = Date.now()
 const tabs = ref<NoteTab[]>([
@@ -109,6 +119,9 @@ const externalRecentNotes = ref<NoteTab[]>(initialJsonSetting<NoteTab[]>('neopad
 const appReady = ref(false)
 const statusMessage = ref('Markdown')
 const settingsOpen = ref(false)
+const settingsInitialTab = ref<'general' | 'ai'>('general')
+const aiPanelSession = ref<AiPanelSession | null>(null)
+const aiChatSessions = ref<Record<string, AiChatState>>({})
 const helpTopic = ref<HelpTopic | null>(null)
 const appVersion = ref('')
 const fontDialogOpen = ref(false)
@@ -243,6 +256,23 @@ const {
   },
 })
 const {
+  aiConfig,
+  aiError,
+  aiTesting,
+  aiTestSucceeded,
+  aiPrompts,
+  aiPromptsLoading,
+  loadAiConfig,
+  updateAiConfig,
+  storeApiKey,
+  removeApiKey,
+  checkConnection,
+  loadAiPrompts,
+  revealAiPromptsFolder,
+  requestAiText,
+  disposeAiAssistant,
+} = useAiAssistant()
+const {
   archiveListOpen,
   archivedNotes,
   archiveLoading,
@@ -314,13 +344,14 @@ const {
 })
 const handleKeydown = createKeyboardHandler({
   state: {
-    modalOpen: () => Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value),
+    modalOpen: () => Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value || aiPanelSession.value),
     reminderDialogOpen: () => reminderDialogOpen.value,
     reminderListOpen: () => reminderListOpen.value,
     archiveListOpen: () => archiveListOpen.value,
     confirmationOpen: () => Boolean(confirmationDialog.value),
     inputOpen: () => Boolean(inputDialog.value),
     fontDialogOpen: () => fontDialogOpen.value,
+    aiPanelOpen: () => Boolean(aiPanelSession.value),
     immersiveMode: () => immersiveMode.value,
     settingsOpen: () => settingsOpen.value,
     helpOpen: () => Boolean(helpTopic.value),
@@ -350,6 +381,7 @@ const handleKeydown = createKeyboardHandler({
     cancelConfirmation: () => finishConfirmationDialog(false),
     cancelInput: () => finishInputDialog(null),
     closeFontDialog,
+    closeAiPanel,
     exitImmersiveMode: () => setImmersiveMode(false),
     closeSettings,
     closeHelp,
@@ -374,6 +406,7 @@ const handleKeydown = createKeyboardHandler({
     toggleNoteLibrary,
     togglePin,
     openSettings,
+    openAiPanel,
     insertDateTimeSeparator,
     insertSeparator,
     insertDateTime,
@@ -414,6 +447,14 @@ const editorModeLabel = computed(() => {
 })
 const effectiveEditorBackground = computed(() => editorBackgroundForTheme(theme.value, editorBackgroundColor.value))
 const themeToggleLabel = computed(() => theme.value === 'dark' ? t.value.status.switchToLight : t.value.status.switchToDark)
+const aiReady = computed(() => aiConfig.value.enabled && Boolean(aiConfig.value.baseUrl.trim()) && Boolean(aiConfig.value.model.trim()))
+const aiSlashLabels = computed(() => ({
+  rewrite: t.value.ai.rewriteCommand,
+  summarize: t.value.ai.summarizeCommand,
+  translate: t.value.ai.translateCommand,
+  continue: t.value.ai.continueCommand,
+  ask: t.value.ai.askCommand,
+}))
 
 onMounted(async () => {
   if (!isTauriRuntime()) {
@@ -427,6 +468,7 @@ onMounted(async () => {
   await loadAppVersion()
   await loadWorkspacePath()
   await loadMcpStatus()
+  await loadAiConfig()
   await loadShortcutWarnings()
   await loadNativeUiConfig()
   await Promise.allSettled([syncWindowOpacity(), syncToggleShortcut(), syncClipboardShortcut()])
@@ -454,6 +496,7 @@ onBeforeUnmount(() => {
   disposeSearchState()
   disposeDocumentSession()
   disposeWindowLifecycle()
+  disposeAiAssistant()
 })
 
 async function recoverPendingNoteWrites() {
@@ -970,15 +1013,105 @@ async function selectSearchResult(result: SearchResult) {
   focusEditorAfterPageAction()
 }
 
-function openSettings() {
+function openSettings(initialTab: 'general' | 'ai' = 'general') {
+  settingsInitialTab.value = initialTab
   settingsOpen.value = true
   statusMessage.value = t.value.status.settings
   void loadMcpStatus()
+  void loadAiConfig()
 }
 
 function closeSettings(returnFocusToEditor = true) {
   settingsOpen.value = false
   if (returnFocusToEditor) focusEditorAfterPageAction()
+}
+
+function openAiPanel(command?: AiCommandName) {
+  const snapshot = editorPane.value?.captureAiSnapshot()
+  if (!snapshot || !activeTab.value) return
+  const savedChat = aiChatSessions.value[activeTab.value.id]
+  aiPanelSession.value = {
+    noteId: activeTab.value.id,
+    noteTitle: activeTab.value.title,
+    snapshot,
+    chat: command
+      ? { messages: [], scope: 'note' }
+      : {
+          messages: savedChat?.messages.map((message) => ({ ...message, sources: message.sources?.map((source) => ({ ...source })) })) ?? [],
+          scope: savedChat?.scope ?? 'note',
+          promptId: savedChat?.promptId,
+        },
+    initialCommand: command,
+  }
+  void loadAiPrompts()
+}
+
+function closeAiPanel(returnFocusToEditor = true) {
+  aiPanelSession.value = null
+  if (returnFocusToEditor) focusEditorAfterPageAction()
+}
+
+function openAiSettings() {
+  closeAiPanel(false)
+  openSettings('ai')
+}
+
+function updateAiChatState(chat: AiChatState) {
+  const session = aiPanelSession.value
+  if (!session || session.initialCommand) return
+  session.chat = chat
+  aiChatSessions.value = {
+    ...aiChatSessions.value,
+    [session.noteId]: {
+      messages: chat.messages.map((message) => ({
+        ...message,
+        sources: message.sources?.map((source) => ({ ...source })),
+      })),
+      scope: chat.scope,
+      promptId: chat.promptId,
+    },
+  }
+}
+
+async function generateForAiPanel(
+  conversation: AiConversationMessage[],
+  scope: AiContextScope,
+  prompt?: string,
+) {
+  const session = aiPanelSession.value
+  if (!session) throw new Error(t.value.ai.staleContext)
+  const currentSnapshot = editorPane.value?.captureAiSnapshot()
+  if (!currentSnapshot || session.noteId !== activeTabId.value) {
+    throw new Error(t.value.ai.staleContext)
+  }
+  const contextKind = session.initialCommand ? session.snapshot.defaultKind : 'note'
+  const sourceSnapshot = session.initialCommand ? session.snapshot : currentSnapshot
+  const context = sourceSnapshot.contexts.find((item) => item.kind === contextKind)
+  if (!context) throw new Error(t.value.ai.staleContext)
+  return requestAiText(context.text, conversation, {
+    searchLibrary: scope === 'library',
+    currentNoteId: session.noteId,
+    prompt,
+  })
+}
+
+function applyAiResult(
+  action: 'replace' | 'insert' | 'insertBelow',
+  result: string,
+  contextKind: AiContextKind,
+) {
+  const session = aiPanelSession.value
+  if (!session || session.noteId !== activeTabId.value) return false
+  const context = session.snapshot.contexts.find((item) => item.kind === contextKind)
+  if (!context || !editorPane.value) return false
+
+  const applied = action === 'replace'
+    ? editorPane.value.replaceAiContext(context, result)
+    : action === 'insertBelow'
+      ? editorPane.value.insertAiBelow(context, result)
+      : editorPane.value.insertAiAtCursor(result)
+  if (applied) statusMessage.value = action === 'replace' ? t.value.ai.replaced : t.value.ai.inserted
+  return applied
 }
 
 function openHelpTopic(topic: HelpTopic) {
@@ -1367,8 +1500,10 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         :vim-mode="vimMode"
         :vim-insert-exit-key="vimInsertExitKey"
         :search-labels="t.editorFind"
+        :ai-slash-labels="aiSlashLabels"
         @vim-mode-change="activeVimMode = $event"
         @vim-tab-switch="cycleTab"
+        @ai-command="openAiPanel"
       />
       <PreviewPane
         v-if="previewMode !== 'edit'"
@@ -1450,6 +1585,11 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       :preview-content-width="previewContentWidth"
       :mcp-status="mcpStatus"
       :mcp-error="mcpUiError"
+      :ai-config="aiConfig"
+      :ai-error="aiError"
+      :ai-testing="aiTesting"
+      :ai-test-succeeded="aiTestSucceeded"
+      :initial-tab="settingsInitialTab"
       :messages="t.settings"
       :menu-messages="t.menu"
       @close="closeSettings"
@@ -1483,6 +1623,26 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       @update-mcp-enabled="updateMcpEnabled"
       @copy-mcp-config="copyMcpConfig"
       @regenerate-mcp-token="refreshMcpToken"
+      @update-ai-config="updateAiConfig"
+      @save-ai-api-key="storeApiKey"
+      @clear-ai-api-key="removeApiKey"
+      @test-ai-connection="checkConnection"
+    />
+
+    <AiAssistantPanel
+      v-if="aiPanelSession"
+      :session="aiPanelSession"
+      :ready="aiReady"
+      :messages="t.ai"
+      :prompts="aiPrompts"
+      :prompts-loading="aiPromptsLoading"
+      :generate="generateForAiPanel"
+      :apply-result="applyAiResult"
+      @close="closeAiPanel"
+      @configure="openAiSettings"
+      @update-chat="updateAiChatState"
+      @refresh-prompts="loadAiPrompts"
+      @open-prompts-folder="revealAiPromptsFolder"
     />
 
     <InputDialog

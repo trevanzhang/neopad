@@ -58,8 +58,12 @@ The repository currently contains a working Windows-focused MVP:
   file in the system file manager. The tab menu can also copy the absolute
   Markdown file path for use with terminals and local agents.
 - The reorganized Settings center groups General, Editor, Preview, Vim,
-  Shortcuts, and MCP controls in a focused dialog, including configurable
+  Shortcuts, AI, and MCP controls in a focused dialog, including configurable
   visibility and clipboard-capture shortcuts.
+- Optional AI collaboration provides a compact `Ctrl+K` note chat, reusable
+  Markdown prompts, bounded all-note context search, and Slash commands. It
+  never inserts or replaces a result until the user chooses an action. Provider
+  credentials stay in the operating system credential manager.
 - `Ctrl+W` closes the current non-pinned tab without changing its file. The tab
   context menu also provides explicit archive and trash actions, while recent
   documents provide a quick way to reopen closed or archived notes.
@@ -276,6 +280,7 @@ Ctrl+Shift+V    Append current clipboard text to clipboard.md
 - [Development](docs/development.md)
 - [Markdown preview and export](docs/export.md)
 - [MCP](docs/mcp.md)
+- [AI collaboration](docs/ai.md)
 - [Tasks](docs/tasks.md)
 - [Changelog](CHANGELOG.md)
 - [Agent guide](AGENTS.md)

@@ -822,7 +822,7 @@ fn external_updated_at(path: &std::path::Path) -> anyhow::Result<i64> {
         .as_millis() as i64)
 }
 
-fn open_path(path: &std::path::Path) -> anyhow::Result<()> {
+pub(crate) fn open_path(path: &std::path::Path) -> anyhow::Result<()> {
     open_target(path.as_os_str())
 }
 

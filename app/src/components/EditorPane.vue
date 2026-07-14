@@ -22,6 +22,9 @@ import { evaluateExpressionLine, formatCalculationResult } from '../lib/editor-c
 import { editorCodeLanguages } from '../lib/editor-code-languages'
 import { createNeopadSearchPanel, type EditorSearchLabels } from '../lib/editor-search-panel'
 import { baseEditorTheme, editorAppearance, neopadHighlightStyle } from '../lib/editor-theme'
+import { contextMatches, createAiEditorSnapshot } from '../lib/ai-editor'
+import { createAiSlashExtension, type AiSlashLabels } from '../lib/ai-slash-commands'
+import type { AiCommandName, AiEditorContext } from '../types/ai'
 
 const props = defineProps<{
   title: string
@@ -32,11 +35,13 @@ const props = defineProps<{
   vimMode: boolean
   vimInsertExitKey: string
   searchLabels: EditorSearchLabels
+  aiSlashLabels: AiSlashLabels
 }>()
 
 const emit = defineEmits<{
   vimModeChange: [mode: string]
   vimTabSwitch: [offset: -1 | 1]
+  aiCommand: [command: AiCommandName]
 }>()
 
 const model = defineModel<string>({ required: true })
@@ -47,6 +52,7 @@ const wrap = new Compartment()
 const appearance = new Compartment()
 const vimSupport = new Compartment()
 const searchSupport = new Compartment()
+const aiSlashSupport = new Compartment()
 let vimModeChangeHandler: ((event: { mode: string; subMode?: string }) => void) | null = null
 let mappedInsertExitKey = ''
 function registerNeopadVimTabMappings() {
@@ -73,6 +79,7 @@ const extensions = [
   markdown({ codeLanguages: editorCodeLanguages }),
   syntaxHighlighting(neopadHighlightStyle),
   searchSupport.of(createSearchExtension()),
+  aiSlashSupport.of(createAiSlashExtension(props.aiSlashLabels)),
   keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
   editable.of(EditorView.editable.of(true)),
   wrap.of(props.wordWrap ? EditorView.lineWrapping : []),
@@ -106,10 +113,12 @@ onMounted(() => {
   })
   connectVimModeListener()
   editorRoot.value.addEventListener('neopad-vim-tab-switch', handleVimTabSwitch)
+  editorRoot.value.addEventListener('neopad-ai-command', handleAiCommand)
 })
 
 onBeforeUnmount(() => {
   editorRoot.value?.removeEventListener('neopad-vim-tab-switch', handleVimTabSwitch)
+  editorRoot.value?.removeEventListener('neopad-ai-command', handleAiCommand)
   disconnectVimModeListener()
   updateInsertExitMapping('')
   editorView?.destroy()
@@ -119,6 +128,10 @@ onBeforeUnmount(() => {
 function handleVimTabSwitch(event: Event) {
   const offset = (event as CustomEvent<number>).detail === -1 ? -1 : 1
   emit('vimTabSwitch', offset)
+}
+
+function handleAiCommand(event: Event) {
+  emit('aiCommand', (event as CustomEvent<AiCommandName>).detail)
 }
 
 watch(
@@ -139,6 +152,11 @@ watch(
 watch(
   () => props.searchLabels,
   () => editorView?.dispatch({ effects: searchSupport.reconfigure(createSearchExtension()) }),
+)
+
+watch(
+  () => props.aiSlashLabels,
+  (labels) => editorView?.dispatch({ effects: aiSlashSupport.reconfigure(createAiSlashExtension(labels)) }),
 )
 
 function createSearchExtension() {
@@ -360,6 +378,52 @@ function insertLine(text: string) {
   return true
 }
 
+function captureAiSnapshot() {
+  if (!editorView) return null
+  const selection = editorView.state.selection.main
+  return createAiEditorSnapshot(
+    editorView.state.doc.toString(),
+    { from: selection.from, to: selection.to },
+    selection.head,
+  )
+}
+
+function replaceAiContext(context: AiEditorContext, text: string) {
+  if (!editorView || !contextMatches(editorView.state.doc.toString(), context)) return false
+  editorView.dispatch({
+    changes: { from: context.from, to: context.to, insert: text },
+    selection: EditorSelection.single(context.from, context.from + text.length),
+    effects: EditorView.scrollIntoView(context.from, { y: 'center' }),
+  })
+  editorView.focus()
+  return true
+}
+
+function insertAiAtCursor(text: string) {
+  if (!editorView) return false
+  const position = editorView.state.selection.main.head
+  editorView.dispatch({
+    changes: { from: position, insert: text },
+    selection: EditorSelection.cursor(position + text.length),
+    effects: EditorView.scrollIntoView(position + text.length, { y: 'center' }),
+  })
+  editorView.focus()
+  return true
+}
+
+function insertAiBelow(context: AiEditorContext, text: string) {
+  if (!editorView || !contextMatches(editorView.state.doc.toString(), context)) return false
+  const needsBreak = context.to > 0 && !text.startsWith('\n')
+  const insertion = `${needsBreak ? '\n\n' : ''}${text}`
+  editorView.dispatch({
+    changes: { from: context.to, insert: insertion },
+    selection: EditorSelection.cursor(context.to + insertion.length),
+    effects: EditorView.scrollIntoView(context.to + insertion.length, { y: 'center' }),
+  })
+  editorView.focus()
+  return true
+}
+
 function goToLine(lineNumber: number) {
   if (!editorView || lineNumber < 1 || lineNumber > editorView.state.doc.lines) {
     return false
@@ -437,6 +501,10 @@ defineExpose({
   findNextMatch,
   insertText,
   insertLine,
+  captureAiSnapshot,
+  replaceAiContext,
+  insertAiAtCursor,
+  insertAiBelow,
   goToLine,
   transformText,
   appendCurrentLineCalculation,

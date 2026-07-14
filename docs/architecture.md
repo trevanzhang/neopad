@@ -142,8 +142,11 @@ the configured workspace.
 - Tab context actions for rename, trash, persistent color selection, file
   manager reveal, absolute-path copying, and PNG/PDF export.
 - Compact settings dialog with independently scrollable content. Optional Vim
-  controls live under Vim settings, while MCP service controls have their
-  own MCP tab.
+  controls live under Vim settings, while AI provider and MCP service controls
+  have their own tabs.
+- Compact AI chat composer opened by `Ctrl+K` and AI actions opened by
+  CodeMirror Slash completion. Responses apply only after an explicit insert
+  or replace action.
 - Autosave and status reporting.
 - Compact reminder creation and list surfaces. New reminder lines use
   `- [ ] @remind YYYY-MM-DD HH:mm content`; checking the Markdown task
@@ -158,6 +161,7 @@ the configured workspace.
   - `F8`: rename the current page.
   - `F10`: cycle the Markdown preview theme.
   - `Ctrl+,`: open settings.
+  - `Ctrl+K`: open the current note's AI chat.
   - `F9`: toggle the light or dark theme.
   - `F11`: toggle immersive fullscreen.
 - Single and bulk overdue completion operations atomically change `[ ]` to
@@ -187,6 +191,26 @@ rejects duplicate window and clipboard shortcut combinations.
 - Single-instance enforcement and persisted main-window position; the initial
   position is the active screen's bottom-right work area.
 - Windows runtime icon and release GUI subsystem.
+
+## AI Collaboration Responsibilities
+
+The Vue layer owns one volatile conversation per note, the compact composer,
+prompt selection, context scope, and result actions. CodeMirror owns Slash
+completion and applies accepted text as one undoable transaction. A replacement
+first checks that the captured text still matches the editor.
+
+The Rust shell validates the configured URL, refuses remote plain HTTP,
+disables redirects, bounds responses, and calls the configured
+`/chat/completions` endpoint. Non-secret provider settings are stored in
+`config.json`; the API key is stored through the platform credential manager.
+AI is off by default and conversations are not persisted. User prompt files are
+read from `~/.neopad/prompts/*.md` through `neopad-core`. Whole-workspace scope
+uses core text relevance search and sends a bounded set of excerpts with source
+metadata; it does not concatenate the workspace or maintain a vector index.
+
+This client is independent of `neopad-mcp`. AI collaboration sends an explicit
+editor request to a model service, while MCP exposes workspace tools to
+external agents.
 
 ## MCP Responsibilities
 

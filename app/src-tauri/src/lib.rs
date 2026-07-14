@@ -1,3 +1,4 @@
+mod ai;
 mod commands;
 mod hotkey;
 mod mcp;
@@ -161,6 +162,14 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            ai::get_ai_config_command,
+            ai::save_ai_config_command,
+            ai::save_ai_api_key_command,
+            ai::clear_ai_api_key_command,
+            ai::test_ai_connection_command,
+            ai::generate_ai_text_command,
+            ai::list_ai_prompts_command,
+            ai::open_ai_prompts_folder_command,
             app_version,
             complete_startup_command,
             get_workspace_command,

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
+import AiSettingsSection from './AiSettingsSection.vue'
 import type { AppLanguage, AppMessages } from '../lib/i18n'
 import { getHelpContent } from '../lib/help-content'
 import type { EditorMode, PreviewContentWidth, PreviewFontFamily, PreviewLineHeight, PreviewTheme } from '../types/editor'
+import type { AiConfig } from '../types/ai'
 
-type SettingsTab = 'general' | 'preview' | 'shortcuts' | 'insertText' | 'advanced' | 'mcp' | 'about'
+type SettingsTab = 'general' | 'preview' | 'shortcuts' | 'insertText' | 'advanced' | 'ai' | 'mcp' | 'about'
 type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
 type McpStatus = {
   enabled: boolean
@@ -46,6 +48,11 @@ const props = defineProps<{
   previewContentWidth: PreviewContentWidth
   mcpStatus: McpStatus | null
   mcpError: string | null
+  aiConfig: AiConfig
+  aiError: string | null
+  aiTesting: boolean
+  aiTestSucceeded: boolean
+  initialTab?: SettingsTab
   messages: AppMessages['settings']
   menuMessages: AppMessages['menu']
 }>()
@@ -82,9 +89,13 @@ const emit = defineEmits<{
   'update-mcp-enabled': [enabled: boolean]
   'copy-mcp-config': []
   'regenerate-mcp-token': []
+  'update-ai-config': [patch: Partial<Omit<AiConfig, 'apiKeyConfigured'>>]
+  'save-ai-api-key': [apiKey: string]
+  'clear-ai-api-key': []
+  'test-ai-connection': []
 }>()
 
-const activeTab = ref<SettingsTab>('general')
+const activeTab = ref<SettingsTab>(props.initialTab ?? 'general')
 const selectedCustomIndex = ref<number | null>(null)
 const panel = ref<HTMLElement | null>(null)
 
@@ -99,6 +110,7 @@ const activeTabLabel = computed<keyof AppMessages['settings']>(() => {
     shortcuts: 'shortcutsTab',
     insertText: 'insertTextTab',
     advanced: 'advancedTab',
+    ai: 'aiTab',
     mcp: 'mcp',
     about: 'about',
   }
@@ -203,6 +215,10 @@ function deleteCustomText(current: string[]) {
       <button type="button" :aria-current="activeTab === 'advanced' ? 'page' : undefined" :class="{ active: activeTab === 'advanced' }" @click="activeTab = 'advanced'">
         <svg class="settings-tab-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4h10M3 8h10M3 12h10" /><circle cx="6" cy="4" r="1.25" /><circle cx="10" cy="8" r="1.25" /><circle cx="5" cy="12" r="1.25" /></svg>
         <span>{{ messages.advancedTab }}</span>
+      </button>
+      <button type="button" :aria-current="activeTab === 'ai' ? 'page' : undefined" :class="{ active: activeTab === 'ai' }" @click="activeTab = 'ai'">
+        <svg class="settings-tab-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.7v2.1M8 12.2v2.1M1.7 8h2.1M12.2 8h2.1M3.5 3.5L5 5M11 11l1.5 1.5M12.5 3.5L11 5M5 11l-1.5 1.5" /><circle cx="8" cy="8" r="2.55" /></svg>
+        <span>{{ messages.aiTab }}</span>
       </button>
       <button type="button" :aria-current="activeTab === 'mcp' ? 'page' : undefined" :class="{ active: activeTab === 'mcp' }" @click="activeTab = 'mcp'">
         <svg class="settings-tab-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="1.8" /><circle cx="12" cy="4" r="1.8" /><circle cx="8" cy="12" r="1.8" /><path d="M5.5 5.1l1.4 5.1M10.5 5.1l-1.4 5.1M5.8 4h4.4" /></svg>
@@ -548,6 +564,20 @@ function deleteCustomText(current: string[]) {
           </label>
           <small class="settings-hint vim-exit-hint">{{ messages.vimModeHint }}</small>
         </fieldset>
+      </template>
+
+      <template v-else-if="activeTab === 'ai'">
+        <AiSettingsSection
+          :config="aiConfig"
+          :error="aiError"
+          :testing="aiTesting"
+          :test-succeeded="aiTestSucceeded"
+          :messages="messages"
+          @update-config="$emit('update-ai-config', $event)"
+          @save-api-key="$emit('save-ai-api-key', $event)"
+          @clear-api-key="$emit('clear-ai-api-key')"
+          @test-connection="$emit('test-ai-connection')"
+        />
       </template>
 
       <template v-else-if="activeTab === 'mcp'">

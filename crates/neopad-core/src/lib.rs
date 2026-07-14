@@ -3,12 +3,15 @@ pub mod config;
 mod lock;
 pub mod note;
 pub mod path;
+pub mod prompt;
 pub mod reminder;
 pub mod search;
 pub mod tab;
 pub mod workspace;
 
-pub use config::{load_config, save_config, AppConfig, McpConfig, PreviewMode, Theme, UiConfig};
+pub use config::{
+    load_config, save_config, AiConfig, AppConfig, McpConfig, PreviewMode, Theme, UiConfig,
+};
 pub use lock::{lock_workspace_for_write, WorkspaceWriteLock};
 pub use note::{
     append_to_clipboard_note, append_to_note, archive_note, clear_trash, close_note, create_note,
@@ -18,11 +21,12 @@ pub use note::{
     restore_recoverable_note_write, set_note_color, unarchive_note, write_note_atomic,
     write_note_atomic_checked, NoteContent, RecoverableNoteWrite,
 };
+pub use prompt::{list_prompts, PromptEntry};
 pub use reminder::{
     claim_due_reminders, complete_due_reminders, complete_reminder, list_reminders,
     parse_reminder_line, reopen_reminder, Reminder, ReminderStatus,
 };
-pub use search::{search_notes, SearchResult};
+pub use search::{find_relevant_note_excerpts, search_notes, RelevantNoteExcerpt, SearchResult};
 pub use tab::{NoteTab, TabsState};
 pub use workspace::{default_workspace_dir, ensure_workspace_layout, init_workspace, Workspace};
 
