@@ -20,3 +20,6 @@ or publishing a release.
    Open the PNG and PDF and verify all three rendered elements are present.
 10. Use File > Open Archive Folder, then copy the file path from an
     internal and an external Markdown tab and verify each absolute path.
+11. Press F4, create and edit a prompt, switch away with F2/F3, rename it with
+    F8, and attach it from Ctrl+K. Then close and reopen its prompt tab, move it
+    to Trash, restore it, and confirm its Markdown content remains intact.

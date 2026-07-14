@@ -51,12 +51,13 @@ The repository currently contains a working Windows-focused MVP:
   and `F6` opens or closes the reminder list. "Mark Completed", "Mark Unfinished",
   and "Clear Due" update reminder checkboxes directly without deleting note
   content.
-- `F4` opens the compact note library for active, archived, and trashed notes;
-  it keeps everyday note actions close to the editor without turning NeoPad
-  into a knowledge-base suite.
-- Right-click a tab or a single note in the note library to reveal its Markdown
-  file in the system file manager. The tab menu can also copy the absolute
-  Markdown file path for use with terminals and local agents.
+- `F4` opens the compact file browser for active, archived, and trashed notes
+  plus reusable AI prompts. Prompt Markdown files can be created, renamed,
+  duplicated, restored, or moved to Trash there, and open in the normal editor
+  as clearly marked prompt tabs.
+- Right-click a tab or a single note or prompt in the file browser to reveal
+  its Markdown file in the system file manager. The tab menu can also copy the
+  absolute Markdown file path for use with terminals and local agents.
 - The reorganized Settings center groups General, Editor, Preview, Vim,
   Shortcuts, AI, and MCP controls in a focused dialog, including configurable
   visibility and clipboard-capture shortcuts.
@@ -250,7 +251,7 @@ Common local shortcuts:
 F1              Shortcut help
 F2              Switch to the previous tab
 F3              Switch to the next tab
-F4              Show or hide the note browser
+F4              Show or hide the note and prompt file browser
 F5              Cycle edit, split, and preview modes
 F6              Open or close the reminder list
 F7              Toggle window on top

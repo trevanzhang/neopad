@@ -21,7 +21,11 @@ pub use note::{
     restore_recoverable_note_write, set_note_color, unarchive_note, write_note_atomic,
     write_note_atomic_checked, NoteContent, RecoverableNoteWrite,
 };
-pub use prompt::{list_prompts, PromptEntry};
+pub use prompt::{
+    create_prompt, list_prompt_files, list_prompts, list_trashed_prompts, prompt_file_path,
+    read_prompt, rename_prompt, restore_prompt_from_trash, trash_prompt,
+    write_prompt_atomic_checked, PromptEntry, TrashedPromptEntry,
+};
 pub use reminder::{
     claim_due_reminders, complete_due_reminders, complete_reminder, list_reminders,
     parse_reminder_line, reopen_reminder, Reminder, ReminderStatus,

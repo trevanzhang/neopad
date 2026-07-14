@@ -33,9 +33,10 @@ Implemented MVP capabilities:
   NeoPad notes stored under `~/.neopad/archive/`.
 - Multiple tabs backed by local metadata, including close-without-delete and
   recent-document workflows.
-- Tab and single-note library context menus can reveal Markdown files in the
-  system file manager. Tab menus can also copy the current note's absolute file
-  path, while the File menu opens the local archive directory directly.
+- Tab and single-file browser context menus can reveal note, prompt, or
+  external Markdown files in the system file manager. Tab menus can also copy
+  the current document's absolute file path, while the File menu opens the
+  local archive directory directly.
 - Autosave.
 - Edit, split, and preview editor modes with a persisted Default Mode setting
   and fixed `F5` cycling shortcut; all three modes remain available in
@@ -85,6 +86,10 @@ Implemented MVP capabilities:
   chat results remain explicit insert, replace, or copy actions. Right-clicking
   an editor selection exposes direct polish, summarize, and translate actions.
   The Help menu documents setup, all three entry points, prompts, and privacy.
+- Prompt Markdown files are managed from the compact `F4` file browser and
+  open in the main editor as prompt tabs. They use the normal save barrier and
+  content-revision conflict checks, but remain outside note search, archive,
+  reminders, recent notes, and MCP note operations.
 - Structured in-app Software Help that introduces NeoPad's product direction,
   core note workflows, editor and search tools, capture and export paths,
   reminders, AI and MCP boundaries, and local-first data guarantees.
@@ -101,7 +106,8 @@ Implemented MVP capabilities:
   reminder metadata file stores notification delivery state only.
 - User-authored reusable AI prompts live in `prompts/*.md` and remain separate
   from note content.
-- Delete operations move notes into `trash/`.
+- Delete operations move notes and prompts into `trash/`; prompt trash remains
+  distinguishable from note trash and must not be reconciled as note content.
 - Emptying Trash moves its Markdown files into the operating system's Recycle
   Bin or Trash before removing deleted-tab metadata; it must not unlink note
   files. Files restored by the operating system must be rediscovered on the
@@ -149,7 +155,9 @@ Implemented MVP capabilities:
 - `Ctrl+K` conversations are kept in memory per note and never persisted.
 - Whole-workspace context uses local text relevance search and sends only a
   bounded set of excerpts rather than concatenating every note.
-- User-authored reusable prompts live in `~/.neopad/prompts/*.md`.
+- User-authored reusable prompts live in `~/.neopad/prompts/*.md`. The `F4`
+  file browser owns prompt creation, rename, duplicate, trash, and restore
+  actions. Open prompt tabs use atomic writes with content-revision conflicts.
 - AI request bodies, credentials, and note text must not be written to logs.
 
 ## Packaging Rules

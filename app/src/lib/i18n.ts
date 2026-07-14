@@ -285,6 +285,10 @@ export type AppMessages = {
     testingConnection: string
     connectionOk: string
     aiPrivacy: string
+    promptLibrarySection: string
+    promptLibraryDescription: string
+    managePrompts: string
+    openPromptsFolder: string
   }
   ai: {
     title: string
@@ -311,6 +315,7 @@ export type AppMessages = {
     loadingPrompts: string
     noPrompts: string
     openPromptsFolder: string
+    managePrompts: string
     noteScope: string
     libraryScope: string
     noteScopeHint: string
@@ -387,15 +392,22 @@ export type AppMessages = {
   library: {
     title: string
     notes: string
+    prompts: string
     archive: string
     trash: string
     emptyNotes: string
+    emptyPrompts: string
     emptyArchive: string
     emptyTrash: string
     newNote: string
+    newPrompt: string
+    newPromptTitle: string
+    duplicatePromptTitle: string
+    copySuffix: string
     refresh: string
     restore: string
     rename: string
+    duplicate: string
     archiveAction: string
     delete: string
     clearTrash: string
@@ -758,6 +770,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       testingConnection: 'Testing...',
       connectionOk: 'Connection succeeded',
       aiPrivacy: 'NeoPad sends note text only when you send an AI request. All-notes scope adds only locally matched excerpts. API keys are not stored in config.json.',
+      promptLibrarySection: 'Prompt library',
+      promptLibraryDescription: 'Create and edit local Markdown prompts in the F4 file browser.',
+      managePrompts: 'Manage prompts',
+      openPromptsFolder: 'Open prompts folder',
     },
     ai: {
       title: 'AI chat',
@@ -784,6 +800,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       loadingPrompts: 'Loading prompts...',
       noPrompts: 'No Markdown prompts yet',
       openPromptsFolder: 'Open prompts folder',
+      managePrompts: 'Manage prompts in Files',
       noteScope: 'Current note',
       libraryScope: 'Full access',
       noteScopeHint: 'Use the current note as context',
@@ -860,23 +877,30 @@ export const messages: Record<AppLanguage, AppMessages> = {
     library: {
       title: 'FILES',
       notes: 'Notes',
+      prompts: 'Prompts',
       archive: 'Archive',
       trash: 'Trash',
       emptyNotes: 'No notes yet',
+      emptyPrompts: 'No prompts yet',
       emptyArchive: 'No archived notes',
       emptyTrash: 'Trash is empty',
       newNote: 'New note',
-      refresh: 'Refresh library',
-      restore: 'Restore note',
+      newPrompt: 'New prompt',
+      newPromptTitle: 'Create prompt',
+      duplicatePromptTitle: 'Duplicate prompt',
+      copySuffix: 'copy',
+      refresh: 'Refresh files',
+      restore: 'Restore',
       rename: 'Rename',
+      duplicate: 'Duplicate',
       archiveAction: 'Archive',
       delete: 'Delete',
       clearTrash: 'Empty Trash',
       clearTrashTitle: 'Empty Trash?',
-      clearTrashMessage: 'Move all notes in NeoPad Trash to the system Recycle Bin or Trash? You can restore them there.',
+      clearTrashMessage: 'Move everything in NeoPad Trash to the system Recycle Bin or Trash? You can restore it there.',
       clearTrashConfirm: 'Empty Trash',
       revealInFileManager: 'Show in Explorer',
-      help: 'Browse local notes, archived notes, and Trash. Ctrl-click selects individual notes; Shift-click selects a range. Right-click to manage the selection.',
+      help: 'Browse notes, prompts, archived notes, and Trash. Ctrl-click selects individual files; Shift-click selects a range. Right-click to manage the selection.',
     },
     recovery: {
       title: 'Recover unsaved note?',
@@ -1229,6 +1253,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       testingConnection: '测试中...',
       connectionOk: '连接成功',
       aiPrivacy: '仅在主动发送 AI 请求时发送笔记内容；全部笔记范围只会附加本地匹配的片段。API Key 不会写入 config.json。',
+      promptLibrarySection: '提示词库',
+      promptLibraryDescription: '在 F4 文件浏览器中创建和编辑本地 Markdown 提示词。',
+      managePrompts: '管理提示词',
+      openPromptsFolder: '打开提示词目录',
     },
     ai: {
       title: 'AI 对话',
@@ -1255,6 +1283,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       loadingPrompts: '正在读取提示词……',
       noPrompts: '还没有 Markdown 提示词',
       openPromptsFolder: '打开提示词目录',
+      managePrompts: '在文件浏览器中管理提示词',
       noteScope: '当前笔记',
       libraryScope: '完全访问',
       noteScopeHint: '使用当前笔记作为上下文',
@@ -1331,23 +1360,30 @@ export const messages: Record<AppLanguage, AppMessages> = {
     library: {
       title: '\u6587\u4ef6',
       notes: '\u7b14\u8bb0',
+      prompts: '\u63d0\u793a\u8bcd',
       archive: '\u5b58\u6863',
       trash: '\u56de\u6536\u7ad9',
       emptyNotes: '\u6682\u65e0\u7b14\u8bb0',
+      emptyPrompts: '\u6682\u65e0\u63d0\u793a\u8bcd',
       emptyArchive: '\u6682\u65e0\u5b58\u6863\u7b14\u8bb0',
       emptyTrash: '\u56de\u6536\u7ad9\u4e3a\u7a7a',
       newNote: '\u65b0\u5efa\u7b14\u8bb0',
-      refresh: '\u5237\u65b0\u7b14\u8bb0\u5e93',
-      restore: '\u6062\u590d\u7b14\u8bb0',
+      newPrompt: '\u65b0\u5efa\u63d0\u793a\u8bcd',
+      newPromptTitle: '\u521b\u5efa\u63d0\u793a\u8bcd',
+      duplicatePromptTitle: '\u521b\u5efa\u63d0\u793a\u8bcd\u526f\u672c',
+      copySuffix: '\u526f\u672c',
+      refresh: '\u5237\u65b0\u6587\u4ef6',
+      restore: '\u6062\u590d',
       rename: '\u91cd\u547d\u540d',
+      duplicate: '\u521b\u5efa\u526f\u672c',
       archiveAction: '\u5b58\u6863',
       delete: '\u5220\u9664',
       clearTrash: '\u6e05\u7a7a\u56de\u6536\u7ad9',
       clearTrashTitle: '\u6e05\u7a7a\u56de\u6536\u7ad9\uff1f',
-      clearTrashMessage: '\u8981\u5c06 NeoPad \u56de\u6536\u7ad9\u4e2d\u7684\u5168\u90e8\u7b14\u8bb0\u79fb\u81f3\u7cfb\u7edf\u56de\u6536\u7ad9\u5417\uff1f\u4ecd\u53ef\u4ece\u7cfb\u7edf\u56de\u6536\u7ad9\u6062\u590d\u3002',
+      clearTrashMessage: '\u8981\u5c06 NeoPad \u56de\u6536\u7ad9\u4e2d\u7684\u5168\u90e8\u5185\u5bb9\u79fb\u81f3\u7cfb\u7edf\u56de\u6536\u7ad9\u5417\uff1f\u4ecd\u53ef\u4ece\u7cfb\u7edf\u56de\u6536\u7ad9\u6062\u590d\u3002',
       clearTrashConfirm: '\u6e05\u7a7a\u56de\u6536\u7ad9',
       revealInFileManager: '\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u663e\u793a',
-      help: '\u6d4f\u89c8\u672c\u5730\u7b14\u8bb0\u3001\u5b58\u6863\u548c\u56de\u6536\u7ad9\u3002Ctrl+\u70b9\u51fb\u53ef\u591a\u9009\uff0cShift+\u70b9\u51fb\u53ef\u8fde\u7eed\u9009\u4e2d\uff1b\u53f3\u952e\u7ba1\u7406\u5f53\u524d\u9009\u533a\u3002',
+      help: '\u6d4f\u89c8\u7b14\u8bb0\u3001\u63d0\u793a\u8bcd\u3001\u5b58\u6863\u548c\u56de\u6536\u7ad9\u3002Ctrl+\u70b9\u51fb\u53ef\u591a\u9009\uff0cShift+\u70b9\u51fb\u53ef\u8fde\u7eed\u9009\u4e2d\uff1b\u53f3\u952e\u7ba1\u7406\u5f53\u524d\u9009\u533a\u3002',
     },
     recovery: {
       title: '\u6062\u590d\u672a\u4fdd\u5b58\u7684\u7b14\u8bb0\uff1f',

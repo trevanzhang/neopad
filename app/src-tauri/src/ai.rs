@@ -1,14 +1,17 @@
-use crate::commands::{display_error, open_path, AppState};
+use crate::commands::{display_error, open_path, reveal_path, AppState};
 use anyhow::{bail, Context, Result};
 use neopad_core::{
-    find_relevant_note_excerpts, list_prompts, load_config, lock_workspace_for_write, save_config,
-    AiConfig, PromptEntry, RelevantNoteExcerpt,
+    create_prompt, find_relevant_note_excerpts, list_prompt_files, list_prompts,
+    list_trashed_prompts, load_config, lock_workspace_for_write, prompt_file_path, read_prompt,
+    rename_prompt, restore_prompt_from_trash, save_config, trash_prompt,
+    write_prompt_atomic_checked, AiConfig, PromptEntry, RelevantNoteExcerpt, TrashedPromptEntry,
 };
 use reqwest::{redirect::Policy, Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::time::{Duration, Instant};
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_clipboard_manager::ClipboardExt;
 use url::Url;
 
 const KEYRING_SERVICE: &str = "com.neopad.app";
@@ -156,6 +159,98 @@ pub async fn generate_ai_text_command(
 #[tauri::command]
 pub fn list_ai_prompts_command(state: State<'_, AppState>) -> Result<Vec<PromptEntry>, String> {
     list_prompts(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn list_ai_prompt_files_command(
+    state: State<'_, AppState>,
+) -> Result<Vec<PromptEntry>, String> {
+    list_prompt_files(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn list_ai_trashed_prompts_command(
+    state: State<'_, AppState>,
+) -> Result<Vec<TrashedPromptEntry>, String> {
+    list_trashed_prompts(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn read_ai_prompt_command(
+    state: State<'_, AppState>,
+    prompt_id: String,
+) -> Result<PromptEntry, String> {
+    read_prompt(&state.workspace, &prompt_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn create_ai_prompt_command(
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<PromptEntry, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    create_prompt(&state.workspace, &name).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn write_ai_prompt_command(
+    state: State<'_, AppState>,
+    prompt_id: String,
+    content: String,
+    expected_revision: String,
+) -> Result<PromptEntry, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    write_prompt_atomic_checked(&state.workspace, &prompt_id, &content, &expected_revision)
+        .map_err(display_error)
+}
+
+#[tauri::command]
+pub fn rename_ai_prompt_command(
+    state: State<'_, AppState>,
+    prompt_id: String,
+    name: String,
+) -> Result<PromptEntry, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    rename_prompt(&state.workspace, &prompt_id, &name).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn trash_ai_prompt_command(
+    state: State<'_, AppState>,
+    prompt_id: String,
+) -> Result<TrashedPromptEntry, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    trash_prompt(&state.workspace, &prompt_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn restore_ai_prompt_command(
+    state: State<'_, AppState>,
+    trashed_prompt_id: String,
+) -> Result<PromptEntry, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    restore_prompt_from_trash(&state.workspace, &trashed_prompt_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn reveal_ai_prompt_command(
+    state: State<'_, AppState>,
+    prompt_id: String,
+) -> Result<(), String> {
+    let path = prompt_file_path(&state.workspace, &prompt_id).map_err(display_error)?;
+    reveal_path(&path).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn copy_ai_prompt_path_command(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    prompt_id: String,
+) -> Result<(), String> {
+    let path = prompt_file_path(&state.workspace, &prompt_id).map_err(display_error)?;
+    app.clipboard()
+        .write_text(path.to_string_lossy().into_owned())
+        .map_err(|error| format!("failed to copy prompt path: {error}"))
 }
 
 #[tauri::command]

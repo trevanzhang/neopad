@@ -23,6 +23,16 @@ export interface AiPromptEntry {
   name: string
   fileName: string
   content: string
+  updatedAt: number
+  revision: string
+}
+
+export interface AiTrashedPromptEntry {
+  id: string
+  name: string
+  fileName: string
+  originalFileName: string
+  deletedAt: number
 }
 
 export interface AiContextSource {

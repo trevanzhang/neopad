@@ -35,7 +35,7 @@ body {
 }
 
 .app-shell.note-library-open {
-  grid-template-columns: 145px minmax(0, 1fr);
+  grid-template-columns: 168px minmax(0, 1fr);
 }
 
 .app-shell.note-library-open .window-chrome,
@@ -328,6 +328,20 @@ body {
   background: var(--np-surface);
 }
 
+.tab-prompt-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  color: var(--np-surface);
+  background: var(--np-accent);
+  border-radius: 3px 3px 3px 1px;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .theme-dark .tab-item[style]::before {
   opacity: 0.35;
 }
@@ -567,6 +581,16 @@ body {
   stroke-width: 1.5;
 }
 
+.note-library-actions .note-library-new-prompt {
+  color: var(--np-accent);
+}
+
+.note-library-new-prompt span {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
 .note-library-body {
   min-height: 0;
   padding: 5px 0 10px;
@@ -614,7 +638,8 @@ body {
   font-weight: 400;
 }
 
-.note-library-trash-root {
+.note-library-trash-root,
+.note-library-prompt-root {
   display: flex;
   align-items: center;
   padding: 0 8px;
@@ -643,7 +668,8 @@ body {
   outline: 0;
 }
 
-.note-library-clear-trash {
+.note-library-clear-trash,
+.note-library-create-prompt {
   display: grid;
   place-items: center;
   width: 20px;
@@ -662,12 +688,20 @@ body {
   outline: 0;
 }
 
+.note-library-create-prompt:hover,
+.note-library-create-prompt:focus-visible {
+  color: var(--np-accent);
+  background: var(--np-hover);
+  outline: 0;
+}
+
 .note-library-clear-trash:disabled {
   cursor: default;
   opacity: 0.35;
 }
 
-.note-library-clear-trash svg {
+.note-library-clear-trash svg,
+.note-library-create-prompt svg {
   display: block;
   width: 13px;
   height: 13px;
@@ -678,7 +712,8 @@ body {
   stroke-width: 1.3;
 }
 
-.note-library-trash-root > small {
+.note-library-trash-root > small,
+.note-library-prompt-root > small {
   align-self: center;
   min-width: 9px;
   padding-left: 5px;
@@ -726,6 +761,26 @@ body {
   stroke-width: 1.35;
 }
 
+.note-library-prompt-folder,
+.note-library-prompt-file {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  color: var(--np-surface);
+  background: var(--np-accent);
+  border-radius: 3px 3px 3px 1px;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.note-library-prompt-file {
+  color: var(--np-accent);
+  background: transparent;
+  border: 1px solid currentColor;
+}
+
 .note-library-entry {
   grid-template-columns: 15px minmax(0, 1fr);
   padding-right: 5px;
@@ -736,6 +791,16 @@ body {
 
 .note-library-entry.archived {
   grid-template-columns: 15px minmax(0, 1fr) auto;
+}
+
+.note-library-entry.prompt {
+  grid-template-columns: 15px minmax(0, 1fr) auto;
+}
+
+.note-library-draft-mark {
+  color: var(--np-muted);
+  font-size: 15px;
+  line-height: 1;
 }
 
 .note-library-entry > span:nth-child(2) {

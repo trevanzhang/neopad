@@ -6,6 +6,12 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+### Added
+
+- Added prompt Markdown management to the `F4` file browser, including create,
+  edit in marked main-editor tabs, rename, duplicate, reveal, trash, and restore
+  workflows with atomic saves and external-change conflict checks.
+
 ## 0.5.3 - 2026-07-14
 
 ### Added

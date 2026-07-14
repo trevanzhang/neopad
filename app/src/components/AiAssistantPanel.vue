@@ -39,7 +39,7 @@ const emit = defineEmits<{
   configure: []
   updateChat: [chat: AiChatState]
   refreshPrompts: []
-  openPromptsFolder: []
+  managePrompts: []
 }>()
 
 const panel = ref<HTMLElement | null>(null)
@@ -406,8 +406,8 @@ function handleMarkdownClick(event: MouseEvent) {
               </button>
               <p v-if="!promptsLoading && filteredPrompts.length === 0">{{ messages.noPrompts }}</p>
             </div>
-            <button type="button" class="ai-open-prompts" @click="emit('openPromptsFolder')">
-              {{ messages.openPromptsFolder }}
+            <button type="button" class="ai-open-prompts" @click="emit('managePrompts')">
+              {{ messages.managePrompts }}
             </button>
           </div>
         </form>

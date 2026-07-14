@@ -13,6 +13,7 @@ import type {
   AiConversationMessage,
   AiGenerateResponse,
   AiPromptEntry,
+  AiTrashedPromptEntry,
 } from '../types/ai'
 
 export interface UiConfig {
@@ -121,6 +122,50 @@ export function generateAiText(
 
 export function listAiPrompts(): Promise<AiPromptEntry[]> {
   return invoke('list_ai_prompts_command')
+}
+
+export function listAiPromptFiles(): Promise<AiPromptEntry[]> {
+  return invoke('list_ai_prompt_files_command')
+}
+
+export function listAiTrashedPrompts(): Promise<AiTrashedPromptEntry[]> {
+  return invoke('list_ai_trashed_prompts_command')
+}
+
+export function readAiPrompt(promptId: string): Promise<AiPromptEntry> {
+  return invoke('read_ai_prompt_command', { promptId })
+}
+
+export function createAiPrompt(name: string): Promise<AiPromptEntry> {
+  return invoke('create_ai_prompt_command', { name })
+}
+
+export function writeAiPrompt(
+  promptId: string,
+  content: string,
+  expectedRevision: string,
+): Promise<AiPromptEntry> {
+  return invoke('write_ai_prompt_command', { promptId, content, expectedRevision })
+}
+
+export function renameAiPrompt(promptId: string, name: string): Promise<AiPromptEntry> {
+  return invoke('rename_ai_prompt_command', { promptId, name })
+}
+
+export function trashAiPrompt(promptId: string): Promise<AiTrashedPromptEntry> {
+  return invoke('trash_ai_prompt_command', { promptId })
+}
+
+export function restoreAiPrompt(trashedPromptId: string): Promise<AiPromptEntry> {
+  return invoke('restore_ai_prompt_command', { trashedPromptId })
+}
+
+export function revealAiPrompt(promptId: string): Promise<void> {
+  return invoke('reveal_ai_prompt_command', { promptId })
+}
+
+export function copyAiPromptPath(promptId: string): Promise<void> {
+  return invoke('copy_ai_prompt_path_command', { promptId })
 }
 
 export function openAiPromptsFolder(): Promise<void> {

@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
 import type { AppMessages } from '../lib/i18n'
-import { readExternalMarkdown, readNote, saveNoteExport } from '../lib/invoke'
+import { readAiPrompt, readExternalMarkdown, readNote, saveNoteExport } from '../lib/invoke'
+import { isExternalTab, isPromptTab } from '../lib/document-tab'
 import { isTauriRuntime } from '../lib/runtime'
 import type { NoteExportFormat } from '../lib/note-export'
 import type { NoteTab } from '../types/note'
@@ -62,7 +63,10 @@ export function useNoteExport(options: NoteExportOptions) {
       return options.content.value
     }
     if (!isTauriRuntime()) return options.content.value
-    if (tab.external && tab.externalPath) {
+    if (isPromptTab(tab) && tab.promptId) {
+      return (await readAiPrompt(tab.promptId)).content
+    }
+    if (isExternalTab(tab) && tab.externalPath) {
       return (await readExternalMarkdown(tab.externalPath)).content
     }
     return (await readNote(tab.id)).content

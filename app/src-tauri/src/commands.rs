@@ -826,7 +826,7 @@ pub(crate) fn open_path(path: &std::path::Path) -> anyhow::Result<()> {
     open_target(path.as_os_str())
 }
 
-fn reveal_path(path: &std::path::Path) -> anyhow::Result<()> {
+pub(crate) fn reveal_path(path: &std::path::Path) -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]
     let mut command = {
         let mut command = Command::new("explorer");

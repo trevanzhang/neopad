@@ -44,7 +44,8 @@ code block instead of replacing the note with an error surface.
 
 Before exporting the active tab, NeoPad completes the normal save barrier. A
 save conflict or failed save stops the export. Exporting a different tab reads
-that tab from its validated source path rather than using stale editor content.
+that tab from its validated source path rather than using stale editor content;
+this includes note, prompt, and external Markdown tabs.
 
 ## Performance and Limits
 

@@ -2,8 +2,9 @@
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { AppMessages } from '../lib/i18n'
 import type { NoteTab } from '../types/note'
+import { isExternalTab, isNoteTab, isPromptTab } from '../lib/document-tab'
 
-defineProps<{
+const props = defineProps<{
   tabs: NoteTab[]
   activeTabId: string
   exportingNote: boolean
@@ -106,6 +107,7 @@ function archiveTabWithShortcut(event: KeyboardEvent, tabId: string) {
   event.preventDefault()
   event.stopPropagation()
   contextMenu.value = null
+  if (isPromptTab(props.tabs.find((tab) => tab.id === tabId))) return
   emit('archiveTab', tabId)
 }
 
@@ -124,6 +126,19 @@ function updateColor(color: string | null) {
   if (!tabId) return
   emit('updateTabColor', tabId, color)
   contextMenu.value = null
+}
+
+function contextTab() {
+  return props.tabs.find((tab) => tab.id === contextMenu.value?.tabId)
+}
+
+function canRenameOrDelete(tab: NoteTab | undefined) {
+  return Boolean(tab && tab.id !== 'inbox' && tab.id !== 'clipboard' && !isExternalTab(tab))
+}
+
+function tabTitle(tab: NoteTab) {
+  if (isPromptTab(tab)) return `prompts/${tab.fileName}`
+  return tab.externalPath ?? tab.title
 }
 </script>
 
@@ -144,7 +159,7 @@ function updateColor(color: string | null) {
       class="tab-item"
       :class="{ active: tab.id === activeTabId }"
       type="button"
-      :title="tab.externalPath ?? tab.title"
+      :title="tabTitle(tab)"
       :style="tab.color ? { '--tab-color': tab.color } : undefined"
       @click="$emit('selectTab', tab.id)"
       @dblclick="$emit('titleDoubleClick', tab.id)"
@@ -154,7 +169,8 @@ function updateColor(color: string | null) {
       @keydown.f12="archiveTabWithShortcut($event, tab.id)"
       @keydown.ctrl.w="closeTabWithShortcut($event, tab.id)"
     >
-      <span v-if="tab.external" class="tab-external-icon" aria-hidden="true" />
+      <span v-if="isExternalTab(tab)" class="tab-external-icon" aria-hidden="true" />
+      <span v-else-if="isPromptTab(tab)" class="tab-prompt-icon" aria-hidden="true">P</span>
       <span class="tab-label">{{ tab.title }}</span>
     </button>
     <button class="tab-add" type="button" title="New note" aria-label="New note" @click="$emit('newTab')">
@@ -183,7 +199,7 @@ function updateColor(color: string | null) {
       <button
         type="button"
         role="menuitem"
-      :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'"
+      :disabled="!canRenameOrDelete(contextTab())"
       @click="runContextAction('rename')"
     >
         <span>{{ messages.rename }}</span>
@@ -192,7 +208,7 @@ function updateColor(color: string | null) {
       <button
         type="button"
         role="menuitem"
-        :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'"
+        :disabled="!canRenameOrDelete(contextTab())"
         @click="runContextAction('delete')"
       >
         <span>{{ messages.delete }}</span>
@@ -201,7 +217,7 @@ function updateColor(color: string | null) {
       <button
         type="button"
         role="menuitem"
-        :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'"
+        :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard' || isPromptTab(contextTab())"
         @click="runContextAction('archive')"
       >
         <span>{{ messages.archive }}</span>
@@ -229,9 +245,10 @@ function updateColor(color: string | null) {
       <button type="button" role="menuitem" :disabled="exportingNote" @click="runContextAction('export-pdf')">
         {{ messages.exportAsPdf }}
       </button>
-      <div class="menu-separator" role="separator" />
-      <span class="tab-context-label">{{ messages.color }}</span>
-      <div class="tab-color-palette">
+      <template v-if="isNoteTab(contextTab())">
+        <div class="menu-separator" role="separator" />
+        <span class="tab-context-label">{{ messages.color }}</span>
+        <div class="tab-color-palette">
         <button
           type="button"
           class="tab-color-reset"
@@ -250,7 +267,8 @@ function updateColor(color: string | null) {
           :aria-label="color"
           @click="updateColor(color)"
         />
-      </div>
+        </div>
+      </template>
     </div>
   </nav>
 </template>

@@ -1,3 +1,5 @@
+export type DocumentKind = 'note' | 'prompt' | 'external'
+
 export type NoteTab = {
   id: string
   title: string
@@ -15,6 +17,9 @@ export type NoteTab = {
   systemTitle: boolean
   color?: string
   contentRevision?: string
+  kind?: DocumentKind
+  promptId?: string
+  promptRevision?: string
 }
 
 export type ExternalDocument = {

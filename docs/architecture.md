@@ -147,6 +147,9 @@ the configured workspace.
 - Compact AI chat composer opened by `Ctrl+K` and independent one-shot editing
   actions opened by CodeMirror `//` completion. Selecting a quick action
   authorizes one direct, undoable editor transaction.
+- Typed document tabs route note, external Markdown, and prompt Markdown loads
+  and saves to their own core-backed APIs. Prompt tabs are transient editor
+  views over `prompts/*.md`; they do not enter note metadata or note search.
 - Autosave and status reporting.
 - Compact reminder creation and list surfaces. New reminder lines use
   `- [ ] @remind YYYY-MM-DD HH:mm content`; checking the Markdown task
@@ -154,7 +157,7 @@ the configured workspace.
 - Local keyboard shortcuts:
   - `F1`: open shortcut help.
   - `F2` / `F3`: switch to the previous / next tab.
-  - `F4`: show or hide the note browser.
+  - `F4`: show or hide the note and prompt file browser.
   - `F5`: cycle edit, split, and preview editor modes.
   - `F6`: toggle the reminder list.
   - `F7`: toggle window on top.
@@ -214,7 +217,9 @@ disables redirects, bounds responses, and calls the configured
 `/chat/completions` endpoint. Non-secret provider settings are stored in
 `config.json`; the API key is stored through the platform credential manager.
 AI is off by default and conversations are not persisted. User prompt files are
-read from `~/.neopad/prompts/*.md` through `neopad-core`. Whole-workspace scope
+created, read, atomically written, renamed, trashed, and restored through
+`neopad-core`. The `F4` browser opens them as prompt-marked editor tabs, while
+the `Ctrl+K` picker includes only non-empty prompts. Whole-workspace scope
 uses core text relevance search and sends a bounded set of excerpts with source
 metadata; it does not concatenate the workspace or maintain a vector index.
 

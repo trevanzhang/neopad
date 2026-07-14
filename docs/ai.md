@@ -56,8 +56,19 @@ Reusable user prompts live as UTF-8 Markdown files in:
 The file name is the prompt name and the Markdown body is the instruction. Use
 the `+` button in the `Ctrl+K` composer to search and attach one prompt. The
 prompt remains visible as a removable chip and is sent only when the user sends
-a message. The picker can open the prompts folder and refresh after files are
-changed externally.
+a message.
+
+Press `F4` to manage prompts beside notes in the compact file browser. Create,
+rename (`F8` while its tab is active), duplicate, reveal, move to Trash, and
+restore actions all operate on `prompts/*.md`. Selecting a prompt opens it in
+the main editor as a prompt-marked tab, with the same autosave barrier and
+external-change conflict protection used by other editable documents. Closing
+a prompt tab only closes the view; deleting it moves the file to NeoPad's Trash.
+
+Empty prompt files remain visible in `F4` so they can be completed, but are
+omitted from the `Ctrl+K` attachment picker until they contain an instruction.
+Prompt documents stay outside note search, archive, reminders, recent notes,
+and MCP note tools.
 
 ## Quick editing commands
 

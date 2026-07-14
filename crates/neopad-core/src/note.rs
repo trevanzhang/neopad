@@ -99,29 +99,25 @@ where
     F: FnMut(&Path) -> Result<()>,
 {
     ensure_workspace_layout(workspace)?;
-    let mut trashed_files = fs::read_dir(&workspace.trash_dir)
+    let mut trashed_items = fs::read_dir(&workspace.trash_dir)
         .with_context(|| {
             format!(
                 "failed to read trash directory {}",
                 workspace.trash_dir.display()
             )
         })?
-        .filter_map(|entry| match entry {
-            Ok(entry) if entry.path().is_file() => Some(Ok(entry.path())),
-            Ok(_) => None,
-            Err(error) => Some(Err(error)),
-        })
+        .map(|entry| entry.map(|entry| entry.path()))
         .collect::<std::io::Result<Vec<_>>>()?;
-    trashed_files.sort();
+    trashed_items.sort();
 
     let mut tabs = load_tabs(workspace)?;
-    if trashed_files.is_empty() {
+    if trashed_items.is_empty() {
         tabs.tabs.retain(|tab| !tab.deleted);
         return save_tabs(workspace, &tabs);
     }
 
     let mut failures = Vec::new();
-    for source in trashed_files {
+    for source in trashed_items {
         if let Err(error) = move_to_trash(&source) {
             failures.push(format!("{}: {error:#}", source.display()));
         }
@@ -141,7 +137,7 @@ where
         Ok(())
     } else {
         bail!(
-            "failed to move {} trashed note(s) to the system Trash: {}",
+            "failed to move {} trashed item(s) to the system Trash: {}",
             failures.len(),
             failures.join("; ")
         )
@@ -988,7 +984,7 @@ fn format_timestamp_separator(timestamp: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::init_workspace;
+    use crate::{create_prompt, init_workspace, trash_prompt};
 
     #[test]
     fn note_crud_round_trip_uses_markdown_files_and_tabs() {
@@ -1118,6 +1114,13 @@ mod tests {
         let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
         let created = create_note(&workspace, Some("Clear me".to_owned())).expect("create");
         delete_note_to_trash(&workspace, &created.id).expect("delete");
+        let prompt = create_prompt(&workspace, "Clear prompt").expect("create prompt");
+        fs::write(
+            workspace.prompts_dir.join(&prompt.file_name),
+            "Keep this prompt body.",
+        )
+        .expect("write prompt");
+        trash_prompt(&workspace, &prompt.id).expect("trash prompt");
         let system_trash = temp_dir.path().join("system-trash");
         fs::create_dir(&system_trash).expect("system trash");
 
@@ -1143,10 +1146,28 @@ mod tests {
             .expect("system trash")
             .map(|entry| entry.expect("moved entry").path())
             .collect::<Vec<_>>();
-        assert_eq!(moved_files.len(), 1);
-        assert!(fs::read_to_string(&moved_files[0])
+        assert_eq!(moved_files.len(), 2);
+        let moved_note = moved_files
+            .iter()
+            .find(|path| path.is_file())
+            .expect("moved note");
+        let moved_prompt_dir = moved_files
+            .iter()
+            .find(|path| path.is_dir())
+            .expect("moved prompt directory");
+        assert!(fs::read_to_string(moved_note)
             .expect("preserved note")
             .contains("Clear me"));
+        let moved_prompt = fs::read_dir(moved_prompt_dir)
+            .expect("prompt trash directory")
+            .next()
+            .expect("moved prompt entry")
+            .expect("moved prompt")
+            .path();
+        assert_eq!(
+            fs::read_to_string(moved_prompt).expect("preserved prompt"),
+            "Keep this prompt body."
+        );
     }
 
     #[test]
@@ -1214,7 +1235,7 @@ mod tests {
         })
         .expect_err("partial failure");
 
-        assert!(error.to_string().contains("failed to move 1 trashed note"));
+        assert!(error.to_string().contains("failed to move 1 trashed item"));
         assert!(trashed_note_path(&workspace, &failed.file_name)
             .expect("failed note remains")
             .is_file());
