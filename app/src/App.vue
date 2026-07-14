@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppShell from './components/AppShell.vue'
 import EditorPane from './components/EditorPane.vue'
 import MenuBar from './components/MenuBar.vue'
@@ -58,14 +58,16 @@ import { downloadText, renderInsertTemplate, safeFileName, titleFromFileName } f
 import { transformText } from './lib/text-transform'
 import { getHelpContent, type HelpTopic } from './lib/help-content'
 import { createKeyboardHandler, isEditableElement } from './lib/keyboard-shortcuts'
+import { createAiInlinePlan, type AiInlinePlan } from './lib/ai-inline-command'
+import { isCurrentAiRequest } from './lib/ai-request-state'
 import { initialJsonSetting } from './lib/preferences'
 import type { NoteTab, Reminder, SearchResult } from './types/note'
 import type {
   AiChatState,
-  AiCommandName,
   AiContextKind,
   AiContextScope,
   AiConversationMessage,
+  AiInlineCommandName,
   AiPanelSession,
 } from './types/ai'
 import {
@@ -85,6 +87,13 @@ const ReminderDialog = defineAsyncComponent(() => import('./components/ReminderD
 const ReminderList = defineAsyncComponent(() => import('./components/ReminderList.vue'))
 const SettingsPanel = defineAsyncComponent(() => import('./components/SettingsPanel.vue'))
 const AiAssistantPanel = defineAsyncComponent(() => import('./components/AiAssistantPanel.vue'))
+
+interface AiInlineSession {
+  requestId: number
+  noteId: string
+  command: AiInlineCommandName
+  plan: AiInlinePlan | null
+}
 
 const now = Date.now()
 const tabs = ref<NoteTab[]>([
@@ -122,6 +131,8 @@ const settingsOpen = ref(false)
 const settingsInitialTab = ref<'general' | 'ai'>('general')
 const aiPanelSession = ref<AiPanelSession | null>(null)
 const aiChatSessions = ref<Record<string, AiChatState>>({})
+const aiInlineSession = ref<AiInlineSession | null>(null)
+let aiInlineRequestId = 0
 const helpTopic = ref<HelpTopic | null>(null)
 const appVersion = ref('')
 const fontDialogOpen = ref(false)
@@ -344,7 +355,7 @@ const {
 })
 const handleKeydown = createKeyboardHandler({
   state: {
-    modalOpen: () => Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value || aiPanelSession.value),
+    modalOpen: () => Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value || aiPanelSession.value || aiInlineSession.value),
     reminderDialogOpen: () => reminderDialogOpen.value,
     reminderListOpen: () => reminderListOpen.value,
     archiveListOpen: () => archiveListOpen.value,
@@ -352,6 +363,7 @@ const handleKeydown = createKeyboardHandler({
     inputOpen: () => Boolean(inputDialog.value),
     fontDialogOpen: () => fontDialogOpen.value,
     aiPanelOpen: () => Boolean(aiPanelSession.value),
+    aiInlineOpen: () => Boolean(aiInlineSession.value),
     immersiveMode: () => immersiveMode.value,
     settingsOpen: () => settingsOpen.value,
     helpOpen: () => Boolean(helpTopic.value),
@@ -382,6 +394,7 @@ const handleKeydown = createKeyboardHandler({
     cancelInput: () => finishInputDialog(null),
     closeFontDialog,
     closeAiPanel,
+    cancelAiInlineCommand,
     exitImmersiveMode: () => setImmersiveMode(false),
     closeSettings,
     closeHelp,
@@ -449,12 +462,21 @@ const effectiveEditorBackground = computed(() => editorBackgroundForTheme(theme.
 const themeToggleLabel = computed(() => theme.value === 'dark' ? t.value.status.switchToLight : t.value.status.switchToDark)
 const aiReady = computed(() => aiConfig.value.enabled && Boolean(aiConfig.value.baseUrl.trim()) && Boolean(aiConfig.value.model.trim()))
 const aiSlashLabels = computed(() => ({
-  rewrite: t.value.ai.rewriteCommand,
+  polish: t.value.ai.polishCommand,
   summarize: t.value.ai.summarizeCommand,
   translate: t.value.ai.translateCommand,
   continue: t.value.ai.continueCommand,
-  ask: t.value.ai.askCommand,
 }))
+const aiInlinePrompts = computed<Record<AiInlineCommandName, string>>(() => ({
+  polish: t.value.ai.polishPrompt,
+  summarize: t.value.ai.summarizePrompt,
+  translate: t.value.ai.translatePrompt,
+  continue: t.value.ai.continuePrompt,
+}))
+
+watch(activeTabId, (next, previous) => {
+  if (next !== previous && aiInlineSession.value) cancelAiInlineCommand(false)
+})
 
 onMounted(async () => {
   if (!isTauriRuntime()) {
@@ -1026,22 +1048,20 @@ function closeSettings(returnFocusToEditor = true) {
   if (returnFocusToEditor) focusEditorAfterPageAction()
 }
 
-function openAiPanel(command?: AiCommandName) {
+function openAiPanel() {
   const snapshot = editorPane.value?.captureAiSnapshot()
   if (!snapshot || !activeTab.value) return
+  cancelAiInlineCommand(false)
   const savedChat = aiChatSessions.value[activeTab.value.id]
   aiPanelSession.value = {
     noteId: activeTab.value.id,
     noteTitle: activeTab.value.title,
     snapshot,
-    chat: command
-      ? { messages: [], scope: 'note' }
-      : {
-          messages: savedChat?.messages.map((message) => ({ ...message, sources: message.sources?.map((source) => ({ ...source })) })) ?? [],
-          scope: savedChat?.scope ?? 'note',
-          promptId: savedChat?.promptId,
-        },
-    initialCommand: command,
+    chat: {
+      messages: savedChat?.messages.map((message) => ({ ...message, sources: message.sources?.map((source) => ({ ...source })) })) ?? [],
+      scope: savedChat?.scope ?? 'note',
+      promptId: savedChat?.promptId,
+    },
   }
   void loadAiPrompts()
 }
@@ -1053,12 +1073,13 @@ function closeAiPanel(returnFocusToEditor = true) {
 
 function openAiSettings() {
   closeAiPanel(false)
+  cancelAiInlineCommand(false)
   openSettings('ai')
 }
 
 function updateAiChatState(chat: AiChatState) {
   const session = aiPanelSession.value
-  if (!session || session.initialCommand) return
+  if (!session) return
   session.chat = chat
   aiChatSessions.value = {
     ...aiChatSessions.value,
@@ -1084,15 +1105,104 @@ async function generateForAiPanel(
   if (!currentSnapshot || session.noteId !== activeTabId.value) {
     throw new Error(t.value.ai.staleContext)
   }
-  const contextKind = session.initialCommand ? session.snapshot.defaultKind : 'note'
-  const sourceSnapshot = session.initialCommand ? session.snapshot : currentSnapshot
-  const context = sourceSnapshot.contexts.find((item) => item.kind === contextKind)
+  const context = currentSnapshot.contexts.find((item) => item.kind === 'note')
   if (!context) throw new Error(t.value.ai.staleContext)
   return requestAiText(context.text, conversation, {
     searchLibrary: scope === 'library',
     currentNoteId: session.noteId,
     prompt,
   })
+}
+
+function cancelAiInlineCommand(returnFocusToEditor = true) {
+  const session = aiInlineSession.value
+  if (session) editorPane.value?.cancelAiInlineCommand(session.requestId)
+  aiInlineRequestId += 1
+  aiInlineSession.value = null
+  if (returnFocusToEditor) focusEditorAfterPageAction()
+}
+
+function displayAiRequestError(error: unknown) {
+  if (typeof error === 'string') return error
+  if (error instanceof Error) return error.message
+  return String(error)
+}
+
+async function requestAiInlineResult(session: AiInlineSession) {
+  if (!session.plan) return
+  const requestId = session.requestId
+
+  try {
+    const response = await requestAiText(
+      session.plan.context.text,
+      [{ role: 'user', content: aiInlinePrompts.value[session.command] }],
+      { searchLibrary: false, currentNoteId: session.noteId, maxTokens: 800 },
+    )
+    const current = aiInlineSession.value
+    if (!isCurrentAiRequest(current, requestId)) return
+    if (current.noteId !== activeTabId.value || !editorPane.value) {
+      cancelAiInlineCommand(false)
+      return
+    }
+    const applied = editorPane.value.applyAiInlineCommand(
+      requestId,
+      current.plan?.action ?? 'insert',
+      current.plan?.context ?? session.plan.context,
+      response.content,
+    )
+    if (!applied) {
+      showAiInlineCommandFailure(current, t.value.ai.staleContext)
+      return
+    }
+    statusMessage.value = current.plan?.action === 'replace' ? t.value.ai.replaced : t.value.ai.inserted
+    aiInlineSession.value = null
+  } catch (error) {
+    const current = aiInlineSession.value
+    if (!isCurrentAiRequest(current, requestId)) return
+    showAiInlineCommandFailure(current, displayAiRequestError(error))
+  }
+}
+
+function showAiInlineCommandFailure(session: AiInlineSession, detail: string) {
+  editorPane.value?.failAiInlineCommand(session.requestId, t.value.ai.inlineFailed, detail)
+  statusMessage.value = detail
+  window.setTimeout(() => {
+    const current = aiInlineSession.value
+    if (!isCurrentAiRequest(current, session.requestId)) return
+    editorPane.value?.cancelAiInlineCommand(session.requestId)
+    aiInlineSession.value = null
+  }, 4000)
+}
+
+function runAiInlineCommand(command: AiInlineCommandName) {
+  const snapshot = editorPane.value?.captureAiSnapshot()
+  if (!snapshot || !activeTab.value) return
+  closeAiPanel(false)
+  cancelAiInlineCommand(false)
+  const plan = createAiInlinePlan(command, snapshot)
+  if (!plan) {
+    statusMessage.value = t.value.ai.inlineEmptyContext
+    return
+  }
+  const requestId = ++aiInlineRequestId
+  const session: AiInlineSession = {
+    requestId,
+    noteId: activeTab.value.id,
+    command,
+    plan,
+  }
+  aiInlineSession.value = session
+  editorPane.value?.startAiInlineCommand(
+    requestId,
+    snapshot.cursor,
+    t.value.ai.thinking,
+    plan.action === 'replace' ? plan.context : undefined,
+  )
+  if (!aiReady.value) {
+    showAiInlineCommandFailure(session, t.value.ai.disabled)
+    return
+  }
+  void requestAiInlineResult(session)
 }
 
 function applyAiResult(
@@ -1503,7 +1613,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         :ai-slash-labels="aiSlashLabels"
         @vim-mode-change="activeVimMode = $event"
         @vim-tab-switch="cycleTab"
-        @ai-command="openAiPanel"
+        @ai-command="runAiInlineCommand"
       />
       <PreviewPane
         v-if="previewMode !== 'edit'"

@@ -79,8 +79,10 @@ Implemented MVP capabilities:
 - Close-to-hide behavior.
 - Standalone Streamable HTTP MCP server managed from a dedicated MCP settings
   page.
-- Optional AI collaboration with a compact `Ctrl+K` note chat and Slash
-  commands. Users explicitly insert, replace, or copy generated Markdown.
+- Optional AI collaboration with a compact `Ctrl+K` note chat and independent
+  `//` continue, polish, summarize, and Chinese-English translation commands.
+  Selecting a `//` command applies generated Markdown as one undoable edit;
+  chat results remain explicit insert, replace, or copy actions.
 - Windows MSI packaging with branded installer assets.
 
 ## Data Rules
@@ -129,8 +131,9 @@ Implemented MVP capabilities:
   model servers.
 - The service URL and model belong in `config.json`. API keys must remain in
   platform secure storage and must not be returned to the webview after save.
-- AI responses must not modify a note automatically. Insert and replace remain
-  explicit, undoable editor transactions.
+- AI chat responses must not modify a note automatically. Selecting a `//`
+  quick command is the explicit action that authorizes one undoable insert or
+  replacement transaction.
 - Replacements must verify that their captured source text is still current.
 - `Ctrl+K` conversations are kept in memory per note and never persisted.
 - Whole-workspace context uses local text relevance search and sends only a

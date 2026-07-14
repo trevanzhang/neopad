@@ -119,7 +119,7 @@ describe('keyboard shortcut routing', () => {
     expect(spies.openSettings).toHaveBeenCalledOnce()
   })
 
-  it('opens inline AI with Ctrl+K while the editor is focused', () => {
+  it('opens AI chat with Ctrl+K while the editor is focused', () => {
     const { flags, spies, handler } = harness()
     flags.set('editorFocused', true)
     handler(keyEvent('k', { ctrlKey: true }))
@@ -160,6 +160,7 @@ describe('keyboard shortcut routing', () => {
     ['confirmation dialog', 'confirmationOpen', 'cancelConfirmation'],
     ['input dialog', 'inputOpen', 'cancelInput'],
     ['font dialog', 'fontDialogOpen', 'closeFontDialog'],
+    ['AI inline command', 'aiInlineOpen', 'cancelAiInlineCommand'],
     ['AI panel', 'aiPanelOpen', 'closeAiPanel'],
     ['settings', 'settingsOpen', 'closeSettings'],
     ['help', 'helpOpen', 'closeHelp'],

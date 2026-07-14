@@ -18,6 +18,7 @@ const emptyConfig = (): AiConfig => ({
   model: '',
   apiKeyConfigured: false,
 })
+const AI_UI_TIMEOUT_MS = 50_000
 
 function errorMessage(error: unknown) {
   if (typeof error === 'string') return error
@@ -139,9 +140,19 @@ export function useAiAssistant() {
   async function requestAiText(
     context: string,
     conversation: AiConversationMessage[],
-    options: { searchLibrary: boolean; currentNoteId: string; prompt?: string },
+    options: { searchLibrary: boolean; currentNoteId: string; prompt?: string; maxTokens?: number },
   ) {
-    return generateAiText(context, conversation, options)
+    let timeoutId = 0
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timeoutId = window.setTimeout(() => {
+        reject(new Error('AI request timed out. Check the provider connection and try again.'))
+      }, AI_UI_TIMEOUT_MS)
+    })
+    try {
+      return await Promise.race([generateAiText(context, conversation, options), timeout])
+    } finally {
+      window.clearTimeout(timeoutId)
+    }
   }
 
   function disposeAiAssistant() {

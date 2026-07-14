@@ -8,11 +8,11 @@ import {
 import { syntaxTree } from '@codemirror/language'
 import type { EditorState, Extension } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import type { AiCommandName } from '../types/ai'
+import type { AiInlineCommandName } from '../types/ai'
 
-export type AiSlashLabels = Record<AiCommandName, string>
+export type AiSlashLabels = Record<AiInlineCommandName, string>
 
-const commands: AiCommandName[] = ['rewrite', 'summarize', 'translate', 'continue', 'ask']
+export const aiSlashCommands: AiInlineCommandName[] = ['continue', 'polish', 'summarize', 'translate']
 
 function isCodeContext(state: EditorState, position: number) {
   let node = syntaxTree(state).resolveInner(position, -1)
@@ -24,13 +24,24 @@ function isCodeContext(state: EditorState, position: number) {
   return false
 }
 
+export function matchAiSlashCommandPrefix(value: string) {
+  const match = value.match(/((?:\/{2}|、、)[a-z]*)$/i)
+  if (!match) return null
+  const before = value.slice(0, match.index)
+  if (/[\/、]$/.test(before)) return null
+  if (/(?:https?|file|ftp):$/i.test(before)) return null
+  const currentToken = before.slice(Math.max(before.lastIndexOf(' '), before.lastIndexOf('\t')) + 1)
+  if (/[\/、]/.test(currentToken)) return null
+  return match
+}
+
 function slashMatch(state: EditorState, position: number) {
   const line = state.doc.lineAt(position)
   const before = state.doc.sliceString(line.from, position)
-  return before.match(/(?:^|\s)(\/[a-z]*)$/i)
+  return matchAiSlashCommandPrefix(before)
 }
 
-function applyCommand(command: AiCommandName) {
+function applyCommand(command: AiInlineCommandName) {
   return (view: EditorView, _completion: Completion, from: number, to: number) => {
     view.dispatch({ changes: { from, to, insert: '' } })
     view.dom.dispatchEvent(new CustomEvent('neopad-ai-command', {
@@ -60,14 +71,16 @@ export function slashCompletions(context: CompletionContext, labels: AiSlashLabe
   if (isCodeContext(context.state, context.pos)) return null
   const match = slashMatch(context.state, context.pos)
   if (!match) return null
+  const trigger = match[1].startsWith('、、') ? '、、' : '//'
 
   return {
     from: context.pos - match[1].length,
-    validFor: /^\/[a-z]*$/i,
-    options: commands.map((command) => ({
-      label: `/${command}`,
+    validFor: /^(?:\/{2}|、、)[a-z]*$/i,
+    options: aiSlashCommands.map((command) => ({
+      label: `${trigger}${command}`,
+      displayLabel: command,
       detail: labels[command],
-      type: 'keyword',
+      type: 'ai-command',
       apply: applyCommand(command),
     })),
   }

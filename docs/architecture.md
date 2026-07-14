@@ -144,9 +144,9 @@ the configured workspace.
 - Compact settings dialog with independently scrollable content. Optional Vim
   controls live under Vim settings, while AI provider and MCP service controls
   have their own tabs.
-- Compact AI chat composer opened by `Ctrl+K` and AI actions opened by
-  CodeMirror Slash completion. Responses apply only after an explicit insert
-  or replace action.
+- Compact AI chat composer opened by `Ctrl+K` and independent one-shot editing
+  actions opened by CodeMirror `//` completion. Selecting a quick action
+  authorizes one direct, undoable editor transaction.
 - Autosave and status reporting.
 - Compact reminder creation and list surfaces. New reminder lines use
   `- [ ] @remind YYYY-MM-DD HH:mm content`; checking the Markdown task
@@ -195,9 +195,12 @@ rejects duplicate window and clipboard shortcut combinations.
 ## AI Collaboration Responsibilities
 
 The Vue layer owns one volatile conversation per note, the compact composer,
-prompt selection, context scope, and result actions. CodeMirror owns Slash
-completion and applies accepted text as one undoable transaction. A replacement
-first checks that the captured text still matches the editor.
+prompt selection, context scope, and result actions. CodeMirror owns `//`
+completion. Quick editing commands use no chat history, prompt attachment, or
+workspace context. A mapped inline widget shows progress at the captured cursor,
+then the result is applied directly as one undoable transaction. A replacement
+first checks that its mapped source text still matches the captured text. Note
+switches and `Esc` cancel pending commands.
 
 The Rust shell validates the configured URL, refuses remote plain HTTP,
 disables redirects, bounds responses, and calls the configured

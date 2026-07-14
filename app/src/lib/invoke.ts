@@ -105,7 +105,7 @@ export function testAiConnection(): Promise<void> {
 export function generateAiText(
   context: string,
   messages: AiConversationMessage[],
-  options: { searchLibrary: boolean; currentNoteId: string; prompt?: string },
+  options: { searchLibrary: boolean; currentNoteId: string; prompt?: string; maxTokens?: number },
 ): Promise<AiGenerateResponse> {
   return invoke('generate_ai_text_command', {
     request: {
@@ -114,6 +114,7 @@ export function generateAiText(
       searchLibrary: options.searchLibrary,
       currentNoteId: options.currentNoteId,
       prompt: options.prompt,
+      maxTokens: options.maxTokens,
     },
   })
 }

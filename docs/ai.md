@@ -1,8 +1,9 @@
 # AI collaboration
 
 NeoPad includes optional, user-initiated AI collaboration inside the editor.
-It combines a lightweight note chat opened with `Ctrl+K` and quick Slash
-commands. It does not add a permanent chat sidebar or on-disk chat history.
+It combines a lightweight note chat opened with `Ctrl+K` and independent
+one-shot editing commands opened with `//`. It does not add a permanent chat
+sidebar or on-disk chat history.
 
 ## Configure
 
@@ -55,19 +56,30 @@ prompt remains visible as a removable chip and is sent only when the user sends
 a message. The picker can open the prompts folder and refresh after files are
 changed externally.
 
-## Slash commands
+## Quick editing commands
 
-Typing `/` at the start of a line or after whitespace opens the AI command
-menu. The initial commands are:
+Type `//` anywhere in ordinary note text to open the command menu; no leading
+space is required. With Chinese punctuation enabled, `、、` is accepted as the
+same trigger. A single `/` or `、` has no AI behavior. The focused command set is:
 
-- `/rewrite`
-- `/summarize`
-- `/translate`
-- `/continue`
-- `/ask`
+- `//continue`
+- `//polish`
+- `//summarize`
+- `//translate`
 
-Slash completion does not activate in Markdown code nodes. Selecting a command
-removes its command token before opening the AI surface.
+These commands are separate from `Ctrl+K` chat: they do not use chat history,
+the prompt library, or all-note context. Polish and translate target the
+selection or nearby paragraph. Summarize targets the selection or current
+note. Continue uses the nearby paragraph. Translation defaults to automatic
+Chinese-English switching.
+
+Completion does not activate inside Markdown code nodes, URLs, paths, longer
+slash runs, or ordinary single-slash text. Selecting a command removes its
+token and shows a small animated marker at the captured cursor. The result is
+then applied directly as one undoable CodeMirror transaction: continue and
+summarize insert at the marker, while polish and translate replace their
+unchanged source text. `Esc` cancels a pending command. Switching notes also
+cancels it, and stale source text is never overwritten.
 
 ## Privacy and boundaries
 

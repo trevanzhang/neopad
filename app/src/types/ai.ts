@@ -1,5 +1,5 @@
 export type AiContextKind = 'selection' | 'paragraph' | 'note'
-export type AiCommandName = 'rewrite' | 'summarize' | 'translate' | 'continue' | 'ask'
+export type AiInlineCommandName = 'continue' | 'polish' | 'summarize' | 'translate'
 export type AiContextScope = 'note' | 'library'
 
 export interface AiConfig {
@@ -52,6 +52,7 @@ export interface AiEditorContext {
 
 export interface AiEditorSnapshot {
   documentText: string
+  cursor: number
   contexts: AiEditorContext[]
   defaultKind: AiContextKind
 }
@@ -61,5 +62,4 @@ export interface AiPanelSession {
   noteTitle: string
   snapshot: AiEditorSnapshot
   chat: AiChatState
-  initialCommand?: AiCommandName
 }

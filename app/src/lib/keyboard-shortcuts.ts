@@ -7,6 +7,7 @@ export interface KeyboardState {
   inputOpen: () => boolean
   fontDialogOpen: () => boolean
   aiPanelOpen: () => boolean
+  aiInlineOpen: () => boolean
   immersiveMode: () => boolean
   settingsOpen: () => boolean
   helpOpen: () => boolean
@@ -38,6 +39,7 @@ export interface KeyboardActions {
   cancelInput: () => void
   closeFontDialog: () => void
   closeAiPanel: () => void
+  cancelAiInlineCommand: () => void
   exitImmersiveMode: () => void | Promise<void>
   closeSettings: () => void
   closeHelp: () => void
@@ -147,6 +149,7 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
         [state.confirmationOpen(), actions.cancelConfirmation],
         [state.inputOpen(), actions.cancelInput],
         [state.fontDialogOpen(), actions.closeFontDialog],
+        [state.aiInlineOpen(), actions.cancelAiInlineCommand],
         [state.aiPanelOpen(), actions.closeAiPanel],
         [state.immersiveMode(), () => void actions.exitImmersiveMode()],
         [state.settingsOpen(), actions.closeSettings],

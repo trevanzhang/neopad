@@ -10,8 +10,10 @@ patch versions are reserved for compatible fixes.
 
 - Added optional inline AI editing with secure OpenAI-compatible provider
   settings, a compact `Ctrl+K` note chat, in-memory per-note sessions, reusable
-  Markdown prompts, bounded all-note context search, explicit result actions,
-  and Slash commands for rewriting, summarizing, translating, and continuing.
+  Markdown prompts, bounded all-note context search, explicit chat result
+  actions, and independent auto-applying `//` commands with cursor-anchored
+  progress for continuing, polishing, summarizing, and Chinese-English
+  translation.
 
 ### Changed
 

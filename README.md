@@ -61,9 +61,11 @@ The repository currently contains a working Windows-focused MVP:
   Shortcuts, AI, and MCP controls in a focused dialog, including configurable
   visibility and clipboard-capture shortcuts.
 - Optional AI collaboration provides a compact `Ctrl+K` note chat, reusable
-  Markdown prompts, bounded all-note context search, and Slash commands. It
-  never inserts or replaces a result until the user chooses an action. Provider
-  credentials stay in the operating system credential manager.
+  Markdown prompts, bounded all-note context search, and independent `//`
+  commands for continue, polish, summarize, and Chinese-English translation.
+  A selected `//` command applies its result directly as one undoable edit;
+  chat results still require an explicit action. Provider credentials stay in
+  the operating system credential manager.
 - `Ctrl+W` closes the current non-pinned tab without changing its file. The tab
   context menu also provides explicit archive and trash actions, while recent
   documents provide a quick way to reopen closed or archived notes.

@@ -319,15 +319,16 @@ export type AppMessages = {
     inserted: string
     replaced: string
     shortcutHint: string
-    rewriteCommand: string
+    polishCommand: string
     summarizeCommand: string
     translateCommand: string
     continueCommand: string
-    askCommand: string
-    rewritePrompt: string
+    polishPrompt: string
     summarizePrompt: string
     translatePrompt: string
     continuePrompt: string
+    inlineEmptyContext: string
+    inlineFailed: string
   }
   search: {
     title: string
@@ -736,7 +737,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       installMethod: 'Agent setup',
       installMethodDescription: 'Use this configuration in an MCP client that supports Streamable HTTP.',
       aiInline: 'AI collaboration',
-      aiDescription: 'Use Ctrl+K for note chat or slash commands for quick editing actions.',
+      aiDescription: 'Use Ctrl+K for note chat or // for independent quick editing actions.',
       enableAi: 'Enable AI features',
       serviceUrl: 'Service URL',
       serviceUrlHint: 'Remote services require HTTPS. Loopback HTTP is allowed for local models.',
@@ -778,7 +779,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       noPrompts: 'No Markdown prompts yet',
       openPromptsFolder: 'Open prompts folder',
       noteScope: 'Current note',
-      libraryScope: 'All notes',
+      libraryScope: 'Full access',
       noteScopeHint: 'Use the current note as context',
       libraryScopeHint: 'Search all notes locally and send only relevant excerpts',
       sources: 'Sources',
@@ -786,15 +787,16 @@ export const messages: Record<AppLanguage, AppMessages> = {
       inserted: 'AI result inserted',
       replaced: 'AI context replaced',
       shortcutHint: 'Ctrl+K',
-      rewriteCommand: 'Rewrite the nearby text',
+      polishCommand: 'Polish',
       summarizeCommand: 'Summarize the current context',
       translateCommand: 'Translate the current context',
       continueCommand: 'Continue writing',
-      askCommand: 'Ask with the current context',
-      rewritePrompt: 'Rewrite this text for clarity while preserving its meaning. Return only the rewritten text.',
+      polishPrompt: 'Polish this text for clarity, fluency, and consistency while preserving its meaning and Markdown structure. Return only the polished text.',
       summarizePrompt: 'Summarize this text concisely in Markdown.',
-      translatePrompt: 'Translate this text into the other primary language used in the text. Return only the translation.',
+      translatePrompt: 'Detect whether this text is primarily Chinese or English. Translate Chinese into natural English and English into natural Chinese. Return only the translation.',
       continuePrompt: 'Continue this text naturally in the same tone and format. Return only the continuation.',
+      inlineEmptyContext: 'There is no text here for this command.',
+      inlineFailed: 'AI command failed',
     },
     search: {
       title: 'Search',
@@ -1201,7 +1203,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       installMethod: '\u5b89\u88c5\u65b9\u6cd5',
       installMethodDescription: '\u5c06\u4e0b\u65b9\u914d\u7f6e\u586b\u5165\u652f\u6301 Streamable HTTP \u7684 MCP \u5ba2\u6237\u7aef\u3002',
       aiInline: 'AI 协作',
-      aiDescription: '使用 Ctrl+K 围绕笔记对话，或通过 Slash 命令执行快速编辑。',
+      aiDescription: '使用 Ctrl+K 围绕笔记对话，或通过 // 执行独立的快速编辑。',
       enableAi: '启用 AI 功能',
       serviceUrl: '服务 URL',
       serviceUrlHint: '远程服务必须使用 HTTPS；本地模型可使用回环地址 HTTP。',
@@ -1243,7 +1245,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       noPrompts: '还没有 Markdown 提示词',
       openPromptsFolder: '打开提示词目录',
       noteScope: '当前笔记',
-      libraryScope: '全部笔记',
+      libraryScope: '完全访问',
       noteScopeHint: '使用当前笔记作为上下文',
       libraryScopeHint: '在本地搜索全部笔记，仅发送相关片段',
       sources: '参考',
@@ -1251,15 +1253,16 @@ export const messages: Record<AppLanguage, AppMessages> = {
       inserted: '已插入 AI 结果',
       replaced: '已替换 AI 上下文',
       shortcutHint: 'Ctrl+K',
-      rewriteCommand: '重写附近文本',
+      polishCommand: '润色',
       summarizeCommand: '总结当前上下文',
       translateCommand: '翻译当前上下文',
       continueCommand: '继续写作',
-      askCommand: '结合当前内容提问',
-      rewritePrompt: '在保留原意的前提下重写这段文字，使其更清晰。只返回重写后的正文。',
+      polishPrompt: '在保留原意和 Markdown 结构的前提下润色这段文字，使表达清晰、流畅且风格一致。只返回润色后的正文。',
       summarizePrompt: '用简洁的 Markdown 总结这段内容。',
-      translatePrompt: '将这段文字翻译为文中另一种主要语言。只返回译文。',
+      translatePrompt: '判断文本的主要语言：中文翻译为自然英文，英文翻译为自然中文。只返回译文。',
       continuePrompt: '使用相同语气和格式自然续写。只返回续写内容。',
+      inlineEmptyContext: '当前位置没有可供处理的文本。',
+      inlineFailed: 'AI 处理失败',
     },
     search: {
       title: '\u641c\u7d22',

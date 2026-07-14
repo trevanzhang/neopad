@@ -60,8 +60,9 @@ This file tracks the implemented MVP relative to the original task plan.
   token regeneration, and copyable client configuration.
 - Optional AI collaboration with secure provider settings, a compact `Ctrl+K`
   note chat, in-memory per-note sessions, a Markdown prompt library, bounded
-  whole-workspace context search, explicit result insertion, and `/rewrite`,
-  `/summarize`, `/translate`, `/continue`, and `/ask` commands.
+  whole-workspace context search, explicit chat result actions, and independent
+  auto-applying `//continue`, `//polish`, `//summarize`, and `//translate`
+  commands with inline progress.
 - MCP HTTP child-process integration tests.
 - Windows Tauri WebDriver smoke tests for the critical note workflow.
 - Windows icon, tray/taskbar icon, MSI branding, desktop shortcut icon, bundled

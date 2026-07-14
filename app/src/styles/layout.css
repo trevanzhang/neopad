@@ -3043,35 +3043,79 @@ body {
 }
 
 .code-editor .cm-tooltip.cm-tooltip-autocomplete {
+  min-width: 286px;
+  padding: 4px;
+  overflow: hidden;
   color: var(--np-text);
   background: var(--np-menu);
   border: 1px solid var(--np-border);
-  border-radius: 3px;
+  border-radius: 7px;
   box-shadow: var(--np-shadow-panel);
 }
 
+.code-editor .cm-tooltip-autocomplete > ul {
+  padding: 0;
+}
+
 .code-editor .cm-tooltip-autocomplete > ul > li {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 9px;
   color: var(--np-text);
   background: transparent;
+  border-radius: 4px;
 }
 
 .code-editor .cm-tooltip-autocomplete > ul > li[aria-selected] {
   color: var(--np-text);
   background: var(--np-ai-accent-soft);
+  box-shadow: inset 2px 0 var(--np-ai-accent);
 }
 
 .code-editor .cm-tooltip-autocomplete .cm-completionIcon {
-  color: var(--np-muted);
+  display: none;
+}
+
+.code-editor .cm-tooltip-autocomplete .cm-completionIcon-ai-command {
+  display: grid;
+  flex: 0 0 24px;
+  place-items: center;
+  width: 24px;
+  height: 20px;
+  margin-right: 8px;
+  padding: 0;
+  color: var(--np-syntax-heading);
+  background: var(--np-ai-accent-soft);
+  border-radius: 4px;
+  opacity: 1;
+}
+
+.code-editor .cm-tooltip-autocomplete .cm-completionIcon-ai-command::after {
+  content: "//";
+  font: 700 11px/1 Consolas, "Cascadia Mono", monospace;
 }
 
 .code-editor .cm-tooltip-autocomplete .cm-completionLabel {
+  min-width: 84px;
+  color: var(--np-text);
   font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.code-editor .cm-tooltip-autocomplete .cm-completionMatchedText {
+  color: var(--np-accent);
+  text-decoration: none;
 }
 
 .code-editor .cm-tooltip-autocomplete .cm-completionDetail {
-  margin-left: 12px;
+  margin-left: 10px;
   color: var(--np-muted);
   font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
   font-style: normal;
 }
 
@@ -3094,8 +3138,43 @@ body {
   }
 }
 
+.code-editor .cm-ai-inline-status {
+  display: inline-flex;
+  align-items: center;
+  min-width: 24px;
+  height: 1em;
+  margin: 0 3px;
+  vertical-align: baseline;
+  color: var(--np-muted);
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.code-editor .cm-ai-inline-status.is-loading {
+  justify-content: center;
+  gap: 4px;
+}
+
+.code-editor .cm-ai-inline-status.is-loading i {
+  width: 5px;
+  height: 5px;
+  background: var(--np-ai-accent);
+  border-radius: 50%;
+  animation: ai-pulse 1s ease-in-out infinite;
+}
+
+.code-editor .cm-ai-inline-status.is-loading i:nth-child(2) { animation-delay: 120ms; }
+.code-editor .cm-ai-inline-status.is-loading i:nth-child(3) { animation-delay: 240ms; }
+
+.code-editor .cm-ai-inline-status.is-error {
+  width: auto;
+  color: var(--np-danger);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .ai-thinking span {
+  .ai-thinking span,
+  .code-editor .cm-ai-inline-status.is-loading i {
     animation: none;
   }
 }
@@ -3223,6 +3302,60 @@ body {
   border-left-color: var(--np-ai-accent);
 }
 
+.ai-message-markdown {
+  --np-preview-text: var(--np-text);
+  --np-preview-heading: var(--np-syntax-heading);
+  --np-preview-muted: var(--np-muted);
+  --np-preview-code-bg: var(--np-code);
+  --np-preview-pre-bg: var(--np-chrome-elevated);
+  --np-preview-border: var(--np-border);
+  --np-preview-accent: var(--np-syntax-link);
+  --np-preview-syntax-keyword: var(--np-syntax-keyword);
+  --np-preview-syntax-string: var(--np-syntax-string);
+  --np-preview-syntax-number: var(--np-syntax-number);
+  --np-preview-syntax-function: var(--np-syntax-function);
+  --np-preview-syntax-type: var(--np-syntax-type);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.62;
+  overflow-wrap: anywhere;
+}
+
+.ai-message-markdown > :first-child {
+  margin-top: 0;
+}
+
+.ai-message-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.ai-message-markdown p {
+  white-space: normal;
+}
+
+.ai-message-markdown h1 {
+  font-size: 19px;
+}
+
+.ai-message-markdown h2 {
+  font-size: 17px;
+}
+
+.ai-message-markdown h3 {
+  font-size: 15px;
+}
+
+.ai-message-markdown ul,
+.ai-message-markdown ol {
+  padding-left: 1.5em;
+}
+
+.ai-message-markdown li + li {
+  margin-top: 0.25em;
+}
+
 .ai-message-sources {
   display: flex;
   flex-wrap: wrap;
@@ -3287,6 +3420,10 @@ body {
   border-top: 0;
 }
 
+.ai-panel:not(.is-expanded) .ai-composer {
+  border-radius: inherit;
+}
+
 .ai-panel.is-expanded .ai-composer {
   border-top: 1px solid var(--np-border);
 }
@@ -3325,7 +3462,7 @@ body {
 
 .ai-composer .ai-tool-button,
 .ai-composer .ai-prompt-chip,
-.ai-composer .ai-scope-toggle,
+.ai-composer .ai-scope-trigger,
 .ai-composer .ai-send-button {
   min-width: 0;
   min-height: 28px;
@@ -3358,7 +3495,8 @@ body {
 .ai-composer .ai-tool-button:hover,
 .ai-composer .ai-tool-button.active,
 .ai-composer .ai-prompt-chip:hover,
-.ai-composer .ai-scope-toggle:hover {
+.ai-composer .ai-scope-trigger:hover,
+.ai-composer .ai-scope-trigger[aria-expanded="true"] {
   color: var(--np-text);
   background: var(--np-hover);
 }
@@ -3378,28 +3516,111 @@ body {
   color: var(--np-muted);
 }
 
-.ai-composer .ai-scope-toggle {
+.ai-scope-picker {
+  position: relative;
+}
+
+.ai-composer .ai-scope-trigger {
   display: flex;
   gap: 6px;
   align-items: center;
   padding: 0 8px;
 }
 
-.ai-composer .ai-scope-toggle.active {
-  color: var(--np-ai-accent-text);
+.ai-composer .ai-scope-trigger.active {
+  color: var(--np-syntax-heading);
   background: var(--np-ai-accent-soft);
   border-color: var(--np-ai-accent);
 }
 
-.ai-scope-check {
-  display: grid;
-  place-items: center;
+.ai-scope-trigger > svg:first-child {
   width: 14px;
   height: 14px;
-  font-size: 9px;
-  line-height: 1;
-  border: 1px solid currentColor;
-  border-radius: 50%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.25;
+}
+
+.ai-scope-trigger .ai-scope-chevron {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.4;
+  transition: transform 120ms ease;
+}
+
+.ai-scope-trigger[aria-expanded="true"] .ai-scope-chevron {
+  transform: rotate(180deg);
+}
+
+.ai-scope-menu {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 0;
+  z-index: 3;
+  display: grid;
+  width: min(300px, calc(100vw - 72px));
+  padding: 4px;
+  color: var(--np-text);
+  background: var(--np-menu);
+  border: 1px solid var(--np-border);
+  border-radius: 6px;
+  box-shadow: var(--np-shadow-panel);
+}
+
+.ai-composer .ai-scope-menu > button {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  width: 100%;
+  height: auto;
+  min-height: 48px;
+  padding: 7px 8px;
+  color: var(--np-text);
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.ai-composer .ai-scope-menu > button:hover,
+.ai-composer .ai-scope-menu > button:focus-visible {
+  background: var(--np-hover);
+  border-color: var(--np-border);
+}
+
+.ai-composer .ai-scope-menu > button.selected {
+  background: var(--np-ai-accent-soft);
+}
+
+.ai-scope-menu-check {
+  padding-top: 2px;
+  color: var(--np-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ai-scope-menu strong,
+.ai-scope-menu small {
+  display: block;
+}
+
+.ai-scope-menu strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ai-scope-menu small {
+  margin-top: 2px;
+  color: var(--np-muted);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .ai-composer .ai-send-button {

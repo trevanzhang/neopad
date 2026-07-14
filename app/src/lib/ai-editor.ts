@@ -72,6 +72,7 @@ export function createAiEditorSnapshot(
 
   return {
     documentText: text,
+    cursor,
     contexts,
     defaultKind: contexts[0]?.kind ?? ('paragraph' satisfies AiContextKind),
   }

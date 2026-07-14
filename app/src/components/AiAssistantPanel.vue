@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 import type { AppMessages } from '../lib/i18n'
+import { openExternalUrl } from '../lib/invoke'
+import { renderMarkdown } from '../lib/markdown'
+import { isTauriRuntime } from '../lib/runtime'
 import type {
   AiChatMessage,
   AiChatState,
@@ -51,6 +54,7 @@ const transcript = ref<AssistantItem[]>(props.session.chat.messages.map((message
 const scope = ref<AiContextScope>(props.session.chat.scope)
 const selectedPromptId = ref(props.session.chat.promptId)
 const promptPickerOpen = ref(false)
+const scopePickerOpen = ref(false)
 const promptQuery = ref('')
 const busy = ref(false)
 const error = ref<string | null>(null)
@@ -63,25 +67,12 @@ const filteredPrompts = computed(() => {
   return props.prompts.filter((item) => `${item.name} ${item.content}`.toLowerCase().includes(query))
 })
 const selectionContext = computed(() => props.session.snapshot.contexts.find((item) => item.kind === 'selection'))
-const commandPrompts = computed<Record<string, string>>(() => ({
-  rewrite: props.messages.rewritePrompt,
-  summarize: props.messages.summarizePrompt,
-  translate: props.messages.translatePrompt,
-  continue: props.messages.continuePrompt,
-}))
-
 onMounted(() => {
   void nextTick(async () => {
     panel.value?.focus()
-    const initial = props.session.initialCommand && commandPrompts.value[props.session.initialCommand]
-    if (initial && props.ready && transcript.value.length === 0) {
-      prompt.value = initial
-      await submitPrompt()
-    } else {
-      promptInput.value?.focus()
-      resizeComposer()
-      await scrollTranscript()
-    }
+    promptInput.value?.focus()
+    resizeComposer()
+    await scrollTranscript()
   })
 })
 
@@ -111,14 +102,13 @@ async function submitPrompt() {
   const content = prompt.value.trim()
   if (!content || busy.value || !props.ready) return
 
-  const contextKind = props.session.initialCommand
-    ? props.session.snapshot.defaultKind
-    : selectionContext.value ? 'selection' : 'note'
+  const contextKind = selectionContext.value ? 'selection' : 'note'
   transcript.value.push({ role: 'user', content })
   prompt.value = ''
   busy.value = true
   error.value = null
   promptPickerOpen.value = false
+  scopePickerOpen.value = false
   resizeComposer()
   persistChat()
   await scrollTranscript()
@@ -165,7 +155,7 @@ function handleComposerKeydown(event: KeyboardEvent) {
 
 function apply(action: 'replace' | 'insert' | 'insertBelow', item: AssistantItem) {
   const kind = action === 'replace'
-    ? props.session.initialCommand ? item.contextKind ?? props.session.snapshot.defaultKind : 'selection'
+    ? 'selection'
     : item.contextKind ?? props.session.snapshot.defaultKind
   if (!props.applyResult(action, item.content, kind)) {
     error.value = props.messages.staleContext
@@ -178,14 +168,28 @@ async function copyResult(item: AssistantItem) {
   window.setTimeout(() => { item.copied = false }, 1600)
 }
 
-function toggleScope() {
-  scope.value = scope.value === 'note' ? 'library' : 'note'
+function toggleScopePicker() {
+  scopePickerOpen.value = !scopePickerOpen.value
+  if (scopePickerOpen.value) promptPickerOpen.value = false
+}
+
+function selectScope(value: AiContextScope) {
+  scope.value = value
+  scopePickerOpen.value = false
   persistChat()
+  promptInput.value?.focus()
+}
+
+function handleScopeFocusOut(event: FocusEvent) {
+  const nextTarget = event.relatedTarget
+  if (nextTarget instanceof Node && (event.currentTarget as HTMLElement).contains(nextTarget)) return
+  scopePickerOpen.value = false
 }
 
 function togglePromptPicker() {
   promptPickerOpen.value = !promptPickerOpen.value
   if (promptPickerOpen.value) {
+    scopePickerOpen.value = false
     promptQuery.value = ''
     void nextTick(() => promptSearchInput.value?.focus())
   }
@@ -210,6 +214,31 @@ function clearChat() {
   persistChat()
   void nextTick(() => promptInput.value?.focus())
 }
+
+function handlePanelEscape() {
+  if (promptPickerOpen.value) {
+    promptPickerOpen.value = false
+  } else if (scopePickerOpen.value) {
+    scopePickerOpen.value = false
+  } else {
+    emit('close')
+  }
+}
+
+function handleMarkdownClick(event: MouseEvent) {
+  const target = event.target
+  if (!(target instanceof Element)) return
+  const link = target.closest('a')
+  if (!(link instanceof HTMLAnchorElement)) return
+  event.preventDefault()
+  const url = link.getAttribute('href') ?? ''
+  if (!/^https?:\/\//i.test(url)) return
+  if (isTauriRuntime()) {
+    void openExternalUrl(url)
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+}
 </script>
 
 <template>
@@ -221,12 +250,11 @@ function clearChat() {
       aria-modal="true"
       :aria-label="messages.title"
       tabindex="-1"
-      @keydown.esc.stop.prevent="promptPickerOpen ? (promptPickerOpen = false) : emit('close')"
+      @keydown.esc.stop.prevent="handlePanelEscape"
     >
       <header v-if="expanded" class="ai-panel-header">
         <div class="ai-panel-title">
           <span class="ai-panel-mark" aria-hidden="true">AI</span>
-          <strong>{{ messages.title }}</strong>
           <span>{{ session.noteTitle }}</span>
         </div>
         <div class="ai-panel-header-actions">
@@ -245,7 +273,13 @@ function clearChat() {
       <template v-else>
         <div v-if="expanded" ref="transcriptElement" class="ai-transcript" aria-live="polite">
           <article v-for="(item, index) in transcript" :key="index" :class="['ai-message', `is-${item.role}`]">
-            <p>{{ item.content }}</p>
+            <div
+              v-if="item.role === 'assistant'"
+              class="ai-message-markdown markdown-preview"
+              @click="handleMarkdownClick"
+              v-html="renderMarkdown(item.content)"
+            />
+            <p v-else>{{ item.content }}</p>
             <div v-if="item.role === 'assistant' && item.sources?.length" class="ai-message-sources">
               <span>{{ messages.sources }}</span>
               <span v-for="source in item.sources" :key="`${source.noteId}-${source.lineNumber}`">
@@ -256,12 +290,8 @@ function clearChat() {
               <button type="button" @click="copyResult(item)">{{ item.copied ? messages.copied : messages.copy }}</button>
               <button type="button" @click="apply('insert', item)">{{ messages.insertAtCursor }}</button>
               <button type="button" @click="apply('insertBelow', item)">{{ messages.insertBelow }}</button>
-              <button
-                v-if="session.initialCommand || selectionContext"
-                type="button"
-                @click="apply('replace', item)"
-              >
-                {{ session.initialCommand ? messages.replace : messages.replaceSelection }}
+              <button v-if="selectionContext" type="button" @click="apply('replace', item)">
+                {{ messages.replaceSelection }}
               </button>
             </div>
           </article>
@@ -304,17 +334,45 @@ function clearChat() {
                 {{ selectedPrompt.name }} <span aria-hidden="true">×</span>
               </button>
 
-              <button
-                type="button"
-                class="ai-scope-toggle"
-                :class="{ active: scope === 'library' }"
-                :aria-pressed="scope === 'library'"
-                :title="scope === 'library' ? messages.libraryScopeHint : messages.noteScopeHint"
-                @click="toggleScope"
-              >
-                <span class="ai-scope-check" aria-hidden="true">{{ scope === 'library' ? '✓' : '' }}</span>
-                {{ scope === 'library' ? messages.libraryScope : messages.noteScope }}
-              </button>
+              <div class="ai-scope-picker" @focusout="handleScopeFocusOut">
+                <button
+                  type="button"
+                  class="ai-scope-trigger"
+                  :class="{ active: scope === 'library' }"
+                  aria-haspopup="menu"
+                  :aria-expanded="scopePickerOpen"
+                  :aria-label="`${messages.context}: ${scope === 'library' ? messages.libraryScope : messages.noteScope}`"
+                  :title="scope === 'library' ? messages.libraryScopeHint : messages.noteScopeHint"
+                  @click="toggleScopePicker"
+                >
+                  <svg v-if="scope === 'library'" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M3.5 3.5h3v3h-3zM9.5 3.5h3v3h-3zM3.5 9.5h3v3h-3zM9.5 9.5h3v3h-3z" />
+                  </svg>
+                  <svg v-else viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M4 2.5h5l3 3v8H4zM9 2.5v3h3" />
+                  </svg>
+                  <span>{{ scope === 'library' ? messages.libraryScope : messages.noteScope }}</span>
+                  <svg class="ai-scope-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="m3 4.5 3 3 3-3" /></svg>
+                </button>
+
+                <div v-if="scopePickerOpen" class="ai-scope-menu" role="menu">
+                  <button
+                    v-for="value in (['note', 'library'] as AiContextScope[])"
+                    :key="value"
+                    type="button"
+                    role="menuitemradio"
+                    :aria-checked="scope === value"
+                    :class="{ selected: scope === value }"
+                    @click="selectScope(value)"
+                  >
+                    <span class="ai-scope-menu-check" aria-hidden="true">{{ scope === value ? '✓' : '' }}</span>
+                    <span>
+                      <strong>{{ value === 'library' ? messages.libraryScope : messages.noteScope }}</strong>
+                      <small>{{ value === 'library' ? messages.libraryScopeHint : messages.noteScopeHint }}</small>
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <button

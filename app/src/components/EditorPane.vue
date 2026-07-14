@@ -23,8 +23,16 @@ import { editorCodeLanguages } from '../lib/editor-code-languages'
 import { createNeopadSearchPanel, type EditorSearchLabels } from '../lib/editor-search-panel'
 import { baseEditorTheme, editorAppearance, neopadHighlightStyle } from '../lib/editor-theme'
 import { contextMatches, createAiEditorSnapshot } from '../lib/ai-editor'
+import {
+  applyAiInlineCommandResult,
+  createAiInlineStatusExtension,
+  removeAiInlineStatus,
+  showAiInlineError,
+  showAiInlineLoading,
+} from '../lib/ai-inline-status'
+import type { AiInlineApplyAction } from '../lib/ai-inline-command'
 import { createAiSlashExtension, type AiSlashLabels } from '../lib/ai-slash-commands'
-import type { AiCommandName, AiEditorContext } from '../types/ai'
+import type { AiEditorContext, AiInlineCommandName } from '../types/ai'
 
 const props = defineProps<{
   title: string
@@ -41,7 +49,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   vimModeChange: [mode: string]
   vimTabSwitch: [offset: -1 | 1]
-  aiCommand: [command: AiCommandName]
+  aiCommand: [command: AiInlineCommandName]
 }>()
 
 const model = defineModel<string>({ required: true })
@@ -80,6 +88,7 @@ const extensions = [
   syntaxHighlighting(neopadHighlightStyle),
   searchSupport.of(createSearchExtension()),
   aiSlashSupport.of(createAiSlashExtension(props.aiSlashLabels)),
+  createAiInlineStatusExtension(),
   keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
   editable.of(EditorView.editable.of(true)),
   wrap.of(props.wordWrap ? EditorView.lineWrapping : []),
@@ -131,7 +140,7 @@ function handleVimTabSwitch(event: Event) {
 }
 
 function handleAiCommand(event: Event) {
-  emit('aiCommand', (event as CustomEvent<AiCommandName>).detail)
+  emit('aiCommand', (event as CustomEvent<AiInlineCommandName>).detail)
 }
 
 watch(
@@ -411,6 +420,38 @@ function insertAiAtCursor(text: string) {
   return true
 }
 
+function startAiInlineCommand(
+  requestId: number,
+  position: number,
+  label: string,
+  source?: AiEditorContext,
+) {
+  if (!editorView) return false
+  showAiInlineLoading(editorView, requestId, position, label, source)
+  return true
+}
+
+function failAiInlineCommand(requestId: number, label: string, detail?: string) {
+  return editorView ? showAiInlineError(editorView, requestId, label, detail) : false
+}
+
+function cancelAiInlineCommand(requestId?: number) {
+  if (!editorView) return false
+  removeAiInlineStatus(editorView, requestId)
+  return true
+}
+
+function applyAiInlineCommand(
+  requestId: number,
+  action: AiInlineApplyAction,
+  context: AiEditorContext,
+  text: string,
+) {
+  return editorView
+    ? applyAiInlineCommandResult(editorView, requestId, action, context, text)
+    : false
+}
+
 function insertAiBelow(context: AiEditorContext, text: string) {
   if (!editorView || !contextMatches(editorView.state.doc.toString(), context)) return false
   const needsBreak = context.to > 0 && !text.startsWith('\n')
@@ -504,6 +545,10 @@ defineExpose({
   captureAiSnapshot,
   replaceAiContext,
   insertAiAtCursor,
+  startAiInlineCommand,
+  failAiInlineCommand,
+  cancelAiInlineCommand,
+  applyAiInlineCommand,
   insertAiBelow,
   goToLine,
   transformText,
