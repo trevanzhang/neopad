@@ -532,6 +532,7 @@ function runDirectoryContextAction(action: 'rename' | 'delete') {
               v-if="row.kind === 'folder'"
               class="note-library-directory"
               :class="{
+                'top-level': row.depth === 0,
                 'drop-target': dragTarget === `archive:${row.path}`,
                 dragging: dragPayload?.kind === 'archive-directory' && dragPayload.path === row.path,
               }"
@@ -604,6 +605,7 @@ function runDirectoryContextAction(action: 'rename' | 'delete') {
               v-if="row.kind === 'folder'"
               class="note-library-directory prompt"
               :class="{
+                'top-level': row.depth === 0,
                 'drop-target': dragTarget === `prompt:${row.path}`,
                 dragging: dragPayload?.kind === 'prompt-directory' && dragPayload.path === row.path,
               }"

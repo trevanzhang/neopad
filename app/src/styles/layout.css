@@ -635,7 +635,8 @@ body {
 
 .note-library-root {
   cursor: pointer;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .note-library-root:hover,
@@ -817,9 +818,9 @@ body {
   align-items: center;
   width: 100%;
   min-height: 24px;
-  padding: 0 6px 0 calc(9px + var(--tree-depth, 0) * 14px);
+  padding: 0 6px 0 calc(22px + var(--tree-depth, 0) * 16px);
   overflow: hidden;
-  color: var(--np-muted);
+  color: color-mix(in srgb, var(--np-text) 68%, var(--np-muted));
   background: transparent;
   border: 0;
   cursor: grab;
@@ -827,6 +828,11 @@ body {
   font-size: 12px;
   font-weight: 500;
   text-align: left;
+}
+
+.note-library-directory.top-level {
+  color: var(--np-text);
+  font-weight: 650;
 }
 
 .note-library-directory:active { cursor: grabbing; }
@@ -837,7 +843,7 @@ body {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: calc(15px + var(--tree-depth, 0) * 14px);
+  left: calc(15px + var(--tree-depth, 0) * 16px);
   width: 1px;
   content: '';
   background: color-mix(in srgb, var(--np-border) 70%, transparent);
@@ -851,7 +857,7 @@ body {
 }
 
 .note-library-entry.tree-entry {
-  padding-left: calc(23px + var(--tree-depth, 0) * 14px);
+  padding-left: calc(36px + var(--tree-depth, 0) * 16px);
 }
 
 .note-library-root.drop-target,
