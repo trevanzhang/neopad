@@ -1,10 +1,12 @@
 use crate::commands::{display_error, open_path, reveal_path, AppState};
 use anyhow::{bail, Context, Result};
 use neopad_core::{
-    create_prompt, find_relevant_note_excerpts, list_prompt_files, list_prompts,
-    list_trashed_prompts, load_config, lock_workspace_for_write, prompt_file_path, read_prompt,
-    rename_prompt, restore_prompt_from_trash, save_config, trash_prompt,
-    write_prompt_atomic_checked, AiConfig, PromptEntry, RelevantNoteExcerpt, TrashedPromptEntry,
+    create_prompt_directory, create_prompt_in_directory, delete_prompt_directory_to_trash,
+    find_relevant_note_excerpts, list_prompt_directories, list_prompt_files, list_prompts,
+    list_trashed_prompts, load_config, lock_workspace_for_write, move_prompt,
+    move_prompt_directory, prompt_file_path, read_prompt, rename_prompt, rename_prompt_directory,
+    restore_prompt_from_trash, save_config, trash_prompt, write_prompt_atomic_checked, AiConfig,
+    PromptEntry, RelevantNoteExcerpt, TrashedPromptEntry,
 };
 use reqwest::{redirect::Policy, Client, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -158,6 +160,7 @@ pub async fn generate_ai_text_command(
 
 #[tauri::command]
 pub fn list_ai_prompts_command(state: State<'_, AppState>) -> Result<Vec<PromptEntry>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     list_prompts(&state.workspace).map_err(display_error)
 }
 
@@ -165,6 +168,7 @@ pub fn list_ai_prompts_command(state: State<'_, AppState>) -> Result<Vec<PromptE
 pub fn list_ai_prompt_files_command(
     state: State<'_, AppState>,
 ) -> Result<Vec<PromptEntry>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     list_prompt_files(&state.workspace).map_err(display_error)
 }
 
@@ -172,7 +176,53 @@ pub fn list_ai_prompt_files_command(
 pub fn list_ai_trashed_prompts_command(
     state: State<'_, AppState>,
 ) -> Result<Vec<TrashedPromptEntry>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     list_trashed_prompts(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn list_ai_prompt_directories_command(
+    state: State<'_, AppState>,
+) -> Result<Vec<String>, String> {
+    list_prompt_directories(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn create_ai_prompt_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+) -> Result<String, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    create_prompt_directory(&state.workspace, &relative_path).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn move_ai_prompt_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+    target_parent: String,
+) -> Result<String, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    move_prompt_directory(&state.workspace, &relative_path, &target_parent).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn rename_ai_prompt_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+    new_name: String,
+) -> Result<String, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    rename_prompt_directory(&state.workspace, &relative_path, &new_name).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn delete_ai_prompt_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+) -> Result<usize, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    delete_prompt_directory_to_trash(&state.workspace, &relative_path).map_err(display_error)
 }
 
 #[tauri::command]
@@ -180,6 +230,7 @@ pub fn read_ai_prompt_command(
     state: State<'_, AppState>,
     prompt_id: String,
 ) -> Result<PromptEntry, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     read_prompt(&state.workspace, &prompt_id).map_err(display_error)
 }
 
@@ -187,9 +238,25 @@ pub fn read_ai_prompt_command(
 pub fn create_ai_prompt_command(
     state: State<'_, AppState>,
     name: String,
+    directory: Option<String>,
 ) -> Result<PromptEntry, String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
-    create_prompt(&state.workspace, &name).map_err(display_error)
+    create_prompt_in_directory(
+        &state.workspace,
+        &name,
+        directory.as_deref().unwrap_or_default(),
+    )
+    .map_err(display_error)
+}
+
+#[tauri::command]
+pub fn move_ai_prompt_command(
+    state: State<'_, AppState>,
+    prompt_id: String,
+    directory: String,
+) -> Result<PromptEntry, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    move_prompt(&state.workspace, &prompt_id, &directory).map_err(display_error)
 }
 
 #[tauri::command]

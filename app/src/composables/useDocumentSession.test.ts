@@ -63,11 +63,11 @@ describe('useDocumentSession', () => {
     const activeTabId = ref(tab.id)
     const onPromptSaved = vi.fn()
     vi.mocked(readAiPrompt).mockResolvedValue({
-      id: 'Review.md', name: 'Review', fileName: 'Review.md',
+      id: 'Review.md', name: 'Review', fileName: 'Review.md', relativePath: 'Review.md',
       content: 'Review carefully.', updatedAt: 2, revision: 'loaded-revision',
     })
     vi.mocked(writeAiPrompt).mockResolvedValue({
-      id: 'Review.md', name: 'Review', fileName: 'Review.md',
+      id: 'Review.md', name: 'Review', fileName: 'Review.md', relativePath: 'Review.md',
       content: 'Review for correctness.', updatedAt: 3, revision: 'saved-revision',
     })
     const session = useDocumentSession({

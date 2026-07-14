@@ -1,5 +1,5 @@
 use crate::atomic_write::write_atomic;
-use crate::path::{archive_file_path, note_file_path, trash_file_path};
+use crate::path::{archive_directory_path, archive_file_path, note_file_path, trash_file_path};
 use crate::{ensure_workspace_layout, NoteTab, TabsState, Workspace};
 use anyhow::{bail, Context, Result};
 use chrono::Local;
@@ -211,6 +211,7 @@ pub fn create_note(workspace: &Workspace, title: Option<String>) -> Result<NoteC
         pinned: false,
         deleted: false,
         archived: false,
+        archive_relative_path: None,
         open: true,
         last_opened_at: Some(now),
         system_title,
@@ -409,10 +410,14 @@ pub fn restore_note_from_trash(workspace: &Workspace, note_id: &str) -> Result<N
         .with_context(|| format!("trashed note not found: {note_id}"))?;
     let source = trashed_note_path(workspace, &tab.file_name)?;
     let target = if tab.archived {
-        archive_file_path(workspace, &tab.file_name)?
+        archive_file_path(workspace, archive_relative_path(tab))?
     } else {
         note_file_path(workspace, &tab.file_name)?
     };
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to recreate note directory {}", parent.display()))?;
+    }
     fs::rename(&source, &target).with_context(|| {
         format!(
             "failed to restore trashed note {} to {}",
@@ -492,16 +497,33 @@ pub fn note_file_path_for_id(workspace: &Workspace, note_id: &str) -> Result<std
 }
 
 pub fn archive_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
+    archive_note_to_directory(workspace, note_id, "")
+}
+
+pub fn archive_note_to_directory(
+    workspace: &Workspace,
+    note_id: &str,
+    directory: &str,
+) -> Result<NoteTab> {
     if matches!(note_id, "inbox" | "clipboard") {
         bail!("{note_id} is pinned and cannot be archived");
     }
     let mut tabs = load_tabs(workspace)?;
     let tab = find_note_tab_mut(&mut tabs, note_id)?;
     let source = note_path(workspace, tab)?;
-    let target = archive_file_path(workspace, &tab.file_name)?;
+    let relative_path = archive_target_relative_path(workspace, directory, &tab.file_name)?;
+    let target = archive_file_path(workspace, &relative_path)?;
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create archive directory {}", parent.display()))?;
+    }
+    if target.exists() {
+        bail!("an archived note already exists at {relative_path}");
+    }
     fs::rename(&source, &target)
         .with_context(|| format!("failed to archive note {}", source.display()))?;
     tab.archived = true;
+    tab.archive_relative_path = Some(relative_path);
     tab.open = false;
     tab.updated_at = next_updated_at(tab.updated_at)?;
     let archived = tab.clone();
@@ -520,11 +542,12 @@ pub fn unarchive_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
     if !tab.archived {
         bail!("note is not archived: {note_id}");
     }
-    let source = archive_file_path(workspace, &tab.file_name)?;
+    let source = archive_file_path(workspace, archive_relative_path(tab))?;
     let target = note_file_path(workspace, &tab.file_name)?;
     fs::rename(&source, &target)
         .with_context(|| format!("failed to restore archived note {}", source.display()))?;
     tab.archived = false;
+    tab.archive_relative_path = None;
     tab.open = true;
     tab.last_opened_at = Some(now_ms()?);
     tab.updated_at = next_updated_at(tab.updated_at)?;
@@ -536,6 +559,163 @@ pub fn unarchive_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
         return Err(error);
     }
     Ok(restored)
+}
+
+pub fn move_archived_note(
+    workspace: &Workspace,
+    note_id: &str,
+    directory: &str,
+) -> Result<NoteTab> {
+    let mut tabs = load_tabs(workspace)?;
+    let tab = find_note_tab_mut(&mut tabs, note_id)?;
+    if !tab.archived {
+        bail!("note is not archived: {note_id}");
+    }
+    let source = archive_file_path(workspace, archive_relative_path(tab))?;
+    let relative_path = archive_target_relative_path(workspace, directory, &tab.file_name)?;
+    if archive_relative_path(tab) == relative_path {
+        return Ok(tab.clone());
+    }
+    let target = archive_file_path(workspace, &relative_path)?;
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create archive directory {}", parent.display()))?;
+    }
+    if target.exists() {
+        bail!("an archived note already exists at {relative_path}");
+    }
+    fs::rename(&source, &target).with_context(|| {
+        format!(
+            "failed to move archived note {} to {}",
+            source.display(),
+            target.display()
+        )
+    })?;
+    tab.archive_relative_path = Some(relative_path);
+    tab.updated_at = next_updated_at(tab.updated_at)?;
+    let moved = tab.clone();
+    if let Err(error) = save_tabs(workspace, &tabs) {
+        fs::rename(&target, &source).with_context(|| {
+            format!("failed to roll back archived note move after metadata error: {error:#}")
+        })?;
+        return Err(error);
+    }
+    Ok(moved)
+}
+
+pub fn create_archive_directory(workspace: &Workspace, relative_path: &str) -> Result<String> {
+    let normalized = normalized_directory(relative_path)?;
+    let path = archive_directory_path(workspace, &normalized)?;
+    fs::create_dir_all(&path)
+        .with_context(|| format!("failed to create archive directory {}", path.display()))?;
+    Ok(normalized)
+}
+
+pub fn move_archive_directory(
+    workspace: &Workspace,
+    relative_path: &str,
+    target_parent: &str,
+) -> Result<String> {
+    let source = normalized_directory(relative_path)?;
+    let name = Path::new(&source)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .context("archive directory name is not valid UTF-8")?;
+    let target = if target_parent.trim().is_empty() {
+        name.to_owned()
+    } else {
+        format!("{}/{}", normalized_directory(target_parent)?, name)
+    };
+    relocate_archive_directory(workspace, &source, &target)
+}
+
+pub fn rename_archive_directory(
+    workspace: &Workspace,
+    relative_path: &str,
+    new_name: &str,
+) -> Result<String> {
+    let source = normalized_directory(relative_path)?;
+    let name = normalized_directory_name(new_name)?;
+    let target = match Path::new(&source).parent().and_then(Path::to_str) {
+        Some(parent) if !parent.is_empty() => format!("{parent}/{name}"),
+        _ => name,
+    };
+    relocate_archive_directory(workspace, &source, &target)
+}
+
+pub fn delete_archive_directory_to_trash(
+    workspace: &Workspace,
+    relative_path: &str,
+) -> Result<usize> {
+    let relative_path = normalized_directory(relative_path)?;
+    let directory = archive_directory_path(workspace, &relative_path)?;
+    ensure_regular_directory(&directory, "archive")?;
+    reconcile_note_metadata(workspace)?;
+
+    let tabs = load_tabs(workspace)?;
+    let note_ids = tabs
+        .tabs
+        .iter()
+        .filter(|tab| {
+            !tab.deleted
+                && tab.archived
+                && path_is_inside_directory(archive_relative_path(tab), &relative_path)
+        })
+        .map(|tab| tab.id.clone())
+        .collect::<Vec<_>>();
+    let managed_paths = tabs
+        .tabs
+        .iter()
+        .filter(|tab| !tab.deleted && tab.archived)
+        .map(|tab| archive_relative_path(tab).to_owned())
+        .collect::<HashSet<_>>();
+
+    for file in regular_files_recursive_strict(&directory)? {
+        let path = relative_path_string(&workspace.archive_dir, &file)?;
+        if !managed_paths.contains(&path) {
+            bail!("archive directory contains an unmanaged file: {path}");
+        }
+    }
+
+    for note_id in &note_ids {
+        delete_note_to_trash(workspace, note_id)?;
+    }
+    fs::remove_dir_all(&directory)
+        .with_context(|| format!("failed to remove archive directory {}", directory.display()))?;
+    Ok(note_ids.len())
+}
+
+pub fn list_archive_directories(workspace: &Workspace) -> Result<Vec<String>> {
+    list_relative_directories(&workspace.archive_dir)
+}
+
+pub fn reorder_open_notes(workspace: &Workspace, ordered_note_ids: &[String]) -> Result<()> {
+    let mut tabs = load_tabs(workspace)?;
+    let current_ids = tabs
+        .tabs
+        .iter()
+        .filter(|tab| !tab.deleted && !tab.archived && tab.open)
+        .map(|tab| tab.id.clone())
+        .collect::<Vec<_>>();
+    if current_ids.len() != ordered_note_ids.len()
+        || current_ids.iter().collect::<HashSet<_>>()
+            != ordered_note_ids.iter().collect::<HashSet<_>>()
+    {
+        bail!("ordered note ids do not match the open note set");
+    }
+
+    let mut ordered = Vec::with_capacity(tabs.tabs.len());
+    for note_id in ordered_note_ids {
+        let index = tabs
+            .tabs
+            .iter()
+            .position(|tab| tab.id == *note_id)
+            .with_context(|| format!("note not found while reordering: {note_id}"))?;
+        ordered.push(tabs.tabs.remove(index));
+    }
+    ordered.append(&mut tabs.tabs);
+    tabs.tabs = ordered;
+    save_tabs(workspace, &tabs)
 }
 
 pub fn set_note_color(
@@ -625,6 +805,15 @@ fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result
         }
 
         let mut current_path = note_path(workspace, tab)?;
+        if tab.archived && !current_path.is_file() && !tab.pinned {
+            if let Some(moved_path) = find_archive_note_path(workspace, &tab.file_name)? {
+                tab.archive_relative_path =
+                    Some(relative_path_string(&workspace.archive_dir, &moved_path)?);
+                tab.updated_at = next_updated_at(tab.updated_at)?;
+                current_path = moved_path;
+                changed = true;
+            }
+        }
         if !current_path.is_file() && !tab.pinned {
             let alternate = if tab.archived {
                 note_file_path(workspace, &tab.file_name)?
@@ -752,6 +941,7 @@ fn reconcile_orphaned_trashed_notes(workspace: &Workspace, tabs: &mut TabsState)
             pinned: false,
             deleted: true,
             archived: false,
+            archive_relative_path: None,
             open: false,
             last_opened_at: None,
             system_title: false,
@@ -788,28 +978,42 @@ fn reconcile_orphaned_notes(
         .tabs
         .iter()
         .filter(|tab| !tab.deleted && tab.archived == archived)
-        .map(|tab| tab.file_name.clone())
+        .map(|tab| {
+            if archived {
+                archive_relative_path(tab).to_owned()
+            } else {
+                tab.file_name.clone()
+            }
+        })
         .collect::<HashSet<_>>();
     let mut orphans = Vec::new();
 
-    for entry in fs::read_dir(directory)
-        .with_context(|| format!("failed to read notes directory {}", directory.display()))?
-    {
-        let entry = entry?;
-        let path = entry.path();
-        let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
+    let paths = if archived {
+        markdown_files_recursive(directory)?
+    } else {
+        fs::read_dir(directory)
+            .with_context(|| format!("failed to read notes directory {}", directory.display()))?
+            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .filter(|path| path.is_file())
+            .collect()
+    };
+    for path in paths {
+        if path.extension().and_then(|extension| extension.to_str()) != Some("md") {
             continue;
-        };
-        if path.is_file()
-            && path.extension().and_then(|extension| extension.to_str()) == Some("md")
-            && !referenced.contains(file_name)
-        {
-            orphans.push((file_name.to_owned(), path));
+        }
+        let relative_path = relative_path_string(directory, &path)?;
+        if !referenced.contains(&relative_path) {
+            let file_name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .context("note file name is not valid UTF-8")?
+                .to_owned();
+            orphans.push((file_name, relative_path, path));
         }
     }
 
     let changed = !orphans.is_empty();
-    for (file_name, path) in orphans {
+    for (file_name, relative_path, path) in orphans {
         let content = fs::read_to_string(&path)
             .with_context(|| format!("failed to read orphaned note {}", path.display()))?;
         let base_id = path
@@ -845,6 +1049,7 @@ fn reconcile_orphaned_notes(
             pinned: false,
             deleted: false,
             archived,
+            archive_relative_path: archived.then_some(relative_path),
             open: !archived,
             last_opened_at: None,
             system_title: false,
@@ -868,10 +1073,231 @@ fn existing_tabs(workspace: &Workspace, tabs: Vec<NoteTab>) -> Result<Vec<NoteTa
 
 fn note_path(workspace: &Workspace, tab: &NoteTab) -> Result<std::path::PathBuf> {
     if tab.archived {
-        archive_file_path(workspace, &tab.file_name)
+        archive_file_path(workspace, archive_relative_path(tab))
     } else {
         note_file_path(workspace, &tab.file_name)
     }
+}
+
+fn archive_relative_path(tab: &NoteTab) -> &str {
+    tab.archive_relative_path
+        .as_deref()
+        .unwrap_or(&tab.file_name)
+}
+
+fn archive_target_relative_path(
+    workspace: &Workspace,
+    directory: &str,
+    file_name: &str,
+) -> Result<String> {
+    if directory.trim().is_empty() {
+        return Ok(file_name.to_owned());
+    }
+    let directory = normalized_directory(directory)?;
+    archive_directory_path(workspace, &directory)?;
+    Ok(format!("{directory}/{file_name}"))
+}
+
+fn normalized_directory(relative_path: &str) -> Result<String> {
+    let normalized = Path::new(relative_path)
+        .components()
+        .map(|component| {
+            let std::path::Component::Normal(value) = component else {
+                bail!("directory contains unsafe path components");
+            };
+            value
+                .to_str()
+                .context("directory path is not valid UTF-8")
+                .map(str::to_owned)
+        })
+        .collect::<Result<Vec<_>>>()?
+        .join("/");
+    if normalized.is_empty() {
+        bail!("directory cannot be empty");
+    }
+    Ok(normalized)
+}
+
+fn normalized_directory_name(name: &str) -> Result<String> {
+    let normalized = normalized_directory(name.trim())?;
+    if normalized.contains('/') {
+        bail!("directory name must not contain path separators");
+    }
+    Ok(normalized)
+}
+
+fn relocate_archive_directory(
+    workspace: &Workspace,
+    source_relative_path: &str,
+    target_relative_path: &str,
+) -> Result<String> {
+    let source_relative_path = normalized_directory(source_relative_path)?;
+    let target_relative_path = normalized_directory(target_relative_path)?;
+    if source_relative_path == target_relative_path {
+        return Ok(source_relative_path);
+    }
+    if path_is_inside_directory(&target_relative_path, &source_relative_path) {
+        bail!("cannot move an archive directory into itself");
+    }
+
+    let source = archive_directory_path(workspace, &source_relative_path)?;
+    let target = archive_directory_path(workspace, &target_relative_path)?;
+    ensure_regular_directory(&source, "archive")?;
+    if target.exists() {
+        bail!("archive directory already exists: {target_relative_path}");
+    }
+    let target_parent = target.parent().context("archive directory has no parent")?;
+    ensure_regular_directory(target_parent, "archive target parent")?;
+
+    reconcile_note_metadata(workspace)?;
+    let mut tabs = load_tabs(workspace)?;
+    fs::rename(&source, &target).with_context(|| {
+        format!(
+            "failed to move archive directory {} to {}",
+            source.display(),
+            target.display()
+        )
+    })?;
+    for tab in tabs.tabs.iter_mut().filter(|tab| tab.archived) {
+        if let Some(next) = replaced_directory_prefix(
+            archive_relative_path(tab),
+            &source_relative_path,
+            &target_relative_path,
+        ) {
+            tab.archive_relative_path = Some(next);
+        }
+    }
+    if let Err(error) = save_tabs(workspace, &tabs) {
+        fs::rename(&target, &source).with_context(|| {
+            format!("failed to roll back archive directory move after metadata error: {error:#}")
+        })?;
+        return Err(error);
+    }
+    Ok(target_relative_path)
+}
+
+fn ensure_regular_directory(path: &Path, label: &str) -> Result<()> {
+    let metadata = fs::symlink_metadata(path)
+        .with_context(|| format!("failed to inspect {label} directory {}", path.display()))?;
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        bail!(
+            "{label} path is not a regular directory: {}",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn path_is_inside_directory(path: &str, directory: &str) -> bool {
+    path.strip_prefix(directory)
+        .is_some_and(|suffix| suffix.starts_with('/'))
+}
+
+fn replaced_directory_prefix(path: &str, source: &str, target: &str) -> Option<String> {
+    path.strip_prefix(source)
+        .filter(|suffix| suffix.starts_with('/'))
+        .map(|suffix| format!("{target}{suffix}"))
+}
+
+fn regular_files_recursive_strict(directory: &Path) -> Result<Vec<std::path::PathBuf>> {
+    let mut files = Vec::new();
+    let mut pending = vec![directory.to_path_buf()];
+    while let Some(current) = pending.pop() {
+        for entry in fs::read_dir(&current)
+            .with_context(|| format!("failed to read directory {}", current.display()))?
+        {
+            let entry = entry?;
+            let file_type = entry.file_type()?;
+            if file_type.is_symlink() {
+                bail!(
+                    "directory contains a symbolic link: {}",
+                    entry.path().display()
+                );
+            }
+            if file_type.is_dir() {
+                pending.push(entry.path());
+            } else if file_type.is_file() {
+                files.push(entry.path());
+            } else {
+                bail!(
+                    "directory contains an unsupported entry: {}",
+                    entry.path().display()
+                );
+            }
+        }
+    }
+    files.sort();
+    Ok(files)
+}
+
+fn relative_path_string(root: &Path, path: &Path) -> Result<String> {
+    Ok(path
+        .strip_prefix(root)
+        .with_context(|| format!("path is outside {}: {}", root.display(), path.display()))?
+        .components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(value) => value.to_str().map(str::to_owned),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("/"))
+}
+
+fn markdown_files_recursive(directory: &Path) -> Result<Vec<std::path::PathBuf>> {
+    let mut files = Vec::new();
+    let mut pending = vec![directory.to_path_buf()];
+    while let Some(current) = pending.pop() {
+        for entry in fs::read_dir(&current)
+            .with_context(|| format!("failed to read directory {}", current.display()))?
+        {
+            let entry = entry?;
+            let file_type = entry.file_type()?;
+            if file_type.is_symlink() {
+                continue;
+            }
+            if file_type.is_dir() {
+                pending.push(entry.path());
+            } else if file_type.is_file() {
+                files.push(entry.path());
+            }
+        }
+    }
+    files.sort();
+    Ok(files)
+}
+
+fn find_archive_note_path(
+    workspace: &Workspace,
+    file_name: &str,
+) -> Result<Option<std::path::PathBuf>> {
+    let mut matches = markdown_files_recursive(&workspace.archive_dir)?
+        .into_iter()
+        .filter(|path| path.file_name().and_then(|name| name.to_str()) == Some(file_name))
+        .collect::<Vec<_>>();
+    if matches.len() > 1 {
+        bail!("multiple archived notes use the file name {file_name}");
+    }
+    Ok(matches.pop())
+}
+
+fn list_relative_directories(root: &Path) -> Result<Vec<String>> {
+    let mut directories = Vec::new();
+    let mut pending = vec![root.to_path_buf()];
+    while let Some(current) = pending.pop() {
+        for entry in fs::read_dir(&current)
+            .with_context(|| format!("failed to read directory {}", current.display()))?
+        {
+            let entry = entry?;
+            let file_type = entry.file_type()?;
+            if file_type.is_dir() && !file_type.is_symlink() {
+                let path = entry.path();
+                directories.push(relative_path_string(root, &path)?);
+                pending.push(path);
+            }
+        }
+    }
+    directories.sort_by_key(|path| path.to_lowercase());
+    Ok(directories)
 }
 
 fn trashed_note_path(workspace: &Workspace, file_name: &str) -> Result<std::path::PathBuf> {
@@ -1540,5 +1966,128 @@ mod tests {
         assert!(recovered.iter().any(|tab| tab.file_name == "recovered.md"));
         let archived = list_archived_notes(&workspace).expect("archived notes");
         assert!(archived.iter().any(|tab| tab.id == created.id));
+    }
+
+    #[test]
+    fn archived_notes_keep_categories_when_moved_trashed_and_restored() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Categorized".to_owned())).expect("create");
+
+        let archived = archive_note_to_directory(&workspace, &created.id, "work/client")
+            .expect("archive to category");
+        assert_eq!(
+            archived.archive_relative_path.as_deref(),
+            Some(format!("work/client/{}", created.file_name).as_str())
+        );
+        assert!(workspace
+            .archive_dir
+            .join(format!("work/client/{}", created.file_name))
+            .is_file());
+
+        let moved =
+            move_archived_note(&workspace, &created.id, "reference").expect("move archived note");
+        assert_eq!(
+            moved.archive_relative_path.as_deref(),
+            Some(format!("reference/{}", created.file_name).as_str())
+        );
+        let trashed = delete_note_to_trash(&workspace, &created.id).expect("trash archived note");
+        assert!(trashed.archived);
+        let restored =
+            restore_note_from_trash(&workspace, &created.id).expect("restore archived note");
+        assert!(restored.archived);
+        assert!(workspace
+            .archive_dir
+            .join(format!("reference/{}", created.file_name))
+            .is_file());
+
+        let active = unarchive_note(&workspace, &created.id).expect("unarchive");
+        assert!(!active.archived);
+        assert!(active.archive_relative_path.is_none());
+        assert!(workspace.notes_dir.join(created.file_name).is_file());
+    }
+
+    #[test]
+    fn archive_directories_can_be_moved_and_renamed_with_metadata() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let first = create_note(&workspace, Some("First".to_owned())).expect("first");
+        let second = create_note(&workspace, Some("Second".to_owned())).expect("second");
+        archive_note_to_directory(&workspace, &first.id, "work/client").expect("archive first");
+        archive_note_to_directory(&workspace, &second.id, "work/client/deep")
+            .expect("archive second");
+        create_archive_directory(&workspace, "reference").expect("target parent");
+
+        let moved =
+            move_archive_directory(&workspace, "work/client", "reference").expect("move directory");
+        assert_eq!(moved, "reference/client");
+        let renamed =
+            rename_archive_directory(&workspace, &moved, "customer").expect("rename directory");
+        assert_eq!(renamed, "reference/customer");
+        assert!(workspace
+            .archive_dir
+            .join(format!("reference/customer/{}", first.file_name))
+            .is_file());
+        assert!(workspace
+            .archive_dir
+            .join(format!("reference/customer/deep/{}", second.file_name))
+            .is_file());
+
+        let archived = list_archived_notes(&workspace).expect("archived notes");
+        assert!(archived.iter().any(|tab| {
+            tab.id == first.id
+                && tab.archive_relative_path.as_deref()
+                    == Some(format!("reference/customer/{}", first.file_name).as_str())
+        }));
+        assert!(move_archive_directory(&workspace, "reference", "reference/customer").is_err());
+    }
+
+    #[test]
+    fn deleting_archive_directory_trashes_notes_and_restore_recreates_it() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let note = create_note(&workspace, Some("Stored".to_owned())).expect("note");
+        archive_note_to_directory(&workspace, &note.id, "old/project").expect("archive");
+
+        assert_eq!(
+            delete_archive_directory_to_trash(&workspace, "old").expect("delete directory"),
+            1
+        );
+        assert!(!workspace.archive_dir.join("old").exists());
+        assert!(list_trashed_notes(&workspace)
+            .expect("trash")
+            .iter()
+            .any(|tab| tab.id == note.id));
+
+        restore_note_from_trash(&workspace, &note.id).expect("restore note");
+        assert!(workspace
+            .archive_dir
+            .join(format!("old/project/{}", note.file_name))
+            .is_file());
+    }
+
+    #[test]
+    fn open_note_order_is_persisted_without_reordering_hidden_notes() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let first = create_note(&workspace, Some("First".to_owned())).expect("first");
+        let second = create_note(&workspace, Some("Second".to_owned())).expect("second");
+        let ordered = vec![
+            second.id.clone(),
+            first.id.clone(),
+            "clipboard".to_owned(),
+            "inbox".to_owned(),
+        ];
+
+        reorder_open_notes(&workspace, &ordered).expect("reorder");
+
+        assert_eq!(
+            list_open_notes(&workspace)
+                .expect("open notes")
+                .into_iter()
+                .map(|tab| tab.id)
+                .collect::<Vec<_>>(),
+            ordered
+        );
     }
 }

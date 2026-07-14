@@ -5,6 +5,30 @@ describe('NeoPad desktop note workflow', () => {
     await browser.execute((target) => (target as HTMLElement).click(), element)
   }
 
+  async function dragAndDrop(sourceSelector: string, targetSelector: string) {
+    let lastError: unknown
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const source = await $(sourceSelector)
+      const target = await $(targetSelector)
+      await source.waitForDisplayed()
+      await target.waitForDisplayed()
+      try {
+        await source.dragAndDrop(target)
+        return
+      } catch (error) {
+        lastError = error
+        await browser.pause(150)
+      }
+    }
+    throw lastError
+  }
+
+  async function contextClick(selector: string) {
+    const element = await $(selector)
+    await element.waitForDisplayed()
+    await element.click({ button: 'right' })
+  }
+
   it('starts with the pinned default pages', async () => {
     await $('[data-ready="true"]').waitForExist()
     await expect($('.tab-item=Inbox')).toBeDisplayed()
@@ -122,6 +146,92 @@ describe('NeoPad desktop note workflow', () => {
     await browser.waitUntil(async () => (await $('.tab-item.active').getText()) === 'Clipboard')
     await click('button[aria-label="Previous tab"]')
     await browser.waitUntil(async () => (await $('.tab-item.active').getText()) === 'Inbox')
+  })
+
+  it('reorders tabs by dragging them', async () => {
+    await dragAndDrop('.tab-item=E2E Renamed', '.tab-item=Inbox')
+    await browser.waitUntil(async () => {
+      const tabs = await $$('.tab-item')
+      return (await tabs[0]?.getText()) === 'E2E Renamed'
+    }, { timeoutMsg: 'dragging a tab did not update its position' })
+  })
+
+  it('organizes archive notes and prompts into folders from the library', async () => {
+    await browser.keys('F4')
+    await expect($('.note-library')).toBeDisplayed()
+
+    await click('.note-library-archive-root .note-library-create-folder')
+    await (await $('.input-dialog input')).setValue('Projects')
+    await browser.keys('Enter')
+    await expect($('.note-library-directory=Projects')).toBeDisplayed()
+
+    await dragAndDrop(
+      "//section[1]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='E2E Renamed']]",
+      '.note-library-directory=Projects',
+    )
+    await click('.note-library-directory=Projects')
+    await expect($("//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]"))
+      .toBeDisplayed()
+
+    await dragAndDrop(
+      "//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]",
+      "//section[1]/button[contains(@class, 'note-library-root')]",
+    )
+    await expect($("//section[1]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='E2E Renamed']]"))
+      .toBeDisplayed()
+
+    await click('.note-library-prompt-root .note-library-create-folder')
+    await (await $('.input-dialog input')).setValue('Writing')
+    await browser.keys('Enter')
+    await expect($("//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]"))
+      .toBeDisplayed()
+
+    await click('.note-library-create-prompt')
+    await (await $('.input-dialog input')).setValue('Review prompt')
+    await browser.keys('Enter')
+    await expect($('.note-library')).toBeDisplayed()
+    await dragAndDrop(
+      "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Review prompt']]",
+      "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]",
+    )
+    await click("//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]")
+    await expect($("//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Review prompt']]"))
+      .toBeDisplayed()
+
+    await click('.note-library-prompt-root .note-library-create-folder')
+    await (await $('.input-dialog input')).setValue('Reference')
+    await browser.keys('Enter')
+    await browser.pause(250)
+    await dragAndDrop(
+      "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]",
+      "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Reference']]",
+    )
+
+    await click("//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Reference']]")
+    const movedDirectory = "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]"
+    await expect($(movedDirectory)).toBeDisplayed()
+    await click(movedDirectory)
+    await expect($("//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Review prompt']]"))
+      .toBeDisplayed()
+
+    await contextClick(movedDirectory)
+    await click("//div[contains(@class, 'note-library-context-menu')]//button[normalize-space()='Rename']")
+    await (await $('.input-dialog input')).setValue('Drafts')
+    await browser.keys('Enter')
+    const renamedDirectory = "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Drafts']]"
+    await expect($(renamedDirectory)).toBeDisplayed()
+
+    await contextClick(renamedDirectory)
+    await click("//div[contains(@class, 'note-library-context-menu')]//button[normalize-space()='Delete']")
+    await expect($('.confirmation-dialog-message')).toHaveText(expect.stringContaining('Drafts'))
+    await click('.input-dialog-actions .danger')
+    await expect($(renamedDirectory)).not.toExist()
+    const trashedPrompt = $("//button[contains(@class, 'trashed') and .//span[normalize-space()='Review prompt']]")
+    if (!(await trashedPrompt.isDisplayed().catch(() => false))) {
+      await click('.note-library-trash-root .note-library-root-toggle')
+    }
+    await expect(trashedPrompt)
+      .toBeDisplayed()
   })
 
   it('maximizes and restores with Alt+Enter while edge snapping is enabled', async () => {

@@ -50,8 +50,9 @@ This file tracks the implemented MVP relative to the original task plan.
 - Native picker, drag-and-drop, and operating-system file-association opening
   with in-place autosave for external Markdown files; content-revision
   conflicts, persistent recent-document list, and copy-to-archive behavior.
-- Compact `F4` file browser for active, archived, and trashed notes plus prompt
-  Markdown management, with prompt files opening in marked main-editor tabs.
+- Compact `F4` file browser with flat active notes, categorized archive and
+  prompt folders, drag-and-drop movement for files and complete folder trees,
+  safe folder rename/delete actions, and marked prompt editor tabs.
 - Modernized desktop chrome, unified dialogs, and a reorganized Settings center
   with configurable global shortcuts.
 - Manual clipboard capture to `clipboard.md`.

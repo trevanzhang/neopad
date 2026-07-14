@@ -401,6 +401,11 @@ export type AppMessages = {
     emptyTrash: string
     newNote: string
     newPrompt: string
+    newFolder: string
+    renameFolderTitle: string
+    deleteFolderTitle: string
+    deleteFolderMessage: string
+    deleteFolderConfirm: string
     newPromptTitle: string
     duplicatePromptTitle: string
     copySuffix: string
@@ -886,6 +891,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       emptyTrash: 'Trash is empty',
       newNote: 'New note',
       newPrompt: 'New prompt',
+      newFolder: 'New folder',
+      renameFolderTitle: 'Rename folder',
+      deleteFolderTitle: 'Delete folder?',
+      deleteFolderMessage: 'Delete "{name}"? Files inside it will be moved to NeoPad Trash.',
+      deleteFolderConfirm: 'Delete folder',
       newPromptTitle: 'Create prompt',
       duplicatePromptTitle: 'Duplicate prompt',
       copySuffix: 'copy',
@@ -1369,6 +1379,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       emptyTrash: '\u56de\u6536\u7ad9\u4e3a\u7a7a',
       newNote: '\u65b0\u5efa\u7b14\u8bb0',
       newPrompt: '\u65b0\u5efa\u63d0\u793a\u8bcd',
+      newFolder: '\u65b0\u5efa\u76ee\u5f55',
+      renameFolderTitle: '\u91cd\u547d\u540d\u76ee\u5f55',
+      deleteFolderTitle: '\u5220\u9664\u76ee\u5f55\uff1f',
+      deleteFolderMessage: '\u786e\u5b9a\u5220\u9664\u201c{name}\u201d\u5417\uff1f\u5176\u4e2d\u7684\u6587\u4ef6\u5c06\u79fb\u81f3 NeoPad \u56de\u6536\u7ad9\u3002',
+      deleteFolderConfirm: '\u5220\u9664\u76ee\u5f55',
       newPromptTitle: '\u521b\u5efa\u63d0\u793a\u8bcd',
       duplicatePromptTitle: '\u521b\u5efa\u63d0\u793a\u8bcd\u526f\u672c',
       copySuffix: '\u526f\u672c',

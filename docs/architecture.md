@@ -78,8 +78,15 @@ The default workspace is `~/.neopad/`.
     inbox.md
     clipboard.md
     page-*.md
+  archive/
+    category/
+      page-*.md
+  prompts/
+    category/
+      prompt.md
   meta/
     tabs.json
+    prompts.json
     reminders.json
   config.json
   trash/
@@ -92,9 +99,17 @@ the affected file and its metadata remain in NeoPad's Trash. Metadata
 reconciliation also recreates deleted-tab entries for NeoPad-formatted files
 that the operating system restores to `trash/`.
 
-The app presents notes as tabs. The durable source of note content is always a
-Markdown file in `notes/`. `tabs.json` stores tab metadata such as title, file
-name, timestamps, pinned state, active tab, and optional tab color.
+The app presents notes as tabs. Active note content stays in the flat
+`notes/*.md` work area. Archived notes may be categorized under
+`archive/**/*.md`; `tabs.json` stores stable note identity and archive relative
+paths in addition to title, file name, timestamps, pinned state, active tab,
+and optional tab color. Reusable prompts may be categorized under
+`prompts/**/*.md`; `prompts.json` keeps prompt identity stable when files move.
+Moving or renaming an archive or prompt directory rewrites every managed
+descendant path while retaining those stable identities. Deleting a directory
+first moves all managed Markdown descendants into NeoPad Trash, then removes
+the empty directory tree; unmanaged files and symbolic links make the operation
+fail without changing the directory.
 `reminders.json` stores only notification delivery signatures so reminder text
 continues to live in ordinary Markdown note lines.
 

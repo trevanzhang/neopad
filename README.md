@@ -52,7 +52,10 @@ The repository currently contains a working Windows-focused MVP:
   and "Clear Due" update reminder checkboxes directly without deleting note
   content.
 - `F4` opens the compact file browser for active, archived, and trashed notes
-  plus reusable AI prompts. Prompt Markdown files can be created, renamed,
+  plus reusable AI prompts. Active notes remain a flat work area, while
+  archived notes and prompts can be organized into local folders. Files and
+  whole folders can be moved by drag and drop; right-click a folder to rename
+  it or move all of its contents to NeoPad Trash. Prompt Markdown files can be created, renamed,
   duplicated, restored, or moved to Trash there, and open in the normal editor
   as clearly marked prompt tabs.
 - Right-click a tab or a single note or prompt in the file browser to reveal
@@ -123,15 +126,19 @@ Important files and directories:
 
 ```text
 ~/.neopad/
-  notes/              Markdown note bodies
-  archive/            Archived notes, included in full-text search
-  meta/tabs.json      Tab metadata
+  notes/              Flat active Markdown work area
+  archive/            Categorized archived notes, included in search
+  prompts/            Categorized reusable Markdown prompts
+  meta/tabs.json      Tab and archive-path metadata
+  meta/prompts.json   Stable prompt identity and path metadata
   meta/reminders.json Notification delivery state
   config.json         App settings
   trash/              Deleted notes are moved here
 ```
 
-Active note content lives in `notes/*.md`. Emptying NeoPad's Trash moves its
+Active note content lives in the flat `notes/*.md` work area. Archived notes may
+live under `archive/**/*.md`, and reusable prompts may live under
+`prompts/**/*.md`. Emptying NeoPad's Trash moves its
 Markdown files to the operating system's Recycle Bin or Trash before removing
 their entries from NeoPad's library. Files restored to NeoPad's `trash/`
 directory by the operating system are rediscovered on refresh. Metadata files
