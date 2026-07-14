@@ -10,6 +10,7 @@ export type AppMessages = {
     rename: string
     delete: string
     archive: string
+    restore: string
     close: string
     color: string
     defaultColor: string
@@ -482,6 +483,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       rename: 'Rename',
       delete: 'Delete',
       archive: 'Archive',
+      restore: 'Restore from Archive',
       close: 'Close',
       color: 'Tab color',
       defaultColor: 'Default',
@@ -970,6 +972,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       rename: '\u91cd\u547d\u540d',
       delete: '\u5220\u9664',
       archive: '\u5f52\u6863',
+      restore: '\u4ece\u5f52\u6863\u4e2d\u6062\u590d',
       close: '\u5173\u95ed',
       color: '\u4fee\u6539\u6807\u7b7e\u9875\u989c\u8272',
       defaultColor: '\u9ed8\u8ba4\u989c\u8272',

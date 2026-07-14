@@ -172,12 +172,9 @@ describe('NeoPad desktop note workflow', () => {
     await click('.note-library-directory=Projects')
     await expect($("//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]"))
       .toBeDisplayed()
-
-    await dragAndDrop(
-      "//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]",
-      "//section[1]/button[contains(@class, 'note-library-root')]",
-    )
-    await expect($("//section[1]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='E2E Renamed']]"))
+    await click("//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]")
+    await expect($('.tab-item.active')).toHaveText('E2E Renamed')
+    await expect($("//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]"))
       .toBeDisplayed()
 
     await click('.note-library-prompt-root .note-library-create-folder')

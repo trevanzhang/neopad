@@ -402,12 +402,14 @@ function handleMarkdownClick(event: MouseEvent) {
                 v-else
                 :key="item.id"
                 type="button"
-                :class="{ selected: item.id === selectedPromptId }"
-                @click="selectPrompt(item)"
-              >
-                <strong>{{ item.name }}</strong>
-                <small v-if="promptCategory(item)">{{ promptCategory(item) }}</small>
-                <span>{{ item.content }}</span>
+              :class="{ selected: item.id === selectedPromptId }"
+              @click="selectPrompt(item)"
+            >
+                <span class="ai-prompt-item-heading">
+                  <strong class="ai-prompt-item-title">{{ item.name }}</strong>
+                  <small v-if="promptCategory(item)" class="ai-prompt-item-category">{{ promptCategory(item) }}</small>
+                </span>
+                <span class="ai-prompt-item-preview">{{ item.content }}</span>
               </button>
               <p v-if="!promptsLoading && filteredPrompts.length === 0">{{ messages.noPrompts }}</p>
             </div>

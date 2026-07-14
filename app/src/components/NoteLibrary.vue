@@ -297,7 +297,9 @@ function updateSelection(event: MouseEvent, id: string, ids: string[], group: Li
 
 function selectNote(event: MouseEvent, note: NoteTab, group: 'notes' | 'archive' | 'trash-notes') {
   updateSelection(event, note.id, noteEntries(group).map((item) => item.id), group)
-  if (group === 'notes' && !event.shiftKey && !(event.ctrlKey || event.metaKey)) emit('select', note.id)
+  if ((group === 'notes' || group === 'archive') && !event.shiftKey && !(event.ctrlKey || event.metaKey)) {
+    emit('select', note.id)
+  }
 }
 
 function selectPrompt(
@@ -512,7 +514,7 @@ function runDirectoryContextAction(action: 'rename' | 'delete') {
         >
           <button class="note-library-root-toggle" type="button" @click="archiveExpanded = !archiveExpanded">
             <svg class="note-library-chevron" :class="{ collapsed: !archiveExpanded }" aria-hidden="true" viewBox="0 0 16 16"><path d="m4.5 6 3.5 4 3.5-4" /></svg>
-            <svg class="note-library-folder archive" aria-hidden="true" viewBox="0 0 16 16"><path d="M1.5 4.25h4.7l1.3 1.5h7v5.8a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1Z" /></svg>
+            <svg class="note-library-archive-box" aria-hidden="true" viewBox="0 0 16 16"><path d="M1.75 5.25h12.5v8.5H1.75zM1.25 2.5h13.5v2.75H1.25zM6.25 8.75h3.5" /></svg>
             <span>{{ messages.archive }}</span>
           </button>
           <button class="note-library-create-folder" type="button" :title="messages.newFolder" :aria-label="messages.newFolder" @click="$emit('createDirectory', 'archive')">

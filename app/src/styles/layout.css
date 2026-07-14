@@ -343,6 +343,22 @@ body {
   background: var(--np-surface);
 }
 
+.tab-item.archived:not(.active) {
+  color: color-mix(in srgb, var(--np-text) 78%, var(--np-muted));
+}
+
+.tab-archive-icon {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  color: color-mix(in srgb, var(--np-accent) 62%, var(--np-muted));
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.35;
+}
+
 .tab-prompt-icon {
   display: grid;
   place-items: center;
@@ -773,6 +789,17 @@ body {
 
 .note-library-folder.archive {
   color: var(--np-muted);
+}
+
+.note-library-archive-box {
+  width: 15px;
+  height: 15px;
+  color: color-mix(in srgb, var(--np-accent) 62%, var(--np-muted));
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.35;
 }
 
 .note-library-folder.trash {
@@ -4034,10 +4061,11 @@ body {
 
 .ai-prompt-list > button {
   display: grid;
-  gap: 2px;
+  grid-template-rows: auto auto;
+  gap: 4px;
   width: 100%;
-  min-height: 45px;
-  padding: 6px 8px;
+  min-height: 54px;
+  padding: 7px 8px;
   color: var(--np-text);
   text-align: left;
   background: transparent;
@@ -4051,25 +4079,36 @@ body {
   border-color: var(--np-border);
 }
 
-.ai-prompt-list strong,
-.ai-prompt-list small,
-.ai-prompt-list span {
+.ai-prompt-item-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+
+.ai-prompt-item-title,
+.ai-prompt-item-category,
+.ai-prompt-item-preview {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ai-prompt-list small {
+.ai-prompt-item-category {
+  flex: 0 1 38%;
   color: var(--np-accent);
   font-size: 10px;
 }
 
-.ai-prompt-list strong {
+.ai-prompt-item-title {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 12px;
   font-weight: 600;
 }
 
-.ai-prompt-list span {
+.ai-prompt-item-preview {
+  display: block;
   color: var(--np-muted);
   font-size: 11px;
 }

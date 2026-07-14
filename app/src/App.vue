@@ -926,7 +926,9 @@ async function selectLibraryNote(noteId: string): Promise<boolean> {
   const generation = nextNoteLoadGeneration()
   if (!(await forceSave()) || !isCurrentNoteLoad(generation)) return false
   try {
-    const opened = isTauriRuntime() ? await openNote(noteId) : libraryNotes.value.find((tab) => tab.id === noteId)
+    const opened = isTauriRuntime()
+      ? await openNote(noteId)
+      : [...libraryNotes.value, ...archivedNotes.value].find((tab) => tab.id === noteId)
     if (!opened || !isCurrentNoteLoad(generation)) return false
     upsertTab(opened)
     activeTabId.value = opened.id

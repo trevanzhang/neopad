@@ -110,8 +110,10 @@ function archiveTabWithShortcut(event: KeyboardEvent, tabId: string) {
   event.preventDefault()
   event.stopPropagation()
   contextMenu.value = null
-  if (isPromptTab(props.tabs.find((tab) => tab.id === tabId))) return
-  emit('archiveTab', tabId)
+  const tab = props.tabs.find((item) => item.id === tabId)
+  if (isPromptTab(tab)) return
+  if (tab?.archived) emit('unarchiveTab', tabId)
+  else emit('archiveTab', tabId)
 }
 
 function closeTabWithShortcut(event: KeyboardEvent, tabId: string) {
@@ -141,6 +143,7 @@ function canRenameOrDelete(tab: NoteTab | undefined) {
 
 function tabTitle(tab: NoteTab) {
   if (isPromptTab(tab)) return `prompts/${tab.fileName}`
+  if (tab.archived) return `${props.messages.archive}: ${tab.title}`
   return tab.externalPath ?? tab.title
 }
 
@@ -189,6 +192,7 @@ function endTabDrag() {
       class="tab-item"
       :class="{
         active: tab.id === activeTabId,
+        archived: tab.archived,
         dragging: tab.id === draggedTabId,
         'drag-target': tab.id === dragTargetTabId && tab.id !== draggedTabId,
       }"
@@ -211,6 +215,7 @@ function endTabDrag() {
     >
       <span v-if="isExternalTab(tab)" class="tab-external-icon" aria-hidden="true" />
       <span v-else-if="isPromptTab(tab)" class="tab-prompt-icon" aria-hidden="true">P</span>
+      <svg v-else-if="tab.archived" class="tab-archive-icon" aria-hidden="true" viewBox="0 0 16 16"><path d="M1.75 5.25h12.5v8.5H1.75zM1.25 2.5h13.5v2.75H1.25zM6.25 8.75h3.5" /></svg>
       <span class="tab-label">{{ tab.title }}</span>
     </button>
     <button class="tab-add" type="button" title="New note" aria-label="New note" @click="$emit('newTab')">
@@ -239,9 +244,9 @@ function endTabDrag() {
       <button
         type="button"
         role="menuitem"
-      :disabled="!canRenameOrDelete(contextTab())"
-      @click="runContextAction('rename')"
-    >
+        :disabled="!canRenameOrDelete(contextTab())"
+        @click="runContextAction('rename')"
+      >
         <span>{{ messages.rename }}</span>
         <span class="tab-context-shortcut">{{ messages.f8 }}</span>
       </button>
@@ -255,6 +260,16 @@ function endTabDrag() {
         <span class="tab-context-shortcut">{{ messages.altDel }}</span>
       </button>
       <button
+        v-if="isNoteTab(contextTab()) && contextTab()?.archived"
+        type="button"
+        role="menuitem"
+        @click="runContextAction('unarchive')"
+      >
+        <span>{{ messages.restore }}</span>
+        <span class="tab-context-shortcut">{{ messages.f12 }}</span>
+      </button>
+      <button
+        v-else
         type="button"
         role="menuitem"
         :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard' || isPromptTab(contextTab())"
