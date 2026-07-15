@@ -79,7 +79,8 @@ The repository currently contains a working Windows-focused MVP:
   documents provide a quick way to reopen closed or archived notes.
 - Archived notes move to `~/.neopad/archive/`, remain available to full-text
   search, and can be listed and restored from the note browser without using
-  the trash. File > Open Archive Folder opens the archive directory directly.
+  the trash. File > Open NeoPad Data Folder opens the complete local workspace,
+  including notes, archives, prompts, Trash, and metadata.
 - If a non-default note file is removed outside NeoPad, its stale tab and recent
   document record are removed on the next refresh; NeoPad does not recreate the
   missing file.
@@ -104,7 +105,9 @@ The repository currently contains a working Windows-focused MVP:
   lock, and interrupted archive/trash state is recovered from Markdown files.
 - Windows MSI packaging with app icon, branded WiX installer images, desktop and
   start-menu shortcut icons, and `.md` / `.markdown` file-association support.
-  The MSI includes `neopad-mcp.exe` as a bundled sidecar binary.
+  A bilingual installer page selects the app language (Chinese by default or
+  English) for first launch. The MSI includes `neopad-mcp.exe` as a bundled
+  sidecar binary.
 
 ## Workspace Layout
 
@@ -206,7 +209,7 @@ NSIS.
 The Windows MSI is written to:
 
 ```text
-target/release/bundle/msi/NeoPad_0.5.2_x64_en-US.msi
+target/release/bundle/msi/NeoPad_<version>_x64_en-US.msi
 ```
 
 Cross-platform release builds also run automatically in GitHub Actions when a

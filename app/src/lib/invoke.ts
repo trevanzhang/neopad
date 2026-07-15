@@ -424,8 +424,8 @@ export function openTrash(): Promise<void> {
   return invoke('open_trash_command')
 }
 
-export function openArchiveInFileManager(): Promise<void> {
-  return invoke('open_archive_in_file_manager_command')
+export function openWorkspaceInFileManager(): Promise<void> {
+  return invoke('open_workspace_in_file_manager_command')
 }
 
 export function revealNoteInFileManager(noteId: string): Promise<void> {

@@ -33,6 +33,7 @@
         <Property Id="REINSTALLMODE" Value="amus" />
         <Property Id="AUTOLAUNCHAPP" Secure="yes" />
         <Property Id="LAUNCHAPPARGS" Secure="yes" />
+        <Property Id="NEOPADLANGUAGE" Value="zh" Secure="yes" />
 
         <MajorUpgrade Schedule="afterInstallInitialize" AllowDowngrades="yes" />
 
@@ -64,6 +65,90 @@
         <CustomAction Id="LaunchApplication" Impersonate="yes" FileKey="Path" ExeCommand="[LAUNCHAPPARGS]" Return="asyncNoWait" />
 
         <UI>
+            <Dialog Id="LanguageDlg"
+                    Width="370"
+                    Height="270"
+                    Title="NeoPad Setup / NeoPad 安装">
+                <Control Id="BannerBmp"
+                         Type="Bitmap"
+                         X="0"
+                         Y="0"
+                         Width="370"
+                         Height="44"
+                         TabSkip="no"
+                         Text="WixUI_Bmp_Banner" />
+                <Control Id="Title"
+                         Type="Text"
+                         X="15"
+                         Y="6"
+                         Width="340"
+                         Height="15"
+                         Transparent="yes"
+                         NoPrefix="yes"
+                         Text="{\WixUI_Font_Title}选择 NeoPad 的界面语言 / Choose the NeoPad language" />
+                <Control Id="Description"
+                         Type="Text"
+                         X="25"
+                         Y="58"
+                         Width="320"
+                         Height="28"
+                         NoPrefix="yes"
+                         Text="请选择 NeoPad 首次启动时使用的语言。之后仍可在设置中更改。&#x0D;&#x0A;Choose the language NeoPad will use on first launch. You can change it later in Settings." />
+                <Control Id="LanguageGroup"
+                         Type="RadioButtonGroup"
+                         X="25"
+                         Y="100"
+                         Width="320"
+                         Height="56"
+                         Property="NEOPADLANGUAGE">
+                    <RadioButtonGroup Property="NEOPADLANGUAGE">
+                        <RadioButton Value="zh"
+                                     X="0"
+                                     Y="0"
+                                     Width="280"
+                                     Height="17"
+                                     Text="中文（默认） / Chinese (default)" />
+                        <RadioButton Value="en"
+                                     X="0"
+                                     Y="26"
+                                     Width="280"
+                                     Height="17"
+                                     Text="English / 英文" />
+                    </RadioButtonGroup>
+                </Control>
+                <Control Id="BottomLine"
+                         Type="Line"
+                         X="0"
+                         Y="234"
+                         Width="370"
+                         Height="0" />
+                <Control Id="Back"
+                         Type="PushButton"
+                         X="180"
+                         Y="243"
+                         Width="56"
+                         Height="17"
+                         Text="返回 / Back" />
+                <Control Id="Next"
+                         Type="PushButton"
+                         X="236"
+                         Y="243"
+                         Width="56"
+                         Height="17"
+                         Default="yes"
+                         Text="下一步 / Next" />
+                <Control Id="Cancel"
+                         Type="PushButton"
+                         X="304"
+                         Y="243"
+                         Width="56"
+                         Height="17"
+                         Cancel="yes"
+                         Text="取消 / Cancel">
+                    <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+                </Control>
+            </Dialog>
+
             <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
 
             <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
@@ -71,12 +156,20 @@
             <Publish Dialog="WelcomeDlg"
                      Control="Next"
                      Event="NewDialog"
-                     Value="InstallDirDlg"
+                     Value="LanguageDlg"
                      Order="2">1</Publish>
+            <Publish Dialog="LanguageDlg"
+                     Control="Back"
+                     Event="NewDialog"
+                     Value="WelcomeDlg">1</Publish>
+            <Publish Dialog="LanguageDlg"
+                     Control="Next"
+                     Event="NewDialog"
+                     Value="InstallDirDlg">1</Publish>
             <Publish Dialog="InstallDirDlg"
                      Control="Back"
                      Event="NewDialog"
-                     Value="WelcomeDlg"
+                     Value="LanguageDlg"
                      Order="2">1</Publish>
         </UI>
 
@@ -109,6 +202,9 @@
             <Component Id="RegistryEntries" Guid="*">
                 <RegistryKey Root="HKCU" Key="Software\\{{manufacturer}}\\{{product_name}}">
                     <RegistryValue Name="InstallDir" Type="string" Value="[INSTALLDIR]" KeyPath="yes" />
+                </RegistryKey>
+                <RegistryKey Root="HKCU" Key="Software\NeoPad\NeoPad">
+                    <RegistryValue Name="InstallLanguage" Type="string" Value="[NEOPADLANGUAGE]" />
                 </RegistryKey>
             </Component>
             <Component Id="Path" Guid="{{path_component_guid}}" Win64="$(var.Win64)">

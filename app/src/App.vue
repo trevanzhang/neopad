@@ -32,7 +32,7 @@ import {
   listNotes,
   listRecentNotes,
   listRecoverableNoteWrites,
-  openArchiveInFileManager,
+  openWorkspaceInFileManager,
   openTrash,
   openNote,
   openExternalMarkdown,
@@ -770,11 +770,11 @@ async function openTrashFolder() {
   }
 }
 
-async function revealArchiveInExplorer() {
+async function openWorkspaceFolder() {
   if (!isTauriRuntime()) return
   try {
-    await openArchiveInFileManager()
-    statusMessage.value = t.value.status.archiveOpened
+    await openWorkspaceInFileManager()
+    statusMessage.value = t.value.status.workspaceOpened
   } catch {
     saveState.value = 'Failed'
   }
@@ -2001,7 +2001,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @save-as-file="saveAsFile"
         @export-note="exportNote(activeTabId, $event)"
         @export-all="exportAllNotes"
-        @reveal-archive="revealArchiveInExplorer"
+        @open-data-folder="openWorkspaceFolder"
         @open-trash="openTrashFolder"
         @hide-window="hideMainWindow"
         @exit-app="exitApp"

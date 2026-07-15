@@ -30,8 +30,8 @@ Markdown 文件，用户数据不需要账号，也不依赖云服务。
 - `F4` 可打开紧凑的笔记浏览器，查看活动、归档和回收站笔记，并在编辑器附近完成
   常用操作。
 - 标签页右键菜单可以在资源管理器中定位 Markdown 文件，也可以复制当前页面的
-  绝对文件地址，便于交给终端或本地 Agent。文件菜单中的“本地查看存档”会直接
-  打开 `~/.neopad/archive/`。
+  绝对文件地址，便于交给终端或本地 Agent。文件菜单中的“打开 NeoPad 数据文件夹”
+  会直接打开完整的 `~/.neopad/` 工作区。
 - 重组后的设置中心将通用、编辑器、预览、Vim、快捷键、AI 和 MCP 设置集中在一个聚焦的
   对话框中；窗口显示与剪贴板捕获快捷键均可配置。
 - 系统托盘图标支持左键恢复并聚焦主窗口，右键打开显示、隐藏、新建笔记、
@@ -45,8 +45,9 @@ Markdown 文件，用户数据不需要账号，也不依赖云服务。
   `- [ ] @remind YYYY-MM-DD HH:mm 提醒内容`。
 - 本地 HTTP MCP 服务默认关闭，可在设置中启停；启用后通过 bearer token
   授权本地 Agent 读写笔记。
-- Windows MSI 安装包会内置 `neopad-mcp.exe` 作为 sidecar，并声明 `.md` 和
-  `.markdown` 文件关联，供用户在系统中选择 NeoPad 作为默认打开方式。
+- Windows MSI 安装包提供中英双语的应用语言选择页（默认中文），所选语言会用于
+  NeoPad 首次启动；安装包同时内置 `neopad-mcp.exe` 作为 sidecar，并声明 `.md`
+  和 `.markdown` 文件关联，供用户在系统中选择 NeoPad 作为默认打开方式。
 - `Ctrl+O`、将 `.md` 或 `.markdown` 文件拖入窗口、或从系统打开关联文件，都会
   就地打开外部 Markdown 文件，并使用 SHA-256 内容 revision 检测外部修改，避免
   静默覆盖。
@@ -148,7 +149,7 @@ AppImage；Windows 不会额外生成 NSIS。
 安装包输出位置：
 
 ```text
-target/release/bundle/msi/NeoPad_0.5.2_x64_en-US.msi
+target/release/bundle/msi/NeoPad_<version>_x64_en-US.msi
 ```
 
 ## MCP 服务

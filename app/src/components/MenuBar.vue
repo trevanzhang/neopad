@@ -26,7 +26,7 @@ const emit = defineEmits<{
   saveAsFile: []
   exportNote: [format: 'png' | 'pdf']
   exportAll: []
-  revealArchive: []
+  openDataFolder: []
   openTrash: []
   hideWindow: []
   exitApp: []
@@ -243,7 +243,7 @@ function handleMenuKeydown(event: KeyboardEvent) {
         </div>
         <button type="button" @click="$emit('exportAll')">{{ messages.exportAll }}</button>
         <div class="menu-separator" role="separator" />
-        <button type="button" @click="$emit('revealArchive')">{{ messages.revealArchive }}</button>
+        <button type="button" @click="$emit('openDataFolder')">{{ messages.openDataFolder }}</button>
         <button type="button" @click="$emit('openTrash')">{{ messages.trash }}</button>
         <div class="menu-separator" role="separator" />
         <button type="button" class="menu-command" @click="$emit('hideWindow')">

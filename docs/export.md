@@ -14,8 +14,8 @@ Export the active note from either location:
 The tab context menu can also copy the absolute path of its Markdown file. This
 is useful when handing a note to a terminal command or local agent. Internal
 notes resolve inside the NeoPad workspace; external Markdown tabs retain their
-approved original paths. File > Open Archive Folder opens
-`~/.neopad/archive/` in the system file manager.
+approved original paths. File > Open NeoPad Data Folder opens the complete
+`~/.neopad/` workspace in the system file manager.
 
 ## Markdown Rendering
 

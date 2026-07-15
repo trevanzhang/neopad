@@ -46,7 +46,7 @@ export type AppMessages = {
     exportAsPng: string
     exportAsPdf: string
     exportAll: string
-    revealArchive: string
+    openDataFolder: string
     trash: string
     hide: string
     exit: string
@@ -448,7 +448,7 @@ export type AppMessages = {
     exportedPdf: string
     exportTooLong: string
     exportFailed: string
-    archiveOpened: string
+    workspaceOpened: string
     notePathCopied: string
     trashOpened: string
     noteFileMissing: string
@@ -538,7 +538,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       exportAsPng: 'As PNG Image...',
       exportAsPdf: 'As PDF Document...',
       exportAll: 'Export All(E)...',
-      revealArchive: 'Open Archive Folder(A)',
+      openDataFolder: 'Open NeoPad Data Folder(D)',
       trash: 'Trash(R)...',
       hide: 'Hide(H)',
       exit: 'Exit(X)',
@@ -940,7 +940,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       exportedPdf: 'PDF exported',
       exportTooLong: 'This note is too long to export safely',
       exportFailed: 'Note export failed',
-      archiveOpened: 'Archive opened in Explorer',
+      workspaceOpened: 'NeoPad data folder opened',
       notePathCopied: 'Page file path copied',
       trashOpened: 'Trash opened',
       noteFileMissing: 'Note file does not exist',
@@ -1028,7 +1028,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       exportAsPng: '\u5bfc\u51fa\u4e3a PNG \u56fe\u7247...',
       exportAsPdf: '\u5bfc\u51fa\u4e3a PDF \u6587\u4ef6...',
       exportAll: '\u5168\u90e8\u5bfc\u51fa(E)...',
-      revealArchive: '\u672c\u5730\u67e5\u770b\u5b58\u6863(A)',
+      openDataFolder: '\u6253\u5f00 NeoPad \u6570\u636e\u6587\u4ef6\u5939(D)',
       trash: '\u56de\u6536\u7ad9(R)...',
       hide: '\u9690\u85cf(H)',
       exit: '\u9000\u51fa(X)',
@@ -1430,7 +1430,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       exportedPdf: '\u5df2\u5bfc\u51fa PDF',
       exportTooLong: '\u7b14\u8bb0\u8fc7\u957f\uff0c\u65e0\u6cd5\u5b89\u5168\u5bfc\u51fa',
       exportFailed: '\u7b14\u8bb0\u5bfc\u51fa\u5931\u8d25',
-      archiveOpened: '\u5df2\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u6253\u5f00\u5b58\u6863',
+      workspaceOpened: '\u5df2\u6253\u5f00 NeoPad \u6570\u636e\u6587\u4ef6\u5939',
       notePathCopied: '\u5df2\u590d\u5236\u5f53\u524d\u9875\u9762\u6587\u4ef6\u5730\u5740',
       trashOpened: '\u5df2\u6253\u5f00\u56de\u6536\u7ad9',
       noteFileMissing: '\u7b14\u8bb0\u6587\u4ef6\u4e0d\u5b58\u5728',

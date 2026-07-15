@@ -181,6 +181,7 @@ Installer-related files:
 ```text
 app/src-tauri/tauri.conf.json
 app/src-tauri/wix/main.wxs
+app/src-tauri/wix/locales/en-US.wxl
 app/src-tauri/icons/icon.ico
 app/src-tauri/icons/wix-banner.bmp
 app/src-tauri/icons/wix-dialog.bmp
@@ -190,6 +191,11 @@ The WiX dialog bitmap is used as a full background on welcome and finish pages.
 Keep the right side visually quiet so default WiX text remains readable. The
 WiX banner must remain free of branding and text because native installer copy
 is drawn over its left side.
+
+The Windows MSI uses English for its standard installer pages and includes one
+bilingual application-language selection page. Chinese is selected by default,
+English is available, and the choice seeds only the first launch of a new
+default workspace without replacing existing user preferences.
 
 ## Verification
 

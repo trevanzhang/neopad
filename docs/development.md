@@ -176,7 +176,16 @@ The Windows MSI installer uses:
 - `app/src-tauri/icons/wix-banner.bmp` for the top installer banner.
 - `app/src-tauri/icons/wix-dialog.bmp` for the welcome and finish dialog image.
 - `app/src-tauri/wix/main.wxs` as the custom WiX template.
+- `app/src-tauri/wix/locales/en-US.wxl` for English installer strings and a
+  code page that can also store the bilingual selection page.
 - `target/release/neopad-mcp.exe` as the MCP sidecar source.
+
+The MSI standard pages use `en-US`. One custom page is bilingual and lets the
+user select Chinese (the default) or English for NeoPad. The installer writes
+that choice to `HKCU\Software\NeoPad\NeoPad\InstallLanguage`; only a new default
+workspace imports it, so upgrades do not overwrite an existing app language
+preference. The English locale uses code page 936 so the same MSI database can
+store the page's Chinese labels without producing mojibake.
 
 When modifying installer UI, keep WiX default text areas clear. The dialog image
 is a full background for welcome and finish pages, not a standalone logo slot.

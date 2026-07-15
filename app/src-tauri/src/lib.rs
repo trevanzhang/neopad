@@ -1,6 +1,7 @@
 mod ai;
 mod commands;
 mod hotkey;
+mod installer;
 mod mcp;
 mod tray;
 mod window;
@@ -16,9 +17,9 @@ use commands::{
     list_archive_directories_command, list_archived_notes_command, list_library_notes_command,
     list_notes_command, list_recent_notes_command, list_recoverable_note_writes_command,
     list_reminders_command, list_trashed_notes_command, move_archive_directory_command,
-    move_archived_note_command, open_archive_in_file_manager_command,
-    open_external_markdown_command, open_external_markdown_paths_command,
-    open_external_url_command, open_note_command, open_trash_command, quit_app_command,
+    move_archived_note_command, open_external_markdown_command,
+    open_external_markdown_paths_command, open_external_url_command, open_note_command,
+    open_trash_command, open_workspace_in_file_manager_command, quit_app_command,
     read_external_markdown_command, read_note_command, rename_archive_directory_command,
     rename_note_command, reopen_reminder_command, reorder_open_notes_command,
     restore_note_from_trash_command, restore_recoverable_note_write_command,
@@ -32,7 +33,7 @@ use commands::{
     update_clipboard_shortcut_command, update_toggle_shortcut_command,
     write_external_markdown_command, write_note_command, AppState,
 };
-use neopad_core::{init_workspace, load_config};
+use neopad_core::{default_workspace_dir, init_workspace, load_config, save_config};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::{atomic::AtomicBool, Arc, Mutex};
@@ -42,7 +43,16 @@ use tauri_plugin_window_state::StateFlags;
 
 fn build_state() -> anyhow::Result<AppState> {
     let workspace_path = std::env::var_os("NEOPAD_WORKSPACE").map(std::path::PathBuf::from);
+    let should_apply_installer_language =
+        workspace_path.is_none() && !default_workspace_dir()?.join("config.json").is_file();
     let workspace = init_workspace(workspace_path)?;
+    if should_apply_installer_language {
+        if let Some(language) = installer::selected_language() {
+            let mut config = load_config(&workspace)?;
+            config.ui.language = language.to_owned();
+            save_config(&workspace, &config)?;
+        }
+    }
     let startup_args = std::env::args_os().collect::<Vec<_>>();
     let startup_hidden = startup_args.iter().any(|arg| arg == "--hidden")
         || load_config(&workspace)
@@ -250,7 +260,7 @@ pub fn run() {
             reveal_external_markdown_in_file_manager_command,
             copy_note_path_to_clipboard_command,
             copy_external_markdown_path_to_clipboard_command,
-            open_archive_in_file_manager_command,
+            open_workspace_in_file_manager_command,
             open_trash_command,
             open_external_url_command,
             quit_app_command,

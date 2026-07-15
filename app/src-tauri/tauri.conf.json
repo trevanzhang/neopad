@@ -53,6 +53,11 @@
     "windows": {
       "wix": {
         "template": "wix/main.wxs",
+        "language": {
+          "en-US": {
+            "localePath": "wix/locales/en-US.wxl"
+          }
+        },
         "bannerPath": "icons/wix-banner.bmp",
         "dialogImagePath": "icons/wix-dialog.bmp"
       }

@@ -658,8 +658,8 @@ pub fn open_trash_command(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn open_archive_in_file_manager_command(state: State<'_, AppState>) -> Result<(), String> {
-    open_path(&state.workspace.archive_dir).map_err(|error| error.to_string())
+pub fn open_workspace_in_file_manager_command(state: State<'_, AppState>) -> Result<(), String> {
+    open_path(&state.workspace.root).map_err(|error| error.to_string())
 }
 
 #[tauri::command]

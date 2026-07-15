@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   initialBooleanSetting,
   initialJsonSetting,
+  initialLanguage,
   initialNumberSetting,
   initialStringSetting,
   normalizePreviewTheme,
@@ -15,6 +16,7 @@ describe('preferences', () => {
   })
 
   it('uses safe defaults outside a browser runtime', () => {
+    expect(initialLanguage()).toBe('zh')
     expect(initialBooleanSetting('missing', true)).toBe(true)
     expect(initialStringSetting('missing', 'fallback')).toBe('fallback')
     expect(initialNumberSetting('missing', 14, 12, 22)).toBe(14)

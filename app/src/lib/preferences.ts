@@ -18,8 +18,9 @@ export const legacyDateTimeSeparatorTemplate = "crlf() + chars('-', 29) + ' ' + 
 export const defaultDateTimeSeparatorTemplate = "crlf() + chars('-', 29) + ' ' + date() + ' ' + time() + ' ' + chars('-', 29) + crlf()"
 
 export function initialLanguage(): AppLanguage {
-  if (typeof window === 'undefined') return 'en'
-  return window.localStorage.getItem('neopad.language') === 'zh' ? 'zh' : 'en'
+  if (typeof window === 'undefined') return 'zh'
+  const stored = window.localStorage.getItem('neopad.language')
+  return stored === 'en' ? 'en' : 'zh'
 }
 
 export function initialTheme(): AppTheme {

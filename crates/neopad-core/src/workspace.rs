@@ -199,6 +199,7 @@ mod tests {
         assert_eq!(config.theme, Theme::System);
         assert_eq!(config.default_hotkey, "Alt+Z");
         assert_eq!(config.clipboard_hotkey, "Ctrl+Shift+V");
+        assert_eq!(config.ui.language, "zh");
         assert_eq!(config.preview_mode, PreviewMode::Edit);
         assert!(config.hide_on_esc);
         assert!(!config.mcp.enabled);

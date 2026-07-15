@@ -96,7 +96,7 @@ pub struct UiConfig {
 }
 
 fn default_language() -> String {
-    "en".to_owned()
+    "zh".to_owned()
 }
 
 fn default_vim_insert_exit_key() -> String {
