@@ -6,11 +6,30 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.6.0 - 2026-07-15
+
 ### Added
 
 - Added prompt Markdown management to the `F4` file browser, including create,
   edit in marked main-editor tabs, rename, duplicate, reveal, trash, and restore
   workflows with atomic saves and external-change conflict checks.
+- Added nested archive and prompt folders with safe rename, delete, and drag-and-drop
+  organization while preserving stable document identities.
+- Added a bilingual Windows installer page for choosing Chinese or English as
+  NeoPad's first-launch language, defaulting to Chinese.
+- Added a Vim quick guide and reorganized the Help menu for easier discovery.
+- Added View > Fullscreen with the existing `F11` shortcut.
+- Added direct PNG export to the system clipboard alongside file export.
+
+### Changed
+
+- Archived notes can now be opened and edited in place without restoring them.
+- The File menu now opens the complete `~/.neopad/` data directory instead of
+  exposing an archive-only folder action.
+- Reorganized PNG export into file and clipboard submenu actions in both the
+  File menu and tab context menu.
+- Replaced the retired npm audit endpoint in CI and release preflight with an
+  exact production-dependency check against npm's Bulk Advisory API.
 
 ### Fixed
 
@@ -19,6 +38,8 @@ patch versions are reserved for compatible fixes.
   edit cannot restore startup placeholder text or content from another note.
 - Made a left click on the system tray icon restore and focus NeoPad while a
   right click continues to open the tray menu.
+- Fixed PNG clipboard export on Windows by writing native image data to the
+  operating-system clipboard.
 
 ## 0.5.3 - 2026-07-14
 
