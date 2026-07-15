@@ -140,7 +140,7 @@ pnpm check:versions
 
 Run `pnpm test:e2e` for desktop workflow changes and `pnpm tauri:build` when
 packaging or sidecar behavior changes. Production dependency changes must also
-pass `pnpm audit --prod` and `cargo audit`.
+pass `pnpm audit:prod` and `cargo audit`.
 
 For MCP-only changes, also run:
 
@@ -212,7 +212,8 @@ macOS builds cross-compile for Apple Silicon from the `macos-latest` (ARM64)
 runner using `--target aarch64-apple-darwin`.
 
 CI and release preflight both reject known production npm vulnerabilities with
-`pnpm audit --prod`. A separate CI job installs the locked `cargo-audit 0.22.2`
+`pnpm audit:prod` through npm's Bulk Advisory API. A separate CI job installs
+the locked `cargo-audit 0.22.2`
 release and rejects RustSec advisories; release preflight repeats that Rust
 dependency audit. The release workflow also runs version/tag validation,
 formatting, Clippy, tests, and the frontend build. Each platform must produce

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "pnpm --filter neopad-app dev",
     "build": "pnpm --filter neopad-app build",
+    "audit:prod": "node scripts/audit-production-dependencies.mjs",
     "check:versions": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/check-versions.ps1",
     "check:release-tag": "node scripts/check-release-tag.mjs",
     "test:frontend": "pnpm --filter neopad-app test",

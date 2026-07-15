@@ -24,7 +24,7 @@ jobs:
         with:
           components: clippy,rustfmt
       - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --prod
+      - run: pnpm audit:prod
       - run: pnpm check:versions
       - run: pnpm check:release-tag
       - run: cargo build -p neopad-mcp --release
