@@ -93,6 +93,9 @@ F12             归档当前页面
 Alt+Enter       最大化或还原主窗口
 Esc             关闭浮层、退出全屏或隐藏窗口
 Ctrl+O          打开外部 Markdown 文件
+Ctrl+Z          撤销当前笔记中的编辑
+Ctrl+Y          重做当前笔记中的编辑
+Ctrl+Shift+Z    备用重做快捷键
 Ctrl+E          插入 Markdown 提醒
 Ctrl+Tab        下一个标签页
 Ctrl+Shift+Tab  上一个标签页

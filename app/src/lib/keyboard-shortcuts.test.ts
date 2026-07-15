@@ -127,6 +127,38 @@ describe('keyboard shortcut routing', () => {
     expect(spies.openAiPanel).toHaveBeenCalledOnce()
   })
 
+  it('routes Ctrl+Z and Ctrl+Y through the focused editor history', () => {
+    const { flags, spies, handler } = harness()
+    flags.set('editorFocused', true)
+
+    handler(keyEvent('z', { ctrlKey: true }))
+    handler(keyEvent('y', { ctrlKey: true }))
+
+    expect(spies.undo).toHaveBeenCalledOnce()
+    expect(spies.redo).toHaveBeenCalledOnce()
+  })
+
+  it('supports Ctrl+Shift+Z as an alternative redo shortcut', () => {
+    const { flags, spies, handler } = harness()
+    flags.set('editorFocused', true)
+
+    handler(keyEvent('z', { ctrlKey: true, shiftKey: true }))
+
+    expect(spies.redo).toHaveBeenCalledOnce()
+  })
+
+  it('leaves Ctrl+Y to Vim when NeoPad Ctrl shortcuts are disabled', () => {
+    const { flags, spies, handler } = harness()
+    flags.set('editorFocused', true)
+    flags.set('vimMode', true)
+
+    const event = keyEvent('y', { ctrlKey: true })
+    handler(event)
+
+    expect(spies.redo).toBeUndefined()
+    expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
   it('honors Escape surface precedence', () => {
     const { flags, spies, handler } = harness()
     flags.set('confirmationOpen', true)

@@ -12,6 +12,12 @@ patch versions are reserved for compatible fixes.
   edit in marked main-editor tabs, rename, duplicate, reveal, trash, and restore
   workflows with atomic saves and external-change conflict checks.
 
+### Fixed
+
+- Added the missing Redo command to the Edit menu and documented `Ctrl+Y`.
+- Isolated undo and redo history when loading or switching notes so undoing an
+  edit cannot restore startup placeholder text or content from another note.
+
 ## 0.5.3 - 2026-07-14
 
 ### Added

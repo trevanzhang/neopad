@@ -275,6 +275,9 @@ Esc             Close overlays, exit fullscreen, or hide the window
 Ctrl+O          Open an external Markdown file
 Ctrl+W          Close the current tab
 Alt+Del         Move the current page to Trash
+Ctrl+Z          Undo an edit in the current note
+Ctrl+Y          Redo an edit in the current note
+Ctrl+Shift+Z    Alternative redo shortcut
 Ctrl+E          Insert a Markdown reminder
 Ctrl+Tab        Next tab
 Ctrl+Shift+Tab  Previous tab

@@ -64,6 +64,7 @@ export type AppMessages = {
     globalSearch: string
     selectAll: string
     ctrlZ: string
+    ctrlY: string
     ctrlX: string
     ctrlC: string
     ctrlV: string
@@ -555,6 +556,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       globalSearch: 'Global Search(G)',
       selectAll: 'Select All(A)',
       ctrlZ: 'Ctrl+Z',
+      ctrlY: 'Ctrl+Y',
       ctrlX: 'Ctrl+X',
       ctrlC: 'Ctrl+C',
       ctrlV: 'Ctrl+V',
@@ -1044,6 +1046,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       globalSearch: '\u5168\u5c40\u641c\u7d22(G)',
       selectAll: '\u5168\u9009(A)',
       ctrlZ: 'Ctrl+Z',
+      ctrlY: 'Ctrl+Y',
       ctrlX: 'Ctrl+X',
       ctrlC: 'Ctrl+C',
       ctrlV: 'Ctrl+V',

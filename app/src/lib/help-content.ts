@@ -69,6 +69,7 @@ export function getShortcutHelpGroups(language: AppLanguage, context: HelpContex
     {
       title: zh ? '\u7f16\u8f91\u3001\u67e5\u627e\u4e0e\u63d2\u5165' : 'Edit, find, and insert',
       rows: [
+        { keys: 'Ctrl+Z / Ctrl+Y', description: zh ? '\u64a4\u9500/\u91cd\u505a\u5f53\u524d\u7b14\u8bb0\u4e2d\u7684\u7f16\u8f91' : 'Undo or redo edits in the current note' },
         { keys: 'Ctrl+F / Ctrl+R', description: zh ? '\u67e5\u627e/\u66ff\u6362\u5f53\u524d\u7b14\u8bb0' : 'Find or replace in the current note' },
         { keys: 'Ctrl+G', description: zh ? '\u67e5\u627e\u4e0b\u4e00\u4e2a' : 'Find the next match' },
         { keys: 'Ctrl+Shift+F', description: zh ? '\u5168\u5c40\u641c\u7d22' : 'Search all NeoPad notes' },

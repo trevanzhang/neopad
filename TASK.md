@@ -39,6 +39,9 @@ Implemented MVP capabilities:
   the current document's absolute file path, while the File menu opens the
   local archive directory directly.
 - Autosave.
+- Per-document undo and redo with `Ctrl+Z`, `Ctrl+Y`, and `Ctrl+Shift+Z`;
+  loading or switching documents starts a fresh history boundary so edits
+  cannot be undone into another note's content.
 - Edit, split, and preview editor modes with a persisted Default Mode setting
   and fixed `F5` cycling shortcut; all three modes remain available in
   immersive fullscreen. New installations start in Edit mode, and later

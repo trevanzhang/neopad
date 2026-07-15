@@ -31,6 +31,7 @@ const emit = defineEmits<{
   hideWindow: []
   exitApp: []
   undo: []
+  redo: []
   cut: []
   copy: []
   paste: []
@@ -259,6 +260,10 @@ function handleMenuKeydown(event: KeyboardEvent) {
         <button type="button" class="menu-command menu-muted" @click="$emit('undo')">
           <span>{{ messages.undo }}</span>
           <span class="menu-shortcut">{{ messages.ctrlZ }}</span>
+        </button>
+        <button type="button" class="menu-command menu-muted" @click="$emit('redo')">
+          <span>{{ messages.redo }}</span>
+          <span class="menu-shortcut">{{ messages.ctrlY }}</span>
         </button>
         <div class="menu-separator" role="separator" />
         <button type="button" class="menu-command" @click="$emit('cut')">

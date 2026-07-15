@@ -19,6 +19,7 @@ import {
 } from '@codemirror/view'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { evaluateExpressionLine, formatCalculationResult } from '../lib/editor-calculation'
+import { resetEditorDocument } from '../lib/editor-document-state'
 import { editorCodeLanguages } from '../lib/editor-code-languages'
 import { createNeopadSearchPanel, type EditorSearchLabels } from '../lib/editor-search-panel'
 import { baseEditorTheme, editorAppearance, neopadHighlightStyle } from '../lib/editor-theme'
@@ -91,34 +92,36 @@ function registerNeopadVimTabMappings() {
   Vim.mapCommand('gT', 'action', 'neopadPreviousTab', {}, { context: 'normal' })
 }
 
-const extensions = [
-  vimSupport.of(props.vimMode ? vim() : []),
-  history(),
-  drawSelection(),
-  dropCursor(),
-  bracketMatching(),
-  highlightActiveLine(),
-  markdown({ codeLanguages: editorCodeLanguages }),
-  syntaxHighlighting(neopadHighlightStyle),
-  searchSupport.of(createSearchExtension()),
-  aiSlashSupport.of(createAiSlashExtension(props.aiSlashLabels)),
-  createAiInlineStatusExtension(),
-  keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
-  editable.of(EditorView.editable.of(true)),
-  wrap.of(props.wordWrap ? EditorView.lineWrapping : []),
-  appearance.of(editorAppearance(props.backgroundColor, props.fontFamily, props.fontSize)),
-  EditorView.updateListener.of((update) => {
-    if (!update.docChanged) {
-      return
-    }
+function createEditorExtensions() {
+  return [
+    vimSupport.of(props.vimMode ? vim() : []),
+    history(),
+    drawSelection(),
+    dropCursor(),
+    bracketMatching(),
+    highlightActiveLine(),
+    markdown({ codeLanguages: editorCodeLanguages }),
+    syntaxHighlighting(neopadHighlightStyle),
+    searchSupport.of(createSearchExtension()),
+    aiSlashSupport.of(createAiSlashExtension(props.aiSlashLabels)),
+    createAiInlineStatusExtension(),
+    keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
+    editable.of(EditorView.editable.of(true)),
+    wrap.of(props.wordWrap ? EditorView.lineWrapping : []),
+    appearance.of(editorAppearance(props.backgroundColor, props.fontFamily, props.fontSize)),
+    EditorView.updateListener.of((update) => {
+      if (!update.docChanged) {
+        return
+      }
 
-    const nextValue = update.state.doc.toString()
-    if (nextValue !== model.value) {
-      model.value = nextValue
-    }
-  }),
-  baseEditorTheme(),
-]
+      const nextValue = update.state.doc.toString()
+      if (nextValue !== model.value) {
+        model.value = nextValue
+      }
+    }),
+    baseEditorTheme(),
+  ]
+}
 
 onMounted(() => {
   if (!editorRoot.value) {
@@ -130,7 +133,7 @@ onMounted(() => {
   editorView = new EditorView({
     state: EditorState.create({
       doc: model.value,
-      extensions,
+      extensions: createEditorExtensions(),
     }),
     parent: editorRoot.value,
   })
@@ -327,13 +330,9 @@ watch(model, (nextValue) => {
     return
   }
 
-  editorView.dispatch({
-    changes: {
-      from: 0,
-      to: editorView.state.doc.length,
-      insert: nextValue,
-    },
-  })
+  disconnectVimModeListener()
+  resetEditorDocument(editorView, nextValue, createEditorExtensions())
+  connectVimModeListener()
 })
 
 watch(

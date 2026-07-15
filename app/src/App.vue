@@ -447,6 +447,8 @@ const handleKeydown = createKeyboardHandler({
     showSearch: showSearchPlaceholder,
     openFind: openFindPanel,
     openReplace: openReplacePanel,
+    undo: undoEditor,
+    redo: redoEditor,
     copy: copyEditorSelection,
     cut: cutEditorSelection,
     paste: pasteIntoEditor,
@@ -810,6 +812,10 @@ async function copyNoteFilePath(noteId: string) {
 
 function undoEditor() {
   editorPane.value?.undoEdit()
+}
+
+function redoEditor() {
+  editorPane.value?.redoEdit()
 }
 
 function cutEditorSelection() {
@@ -2000,6 +2006,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @hide-window="hideMainWindow"
         @exit-app="exitApp"
         @undo="undoEditor"
+        @redo="redoEditor"
         @cut="cutEditorSelection"
         @copy="copyEditorSelection"
         @paste="pasteIntoEditor"

@@ -24,7 +24,7 @@ interface DocumentSessionOptions {
 }
 
 export function useDocumentSession(options: DocumentSessionOptions) {
-  const content = ref('# Inbox\n\nStart typing...')
+  const content = ref('# Inbox\n\n')
   const saveState = ref<'Saved' | 'Saving' | 'Failed'>('Saved')
   const isLoadingNote = ref(false)
   let suppressedLoadedContent: string | null = null

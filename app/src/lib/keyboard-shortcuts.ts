@@ -54,6 +54,8 @@ export interface KeyboardActions {
   showSearch: () => void
   openFind: () => void
   openReplace: () => void
+  undo: () => void
+  redo: () => void
   copy: () => void
   cut: () => void
   paste: () => void
@@ -185,6 +187,17 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
         consume(event, () => void actions.closeActivePage()); return
       }
       if (key === 'o') { consume(event, actions.triggerLoadFile); return }
+    }
+
+    const editorHistoryShortcut = state.editorFocused() && workspaceClear() &&
+      !event.altKey && (event.ctrlKey || event.metaKey) &&
+      (!state.vimMode() || state.vimUseCtrlShortcuts())
+    if (editorHistoryShortcut) {
+      const key = event.key.toLowerCase()
+      if (key === 'z' && !event.shiftKey) { consume(event, actions.undo); return }
+      if ((key === 'y' && !event.shiftKey) || (key === 'z' && event.shiftKey)) {
+        consume(event, actions.redo); return
+      }
     }
 
     if (state.vimMode() && state.editorFocused()) {

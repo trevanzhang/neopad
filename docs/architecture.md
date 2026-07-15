@@ -38,7 +38,8 @@ state machine. Domain behavior is split into focused Vue composables:
 - `useDialogs` serializes input and confirmation requests.
 - `keyboard-shortcuts.ts` is a pure priority router with explicit state getters
   and application actions; characterization tests protect modal blocking,
-  Escape precedence, tab cycling, and native window fallback.
+  Escape precedence, tab cycling, editor undo/redo routing, and native window
+  fallback.
 - `useWindowLifecycle` owns Tauri event listeners and save-before-hide/quit
   behavior.
 - `text-transform.ts`, `help-content.ts`, and the document utility modules keep
@@ -46,7 +47,9 @@ state machine. Domain behavior is split into focused Vue composables:
 - `EditorPane.vue` owns the live CodeMirror instance and command surface only.
   The custom search panel, editor themes, and line calculator live in focused
   `editor-*` modules; pure match-count and expression behavior has regression
-  coverage independent of the desktop runtime.
+  coverage independent of the desktop runtime. A loaded document starts with a
+  fresh CodeMirror state so undo/redo history cannot cross note, prompt, or
+  external-document boundaries; loading content is never an undoable edit.
 
 Keep dependencies explicit when adding a composable. Do not introduce a global
 store merely to reduce prop or line counts. New global shortcuts must extend
@@ -182,6 +185,8 @@ the configured workspace.
   - `F10`: cycle the Markdown preview theme.
   - `Ctrl+,`: open settings.
   - `Ctrl+K`: open the current note's AI chat.
+  - `Ctrl+Z`: undo an edit in the current document.
+  - `Ctrl+Y` / `Ctrl+Shift+Z`: redo an edit in the current document.
   - `F9`: toggle the light or dark theme.
   - `F11`: toggle immersive fullscreen.
 - Single and bulk overdue completion operations atomically change `[ ]` to
