@@ -29,8 +29,18 @@ describe('NeoPad desktop note workflow', () => {
     await element.click({ button: 'right' })
   }
 
+  async function useEnglishLocale() {
+    await browser.keys(['Control', ','])
+    await expect($('.settings-panel')).toBeDisplayed()
+    const language = await $("//select[option[@value='en'] and option[@value='zh']]")
+    await language.selectByAttribute('value', 'en')
+    await click('.settings-close')
+    await expect($('.settings-panel')).not.toBeDisplayed()
+  }
+
   it('starts with the pinned default pages', async () => {
     await $('[data-ready="true"]').waitForExist()
+    await useEnglishLocale()
     await expect($('.tab-item=Inbox')).toBeDisplayed()
     await expect($('.tab-item=Clipboard')).toBeDisplayed()
     await expect($('.code-editor')).toBeDisplayed()
