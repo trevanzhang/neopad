@@ -44,7 +44,8 @@ This file tracks the implemented MVP relative to the original task plan.
 - ZIP export for active and archived NeoPad notes, preserving each note as its
   own Markdown file.
 - Current-note PNG and multi-page PDF export from the File and tab context
-  menus, sharing the preview renderer for highlighted code, KaTeX, and Mermaid.
+  menus, with PNG output saved to a file or copied to the system clipboard and
+  all output sharing the preview renderer for highlighted code, KaTeX, and Mermaid.
 - Direct local archive-folder access from the File menu without removing the
   archive management surface in the note browser.
 - Native picker, drag-and-drop, and operating-system file-association opening
@@ -67,7 +68,7 @@ This file tracks the implemented MVP relative to the original task plan.
   with inline progress. Exact editor selections also expose direct AI actions
   from the context menu, while ordinary Slash operations retain current-note
   reference context without expanding their write range.
-- Structured in-app Software, shortcut, Markdown, expression, and AI help
+- Structured in-app Software, shortcut, Markdown, Vim, expression, and AI help
   references that reflect the current local-first workflows and boundaries.
 - MCP HTTP child-process integration tests.
 - Windows Tauri WebDriver smoke tests for the critical note workflow.

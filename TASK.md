@@ -65,7 +65,8 @@ Implemented MVP capabilities:
 - Native Save As for exporting the active note to Markdown or all notes to a
   ZIP archive with one Markdown file per tab.
 - White-background PNG and multi-page PDF export for the current tab, including
-  rendered code highlighting, KaTeX formulas, and Mermaid diagrams. Export
+  rendered code highlighting, KaTeX formulas, and Mermaid diagrams. PNG output
+  can be saved to a file or copied directly to the system clipboard. Export
   rendering stays content-focused and loads its heavier engines on demand.
 - `Ctrl+O`, native file drag and drop, and operating-system file associations
   open external Markdown files in place and autosave changes back to their
@@ -102,9 +103,10 @@ Implemented MVP capabilities:
 - Structured in-app Software Help that introduces NeoPad's product direction,
   core note workflows, editor and search tools, capture and export paths,
   reminders, AI and MCP boundaries, and local-first data guarantees.
-- Grouped in-app Markdown and expression references that document supported
-  rendering syntax, NeoPad reminders, calculation operators, examples, and
-  unsupported expression behavior.
+- Grouped in-app Markdown, Vim, and expression references that document
+  supported rendering syntax, Vim editing and NeoPad-specific tab mappings,
+  NeoPad reminders, calculation operators, examples, and unsupported
+  expression behavior.
 - Windows MSI packaging with branded installer assets.
 
 ## Data Rules

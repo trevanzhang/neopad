@@ -29,14 +29,28 @@ describe('help content', () => {
 
   it('keeps localized guides available', () => {
     expect(getHelpContent('markdown', 'zh', context).title).toBe('Markdown 简明指南')
+    expect(getHelpContent('vim', 'zh', context).title).toBe('Vim 简明指南')
     expect(getHelpContent('expression', 'zh', context).lines[0]).toContain('Ctrl+Enter')
   })
 
-  it('provides structured Markdown and expression references', () => {
+  it('provides structured Markdown, Vim, and expression references', () => {
     const markdown = getReferenceHelp('markdown', 'en')
+    const vim = getReferenceHelp('vim', 'en')
     const expression = getReferenceHelp('expression', 'en')
     expect(markdown.groups.map((group) => group.title)).toContain('Code, math, and diagrams')
     expect(markdown.groups.flatMap((group) => group.rows).some((row) => row.value.includes('mermaid'))).toBe(true)
+    expect(vim.groups.map((group) => group.title)).toEqual([
+      'Modes and entry',
+      'Movement',
+      'Editing and history',
+      'Selection, search, and replace',
+      'NeoPad integration',
+    ])
+    expect(vim.groups.flatMap((group) => group.rows)).toContainEqual({
+      value: 'gt / gT',
+      description: 'Switch to the next / previous NeoPad tab',
+    })
+    expect(vim.groups.flatMap((group) => group.rows).find((row) => row.value === 'u / Ctrl+r')?.description).toContain('Ctrl shortcuts')
     expect(expression.groups.map((group) => group.title)).toEqual([
       'Supported operators',
       'Examples',

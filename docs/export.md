@@ -8,8 +8,14 @@ from looking materially different after export.
 
 Export the active note from either location:
 
-- File > Export Current Note > As PNG Image / As PDF Document.
-- Right-click a tab > Export as PNG / Export as PDF.
+- File > Export Current Note > As PNG Image > Export PNG to File / Export PNG
+  to Clipboard, or As PDF Document.
+- Right-click a tab > Export as PNG > Export PNG to File / Export PNG to
+  Clipboard, or Export as PDF.
+
+Clipboard PNG export uses the same white-background rendering as file export.
+After NeoPad reports that the image was copied, paste it directly into a chat,
+document, image editor, or social app that accepts clipboard images.
 
 The tab context menu can also copy the absolute path of its Markdown file. This
 is useful when handing a note to a terminal command or local agent. Internal
@@ -34,6 +40,8 @@ code block instead of replacing the note with an error surface.
 ## Output Rules
 
 - PNG is a white-background, content-only long image at a fixed reading width.
+  It can be saved to a file or copied directly to the operating-system
+  clipboard.
 - PDF uses A4 portrait pages with 15 mm margins. Pagination prefers top-level
   Markdown block boundaries and falls back to a regular page cut for blocks
   taller than one page.
@@ -66,7 +74,7 @@ app/src/lib/markdown.ts              Shared Markdown/KaTeX/Mermaid renderer
 app/src/lib/editor-code-languages.ts Curated CodeMirror fence languages
 app/src/lib/note-export.ts           Canvas capture and A4 pagination
 app/src/composables/useNoteExport.ts  Save barrier and tab-source selection
-app/src-tauri/src/commands.rs         Native dialogs, clipboard, and reveal commands
+app/src-tauri/src/commands.rs         Native dialogs, PNG clipboard, and reveal commands
 crates/neopad-core/src/lib.rs         Atomic binary export writes
 ```
 

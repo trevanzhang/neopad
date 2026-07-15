@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import type { AppMessages } from '../lib/i18n'
-import { readAiPrompt, readExternalMarkdown, readNote, saveNoteExport } from '../lib/invoke'
+import { copyPngToClipboard, readAiPrompt, readExternalMarkdown, readNote, saveNoteExport } from '../lib/invoke'
 import { isExternalTab, isPromptTab } from '../lib/document-tab'
 import { isTauriRuntime } from '../lib/runtime'
 import type { NoteExportFormat } from '../lib/note-export'
@@ -20,7 +20,11 @@ interface NoteExportOptions {
 export function useNoteExport(options: NoteExportOptions) {
   const exportingNote = ref(false)
 
-  async function exportNote(tabId: string, format: NoteExportFormat) {
+  async function exportNote(
+    tabId: string,
+    format: NoteExportFormat,
+    destination: 'file' | 'clipboard' = 'file',
+  ) {
     if (exportingNote.value) return
     const tab = options.tabs.value.find((item) => item.id === tabId)
     if (!tab) return
@@ -36,6 +40,12 @@ export function useNoteExport(options: NoteExportOptions) {
       }
       const { createNoteExportBlob } = await import('../lib/note-export')
       const blob = await createNoteExportBlob(source, format)
+      if (destination === 'clipboard') {
+        if (format !== 'png') throw new Error('NOTE_EXPORT_CLIPBOARD_FORMAT')
+        await copyPngBlobToClipboard(blob)
+        options.statusMessage.value = options.text().copiedPng
+        return
+      }
       const fileName = `${options.safeFileName(tab.title || 'Untitled')}.${format}`
       const saved = isTauriRuntime()
         ? await saveNoteExport(fileName, format, new Uint8Array(await blob.arrayBuffer()))
@@ -82,6 +92,18 @@ export function useNoteExport(options: NoteExportOptions) {
     anchor.remove()
     window.setTimeout(() => URL.revokeObjectURL(url), 0)
     return true
+  }
+
+  async function copyPngBlobToClipboard(blob: Blob) {
+    if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      return
+    }
+    if (isTauriRuntime()) {
+      await copyPngToClipboard(new Uint8Array(await blob.arrayBuffer()))
+      return
+    }
+    throw new Error('NOTE_EXPORT_CLIPBOARD_UNAVAILABLE')
   }
 
   return { exportingNote, exportNote }

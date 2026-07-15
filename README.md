@@ -72,7 +72,7 @@ The repository currently contains a working Windows-focused MVP:
   A selected `//` command applies its result directly as one undoable edit;
   right-clicking an exact editor selection exposes direct AI actions, while
   chat results still require an explicit copy or insert action. The Help menu
-  includes structured Software, shortcut, Markdown, expression, and AI guides.
+  includes structured Software, shortcut, Markdown, Vim, expression, and AI guides.
   Provider credentials stay in the operating system credential manager.
 - `Ctrl+W` closes the current non-pinned tab without changing its file. The tab
   context menu also provides explicit archive and trash actions, while recent
@@ -94,8 +94,9 @@ The repository currently contains a working Windows-focused MVP:
   conflict check. External files can be copied into the NeoPad archive without
   moving or deleting their originals. Native Save As dialogs export the active
   note as Markdown, PNG, or multi-page PDF, or export all notes as a ZIP archive
-  containing one Markdown file per tab. PNG and PDF actions are available from
-  both the File menu and the tab context menu.
+  containing one Markdown file per tab. PNG output can be saved to a file or
+  copied directly to the system clipboard for pasting into other apps. PNG and
+  PDF actions are available from both the File menu and the tab context menu.
 - Standalone local HTTP `neopad-mcp` service managed from Settings, with bearer
   token access for local agents. The dedicated MCP settings page can start or
   stop the service, show the local URL and token, regenerate the token, and copy

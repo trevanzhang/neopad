@@ -20,6 +20,8 @@ export type AppMessages = {
     revealInFileManager: string
     copyFilePath: string
     exportAsPng: string
+    exportPngToFile: string
+    exportPngToClipboard: string
     exportAsPdf: string
     f8: string
     altDel: string
@@ -44,6 +46,8 @@ export type AppMessages = {
     saveAsFile: string
     exportCurrentNote: string
     exportAsPng: string
+    exportPngToFile: string
+    exportPngToClipboard: string
     exportAsPdf: string
     exportAll: string
     openDataFolder: string
@@ -90,6 +94,7 @@ export type AppMessages = {
     previousTab: string
     nextTab: string
     switchEditorMode: string
+    fullscreen: string
     cycleEditorMode: string
     editMode: string
     splitMode: string
@@ -118,6 +123,7 @@ export type AppMessages = {
     f7: string
     f9: string
     f10: string
+    f11: string
     windowOpacity: string
     textProcessing: string
     uppercase: string
@@ -152,6 +158,7 @@ export type AppMessages = {
     softwareHelp: string
     aiGuide: string
     markdownGuide: string
+    vimGuide: string
     shortcutList: string
     expressionGuide: string
     about: string
@@ -445,6 +452,7 @@ export type AppMessages = {
     exported: string
     exportingNote: string
     exportedPng: string
+    copiedPng: string
     exportedPdf: string
     exportTooLong: string
     exportFailed: string
@@ -493,7 +501,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       library: 'Open note browser',
       revealInFileManager: 'Show in Explorer',
       copyFilePath: 'Copy Page File Path',
-      exportAsPng: 'Export as PNG...',
+      exportAsPng: 'Export as PNG',
+      exportPngToFile: 'Export PNG to File...',
+      exportPngToClipboard: 'Export PNG to Clipboard',
       exportAsPdf: 'Export as PDF...',
       f8: 'F8',
       altDel: 'Alt+Del',
@@ -535,7 +545,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       recentDocuments: 'Recent Documents',
       saveAsFile: 'Save As File(S)',
       exportCurrentNote: 'Export Current Note',
-      exportAsPng: 'As PNG Image...',
+      exportAsPng: 'As PNG Image',
+      exportPngToFile: 'Export PNG to File...',
+      exportPngToClipboard: 'Export PNG to Clipboard',
       exportAsPdf: 'As PDF Document...',
       exportAll: 'Export All(E)...',
       openDataFolder: 'Open NeoPad Data Folder(D)',
@@ -582,6 +594,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       previousTab: 'Previous Tab',
       nextTab: 'Next Tab',
       switchEditorMode: 'Switch Editor Mode',
+      fullscreen: 'Fullscreen',
       cycleEditorMode: 'Cycle Editor Mode(C)',
       editMode: 'Edit',
       splitMode: 'Hybrid',
@@ -610,6 +623,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f7: 'F7',
       f9: 'F9',
       f10: 'F10',
+      f11: 'F11',
       windowOpacity: 'Window Opacity(W)...',
       textProcessing: 'Text Processing(P)',
       uppercase: 'To Uppercase(U)',
@@ -644,6 +658,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       softwareHelp: 'Software Help(R)...',
       aiGuide: 'AI Collaboration Guide(A)...',
       markdownGuide: 'Markdown Quick Guide(M)...',
+      vimGuide: 'Vim Quick Guide(V)...',
       shortcutList: 'Shortcut List(S)...',
       expressionGuide: 'Expression Guide(E)...',
       about: 'About NeoPad',
@@ -937,6 +952,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       exported: 'Exported',
       exportingNote: 'Exporting note...',
       exportedPng: 'PNG exported',
+      copiedPng: 'PNG copied to clipboard',
       exportedPdf: 'PDF exported',
       exportTooLong: 'This note is too long to export safely',
       exportFailed: 'Note export failed',
@@ -983,7 +999,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       library: '\u6253\u5f00\u7b14\u8bb0\u6d4f\u89c8\u5668',
       revealInFileManager: '\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u663e\u793a',
       copyFilePath: '\u590d\u5236\u5f53\u524d\u9875\u9762\u6587\u4ef6\u5730\u5740',
-      exportAsPng: '\u5bfc\u51fa\u4e3a PNG...',
+      exportAsPng: '\u5bfc\u51fa\u4e3a PNG',
+      exportPngToFile: '\u5bfc\u51fa PNG \u5230\u6587\u4ef6...',
+      exportPngToClipboard: '\u5bfc\u51fa PNG \u5230\u526a\u8d34\u677f',
       exportAsPdf: '\u5bfc\u51fa\u4e3a PDF...',
       f8: 'F8',
       altDel: 'Alt+Del',
@@ -1025,7 +1043,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       recentDocuments: '\u6700\u8fd1\u6253\u5f00\u7684\u6587\u6863',
       saveAsFile: '\u53e6\u5b58\u5230\u6587\u4ef6(S)',
       exportCurrentNote: '\u5bfc\u51fa\u5f53\u524d\u7b14\u8bb0',
-      exportAsPng: '\u5bfc\u51fa\u4e3a PNG \u56fe\u7247...',
+      exportAsPng: '\u5bfc\u51fa\u4e3a PNG \u56fe\u7247',
+      exportPngToFile: '\u5bfc\u51fa PNG \u5230\u6587\u4ef6...',
+      exportPngToClipboard: '\u5bfc\u51fa PNG \u5230\u526a\u8d34\u677f',
       exportAsPdf: '\u5bfc\u51fa\u4e3a PDF \u6587\u4ef6...',
       exportAll: '\u5168\u90e8\u5bfc\u51fa(E)...',
       openDataFolder: '\u6253\u5f00 NeoPad \u6570\u636e\u6587\u4ef6\u5939(D)',
@@ -1072,6 +1092,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       previousTab: '\u4e0a\u4e00\u4e2a\u6807\u7b7e\u9875',
       nextTab: '\u4e0b\u4e00\u4e2a\u6807\u7b7e\u9875',
       switchEditorMode: '\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f',
+      fullscreen: '\u5168\u5c4f\u663e\u793a',
       cycleEditorMode: '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u5668\u6a21\u5f0f(C)',
       editMode: '\u7f16\u8f91',
       splitMode: '\u6df7\u5408',
@@ -1100,6 +1121,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       f7: 'F7',
       f9: 'F9',
       f10: 'F10',
+      f11: 'F11',
       windowOpacity: '\u7a97\u53e3\u900f\u660e\u5ea6(W)...',
       textProcessing: '\u6587\u672c\u5904\u7406(P)',
       uppercase: '\u8f6c\u5927\u5199(U)',
@@ -1134,6 +1156,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       softwareHelp: '\u8f6f\u4ef6\u8bf4\u660e(R)...',
       aiGuide: 'AI \u534f\u4f5c\u6307\u5357(A)...',
       markdownGuide: 'Markdown \u7b80\u660e\u6307\u5357(M)...',
+      vimGuide: 'Vim \u7b80\u660e\u6307\u5357(V)...',
       shortcutList: '\u5feb\u6377\u952e\u5217\u8868(S)...',
       expressionGuide: '\u8868\u8fbe\u5f0f\u8ba1\u7b97\u6307\u5357(E)...',
       about: '\u5173\u4e8e NeoPad',
@@ -1427,6 +1450,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       exported: '\u5df2\u5168\u90e8\u5bfc\u51fa',
       exportingNote: '\u6b63\u5728\u5bfc\u51fa\u7b14\u8bb0...',
       exportedPng: '\u5df2\u5bfc\u51fa PNG',
+      copiedPng: '\u5df2\u5c06 PNG \u590d\u5236\u5230\u526a\u8d34\u677f',
       exportedPdf: '\u5df2\u5bfc\u51fa PDF',
       exportTooLong: '\u7b14\u8bb0\u8fc7\u957f\uff0c\u65e0\u6cd5\u5b89\u5168\u5bfc\u51fa',
       exportFailed: '\u7b14\u8bb0\u5bfc\u51fa\u5931\u8d25',

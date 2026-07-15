@@ -1,7 +1,7 @@
 import type { AppLanguage } from './i18n'
 import { formatShortcutLabel } from './shortcut'
 
-export type HelpTopic = 'software' | 'ai' | 'markdown' | 'shortcuts' | 'expression' | 'about'
+export type HelpTopic = 'software' | 'ai' | 'markdown' | 'vim' | 'shortcuts' | 'expression' | 'about'
 
 export interface HelpContext {
   appVersion: string
@@ -95,8 +95,73 @@ export function getShortcutHelpGroups(language: AppLanguage, context: HelpContex
   ]
 }
 
-export function getReferenceHelp(topic: 'markdown' | 'expression', language: AppLanguage): ReferenceHelp {
+export function getReferenceHelp(topic: 'markdown' | 'vim' | 'expression', language: AppLanguage): ReferenceHelp {
   const zh = language === 'zh'
+  if (topic === 'vim') {
+    return {
+      intro: zh
+        ? '在“设置（Ctrl+,）→ Vim 模式”中启用 Vim 键位。状态栏会显示当前模式；NeoPad 支持常用 Vim 编辑操作，并保留自动保存、标签页和应用快捷键等桌面功能。'
+        : 'Enable Vim keys in Settings (Ctrl+,) -> Vim. The status bar shows the current mode. NeoPad supports common Vim editing while retaining autosave, tabs, and application shortcuts.',
+      valueLabel: zh ? '按键' : 'Keys',
+      descriptionLabel: zh ? '作用' : 'Action',
+      groups: [
+        {
+          title: zh ? '模式与进入方式' : 'Modes and entry',
+          rows: [
+            { value: 'i / a', description: zh ? '在光标前 / 后进入 Insert 模式' : 'Enter Insert mode before / after the cursor' },
+            { value: 'I / A', description: zh ? '在行首 / 行尾进入 Insert 模式' : 'Enter Insert mode at the start / end of the line' },
+            { value: 'o / O', description: zh ? '在下方 / 上方新建一行并进入 Insert 模式' : 'Open a new line below / above and enter Insert mode' },
+            { value: 'v / V / Ctrl+q', description: zh ? '进入字符 / 行 / 块 Visual 模式；关闭 NeoPad Ctrl 快捷键后也可用 Ctrl+v 进入块模式' : 'Enter character / line / block Visual mode; Ctrl+v also enters block mode when NeoPad Ctrl shortcuts are disabled' },
+            { value: 'Esc', description: zh ? '从 Insert 或 Visual 返回 Normal；在 Normal 模式按 Esc 会按 NeoPad 规则隐藏窗口' : 'Return from Insert or Visual to Normal; in Normal mode, Esc follows NeoPad behavior and hides the window' },
+            { value: zh ? '自定义退出序列（默认 jj）' : 'Custom exit sequence (default: jj)', description: zh ? '在 Insert 模式中返回 Normal；可在 Vim 设置中修改或留空禁用' : 'Return to Normal mode from Insert; change it or leave it empty in Vim settings' },
+          ],
+        },
+        {
+          title: zh ? '移动' : 'Movement',
+          rows: [
+            { value: 'h / j / k / l', description: zh ? '向左 / 下 / 上 / 右移动' : 'Move left / down / up / right' },
+            { value: 'w / b / e', description: zh ? '移动到下一个词首 / 上一个词首 / 当前或下一个词尾' : 'Move to the next word start / previous word start / word end' },
+            { value: '0 / ^ / $', description: zh ? '移动到行首 / 首个非空字符 / 行尾' : 'Move to line start / first non-blank character / line end' },
+            { value: 'gg / G', description: zh ? '移动到文档开头 / 结尾' : 'Move to the start / end of the document' },
+            { value: '{ / }', description: zh ? '移动到上一个 / 下一个段落' : 'Move to the previous / next paragraph' },
+            { value: '数字 + 移动', description: zh ? '重复移动，例如 5j 向下移动 5 行' : 'Repeat a motion, for example 5j moves down 5 lines' },
+          ],
+        },
+        {
+          title: zh ? '编辑与撤销' : 'Editing and history',
+          rows: [
+            { value: 'x / X', description: zh ? '删除光标处 / 光标前的字符' : 'Delete the character under / before the cursor' },
+            { value: 'dd / D', description: zh ? '删除整行 / 删除到行尾' : 'Delete the whole line / to the end of the line' },
+            { value: 'yy / Y', description: zh ? '复制当前行' : 'Yank the current line' },
+            { value: 'p / P', description: zh ? '在光标后 / 前粘贴' : 'Paste after / before the cursor' },
+            { value: 'r / cw / ciw', description: zh ? '替换字符 / 修改到词尾 / 修改整个单词' : 'Replace a character / change to word end / change the inner word' },
+            { value: 'u / Ctrl+r', description: zh ? '撤销 / 重做；Ctrl+r 需关闭“保留 NeoPad 的 Ctrl 快捷键”' : 'Undo / redo; Ctrl+r requires Keep NeoPad Ctrl shortcuts to be disabled' },
+            { value: '.  /  数字 + 操作', description: zh ? '重复上次修改；操作可带次数，例如 3dd 删除 3 行' : 'Repeat the last change; operators accept counts, for example 3dd deletes 3 lines' },
+          ],
+        },
+        {
+          title: zh ? '选择、搜索与替换' : 'Selection, search, and replace',
+          rows: [
+            { value: 'v / V + 移动', description: zh ? '选择字符或整行，再按 y、d、c 执行复制、删除或修改' : 'Select characters or lines, then use y, d, or c to yank, delete, or change' },
+            { value: '/文本 / ?文本', description: zh ? '向后 / 向前搜索' : 'Search forward / backward' },
+            { value: 'n / N', description: zh ? '跳到下一个 / 上一个搜索结果' : 'Go to the next / previous search result' },
+            { value: '* / #', description: zh ? '向后 / 向前搜索光标所在单词' : 'Search forward / backward for the word under the cursor' },
+            { value: ':s/旧/新/g', description: zh ? '替换当前行中的匹配文本' : 'Replace matching text in the current line' },
+            { value: ':%s/旧/新/g', description: zh ? '替换整个文档中的匹配文本' : 'Replace matching text throughout the document' },
+          ],
+        },
+        {
+          title: zh ? 'NeoPad 集成' : 'NeoPad integration',
+          rows: [
+            { value: 'gt / gT', description: zh ? '切换到下一个 / 上一个 NeoPad 标签页' : 'Switch to the next / previous NeoPad tab' },
+            { value: 'F2–F10', description: zh ? 'NeoPad 功能键仍然可用，例如 F4 文件浏览器、F5 视图切换' : 'NeoPad function keys remain available, such as F4 file browser and F5 view cycle' },
+            { value: zh ? '保留 NeoPad 的 Ctrl 快捷键' : 'Keep NeoPad Ctrl shortcuts', description: zh ? '开启时 Ctrl+F、Ctrl+R、Ctrl+C/V、Ctrl+Z/Y 等由 NeoPad 优先处理' : 'When enabled, NeoPad takes priority for Ctrl+F, Ctrl+R, Ctrl+C/V, Ctrl+Z/Y, and similar shortcuts' },
+            { value: zh ? '自动保存' : 'Autosave', description: zh ? '无需执行 :w；笔记仍按 NeoPad 的自动保存流程写入' : 'There is no need to run :w; notes continue through NeoPad autosave' },
+          ],
+        },
+      ],
+    }
+  }
   if (topic === 'expression') {
     return {
       intro: zh
@@ -251,6 +316,16 @@ export function getHelpContent(topic: HelpTopic | null, language: AppLanguage, c
       ])],
     }
   }
+  if (topic === 'vim') {
+    const reference = getReferenceHelp('vim', language)
+    return {
+      title: zh ? 'Vim 简明指南' : 'Vim Quick Guide',
+      lines: [reference.intro, ...reference.groups.flatMap((group) => [
+        `## ${group.title}`,
+        ...group.rows.map((row) => `${row.value} - ${row.description}`),
+      ])],
+    }
+  }
   if (topic === 'expression') {
     const reference = getReferenceHelp('expression', language)
     return {
@@ -298,7 +373,7 @@ export function getHelpContent(topic: HelpTopic | null, language: AppLanguage, c
       'AI \u534f\u4f5c\u9ed8\u8ba4\u5173\u95ed\uff1b\u542f\u7528\u5e76\u914d\u7f6e\u6a21\u578b\u540e\uff0c\u53ef\u7528 // \u5feb\u6377\u5904\u7406\u3001\u9009\u533a\u53f3\u952e AI \u64cd\u4f5c\u548c Ctrl+K \u7b14\u8bb0\u5bf9\u8bdd\u3002MCP \u662f\u4e0e AI \u5ba2\u6237\u7aef\u5206\u79bb\u7684\u672c\u5730\u670d\u52a1\uff0c\u4e5f\u9ed8\u8ba4\u5173\u95ed\uff1b\u542f\u7528\u540e\uff0c\u6301\u6709 Bearer Token \u7684\u672c\u5730\u5de5\u5177\u53ef\u8bfb\u5199\u7b14\u8bb0\u3002',
       '## 7. \u6570\u636e\u5b89\u5168\u4e0e\u4ea7\u54c1\u8fb9\u754c',
       'NeoPad \u65e0\u9700\u8d26\u53f7\uff0c\u4e0d\u5185\u7f6e\u4e91\u540c\u6b65\uff1b\u7b14\u8bb0\u4fdd\u6301\u4e3a\u672c\u5730\u53ef\u8bfb\u6587\u4ef6\uff0c\u5199\u5165\u4f7f\u7528\u539f\u5b50\u4fdd\u5b58\u548c\u51b2\u7a81\u68c0\u67e5\u3002\u5b83\u4e0d\u81ea\u52a8\u8bb0\u5f55\u526a\u8d34\u677f\u5386\u53f2\uff0c\u4e0d\u6301\u4e45\u5316 AI \u5bf9\u8bdd\uff0c\u4e5f\u4e0d\u63d0\u4f9b\u77e5\u8bc6\u56fe\u8c31\u3001\u53cc\u94fe\u6216 RAG \u7d22\u5f15\u3002',
-      '\u5efa\u8bae\uff1a\u6309 F1 \u67e5\u770b\u5b8c\u6574\u5feb\u6377\u952e\uff1b\u9700\u8981\u5177\u4f53\u8bed\u6cd5\u6216\u529f\u80fd\u65f6\uff0c\u7ee7\u7eed\u67e5\u770b\u201cMarkdown \u7b80\u660e\u6307\u5357\u201d\u3001\u201c\u8868\u8fbe\u5f0f\u8ba1\u7b97\u6307\u5357\u201d\u548c\u201cAI \u534f\u4f5c\u6307\u5357\u201d\u3002',
+      '\u5efa\u8bae\uff1a\u6309 F1 \u67e5\u770b\u5b8c\u6574\u5feb\u6377\u952e\uff1b\u9700\u8981\u5177\u4f53\u8bed\u6cd5\u6216\u529f\u80fd\u65f6\uff0c\u7ee7\u7eed\u67e5\u770b\u201cMarkdown \u7b80\u660e\u6307\u5357\u201d\u3001\u201cVim \u7b80\u660e\u6307\u5357\u201d\u3001\u201c\u8868\u8fbe\u5f0f\u8ba1\u7b97\u6307\u5357\u201d\u548c\u201cAI \u534f\u4f5c\u6307\u5357\u201d\u3002',
     ] : [
       '## 1. What NeoPad is',
       'NeoPad is a lightweight, local-first Markdown desktop note pad for fast capture, quick organization, and timely retrieval. It is designed as an efficient capture tool, not a full knowledge-base suite.',
@@ -314,7 +389,7 @@ export function getHelpContent(topic: HelpTopic | null, language: AppLanguage, c
       'AI collaboration is off by default. After configuring a model, use // quick actions, right-click AI actions for a selection, or Ctrl+K note chat. MCP is a separate local service and is also off by default; when enabled, local tools with its bearer token can read and write notes.',
       '## 7. Data safety and product boundaries',
       'NeoPad requires no account and includes no cloud sync. Notes stay readable local files protected by atomic saves and conflict checks. It does not automatically keep clipboard history, persist AI chats, or provide a knowledge graph, backlinks, or a RAG index.',
-      'Tip: press F1 for the complete shortcut list, then use the Markdown, Expression, and AI Collaboration guides when you need feature-specific help.',
+      'Tip: press F1 for the complete shortcut list, then use the Markdown, Vim, Expression, and AI Collaboration guides when you need feature-specific help.',
     ],
   }
 }

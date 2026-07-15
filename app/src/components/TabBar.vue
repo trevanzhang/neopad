@@ -21,7 +21,7 @@ const emit = defineEmits<{
   unarchiveTab: [tabId: string]
   revealTab: [tabId: string]
   copyTabPath: [tabId: string]
-  exportTab: [tabId: string, format: 'png' | 'pdf']
+  exportTab: [tabId: string, format: 'png' | 'pdf', destination?: 'file' | 'clipboard']
   updateTabColor: [tabId: string, color: string | null]
   newTab: []
   toggleLibrary: []
@@ -30,7 +30,7 @@ const emit = defineEmits<{
   reorderTabs: [orderedTabIds: string[]]
 }>()
 
-const contextMenu = ref<{ tabId: string; x: number; y: number } | null>(null)
+const contextMenu = ref<{ tabId: string; x: number; y: number; openSubmenuLeft: boolean } | null>(null)
 const contextMenuElement = ref<HTMLElement | null>(null)
 const colors = ['#F4B8B8', '#F6D58A', '#BFE3A4', '#A9DCEB', '#BFC7F3', '#DCB8ED']
 const draggedTabId = ref<string | null>(null)
@@ -52,6 +52,7 @@ function openContextMenu(event: MouseEvent, tab: NoteTab) {
     tabId: tab.id,
     x: Math.max(4, Math.min(event.clientX, window.innerWidth - 210)),
     y: Math.max(4, Math.min(event.clientY, window.innerHeight - 305)),
+    openSubmenuLeft: event.clientX + 520 > window.innerWidth,
   }
   void nextTick(() => contextMenuElement.value?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus())
 }
@@ -68,7 +69,7 @@ function closeContextMenuOnEscape(event: KeyboardEvent) {
   contextMenu.value = null
 }
 
-function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'unarchive' | 'reveal' | 'copy-path' | 'export-png' | 'export-pdf') {
+function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'unarchive' | 'reveal' | 'copy-path' | 'export-png-file' | 'export-png-clipboard' | 'export-pdf') {
   const tabId = contextMenu.value?.tabId
   if (!tabId) return
   contextMenu.value = null
@@ -78,9 +79,21 @@ function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'u
   else if (action === 'archive') emit('archiveTab', tabId)
   else if (action === 'unarchive') emit('unarchiveTab', tabId)
   else if (action === 'copy-path') emit('copyTabPath', tabId)
-  else if (action === 'export-png') emit('exportTab', tabId, 'png')
+  else if (action === 'export-png-file') emit('exportTab', tabId, 'png', 'file')
+  else if (action === 'export-png-clipboard') emit('exportTab', tabId, 'png', 'clipboard')
   else if (action === 'export-pdf') emit('exportTab', tabId, 'pdf')
   else emit('revealTab', tabId)
+}
+
+function handleContextMenuKeydown(event: KeyboardEvent) {
+  const target = event.target as HTMLElement | null
+  if (event.key === 'ArrowRight' && target?.parentElement?.classList.contains('tab-context-subroot')) {
+    event.preventDefault()
+    target.parentElement.querySelector<HTMLButtonElement>('.tab-context-submenu > button:not(:disabled)')?.focus()
+  } else if (event.key === 'ArrowLeft' && target?.closest('.tab-context-submenu')) {
+    event.preventDefault()
+    target.closest<HTMLElement>('.tab-context-subroot')?.querySelector<HTMLButtonElement>(':scope > button')?.focus()
+  }
 }
 
 function deleteTabWithShortcut(event: KeyboardEvent, tabId: string) {
@@ -236,6 +249,7 @@ function endTabDrag() {
       role="menu"
       :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
       @contextmenu.prevent
+      @keydown="handleContextMenuKeydown"
       @keydown.f8="renameTabWithShortcut($event, contextMenu.tabId)"
       @keydown.delete="deleteTabWithShortcut($event, contextMenu.tabId)"
       @keydown.f12="archiveTabWithShortcut($event, contextMenu.tabId)"
@@ -294,9 +308,24 @@ function endTabDrag() {
         {{ messages.copyFilePath }}
       </button>
       <div class="menu-separator" role="separator" />
-      <button type="button" role="menuitem" :disabled="exportingNote" @click="runContextAction('export-png')">
-        {{ messages.exportAsPng }}
-      </button>
+      <div class="tab-context-subroot">
+        <button type="button" role="menuitem" aria-haspopup="menu" :disabled="exportingNote">
+          <span>{{ messages.exportAsPng }}</span>
+          <span class="menu-arrow">&rsaquo;</span>
+        </button>
+        <div
+          class="tab-context-submenu"
+          :class="{ 'open-left': contextMenu.openSubmenuLeft }"
+          role="menu"
+        >
+          <button type="button" role="menuitem" :disabled="exportingNote" @click="runContextAction('export-png-file')">
+            {{ messages.exportPngToFile }}
+          </button>
+          <button type="button" role="menuitem" :disabled="exportingNote" @click="runContextAction('export-png-clipboard')">
+            {{ messages.exportPngToClipboard }}
+          </button>
+        </div>
+      </div>
       <button type="button" role="menuitem" :disabled="exportingNote" @click="runContextAction('export-pdf')">
         {{ messages.exportAsPdf }}
       </button>

@@ -500,7 +500,7 @@ const shortcutHelpGroups = computed(() => getShortcutHelpGroups(language.value, 
   clipboardShortcutBaseKey: clipboardShortcutBaseKey.value,
   clipboardShortcutModifiers: clipboardShortcutModifiers.value,
 }))
-const referenceHelp = computed(() => helpTopic.value === 'markdown' || helpTopic.value === 'expression'
+const referenceHelp = computed(() => helpTopic.value === 'markdown' || helpTopic.value === 'vim' || helpTopic.value === 'expression'
   ? getReferenceHelp(helpTopic.value, language.value)
   : null)
 const editorModeLabel = computed(() => {
@@ -1999,7 +1999,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @save-clipboard="saveCurrentClipboard"
         @load-file="triggerLoadFile"
         @save-as-file="saveAsFile"
-        @export-note="exportNote(activeTabId, $event)"
+        @export-note="(format, destination) => exportNote(activeTabId, format, destination)"
         @export-all="exportAllNotes"
         @open-data-folder="openWorkspaceFolder"
         @open-trash="openTrashFolder"
@@ -2022,6 +2022,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @next-tab="cycleTab(1)"
         @toggle-note-library="toggleNoteLibrary"
         @cycle-editor-mode="cycleEditorMode"
+        @toggle-immersive-mode="toggleImmersiveMode"
         @format-font="promptEditorFont"
         @format-background="openBackgroundColorPicker"
         @toggle-word-wrap="toggleWordWrap"

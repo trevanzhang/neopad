@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { Image, transformImage } from '@tauri-apps/api/image'
 import type { ExternalDocument, NoteContent, NoteTab, Reminder, SearchResult, WorkspaceInfo } from '../types/note'
 import type {
   EditorMode,
@@ -370,6 +371,17 @@ export function saveNoteExport(
     format,
     data: Array.from(data),
   })
+}
+
+export async function copyPngToClipboard(data: Uint8Array): Promise<void> {
+  const image = await Image.fromBytes(data)
+  try {
+    await invoke('plugin:clipboard-manager|write_image', {
+      image: transformImage(image),
+    })
+  } finally {
+    await image.close()
+  }
 }
 
 export function exportAllNotesZip(): Promise<boolean> {

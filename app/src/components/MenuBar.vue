@@ -24,7 +24,7 @@ const emit = defineEmits<{
   saveClipboard: []
   loadFile: []
   saveAsFile: []
-  exportNote: [format: 'png' | 'pdf']
+  exportNote: [format: 'png' | 'pdf', destination?: 'file' | 'clipboard']
   exportAll: []
   openDataFolder: []
   openTrash: []
@@ -59,8 +59,9 @@ const emit = defineEmits<{
   windowOpacity: []
   reminderList: []
   processText: [action: string]
-  helpTopic: [topic: 'software' | 'ai' | 'markdown' | 'shortcuts' | 'expression' | 'about']
+  helpTopic: [topic: 'software' | 'ai' | 'markdown' | 'vim' | 'shortcuts' | 'expression' | 'about']
   cycleEditorMode: []
+  toggleImmersiveMode: []
 }>()
 
 function toggleArchive() {
@@ -233,9 +234,20 @@ function handleMenuKeydown(event: KeyboardEvent) {
             <span class="menu-arrow">&rsaquo;</span>
           </button>
           <div class="menu-popover menu-subpopover">
-            <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png')">
-              {{ messages.exportAsPng }}
-            </button>
+            <div class="menu-subroot">
+              <button type="button" class="menu-command" :disabled="exportingNote">
+                <span>{{ messages.exportAsPng }}</span>
+                <span class="menu-arrow">&rsaquo;</span>
+              </button>
+              <div class="menu-popover menu-subpopover">
+                <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png', 'file')">
+                  {{ messages.exportPngToFile }}
+                </button>
+                <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png', 'clipboard')">
+                  {{ messages.exportPngToClipboard }}
+                </button>
+              </div>
+            </div>
             <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'pdf')">
               {{ messages.exportAsPdf }}
             </button>
@@ -322,6 +334,11 @@ function handleMenuKeydown(event: KeyboardEvent) {
         <button type="button" class="menu-command" @click="$emit('cycleEditorMode')">
           <span>{{ messages.switchEditorMode }}</span>
           <span class="menu-shortcut">{{ messages.f5 }}</span>
+        </button>
+        <div class="menu-separator" role="separator" />
+        <button type="button" class="menu-command" @click="$emit('toggleImmersiveMode')">
+          <span>{{ messages.fullscreen }}</span>
+          <span class="menu-shortcut">{{ messages.f11 }}</span>
         </button>
       </div>
     </div>
@@ -455,12 +472,13 @@ function handleMenuKeydown(event: KeyboardEvent) {
       <button type="button" class="menu-title">{{ messages.help }}</button>
       <div class="menu-popover">
         <button type="button" @click="$emit('helpTopic', 'software')">{{ messages.softwareHelp }}</button>
-        <button type="button" @click="$emit('helpTopic', 'ai')">{{ messages.aiGuide }}</button>
         <button type="button" class="menu-command" @click="$emit('helpTopic', 'shortcuts')">
           <span>{{ messages.shortcutList }}</span>
           <span class="menu-shortcut">{{ messages.f1 }}</span>
         </button>
+        <button type="button" @click="$emit('helpTopic', 'ai')">{{ messages.aiGuide }}</button>
         <button type="button" @click="$emit('helpTopic', 'expression')">{{ messages.expressionGuide }}</button>
+        <button type="button" @click="$emit('helpTopic', 'vim')">{{ messages.vimGuide }}</button>
         <button type="button" @click="$emit('helpTopic', 'markdown')">{{ messages.markdownGuide }}</button>
         <div class="menu-separator" role="separator" />
         <button type="button" @click="$emit('helpTopic', 'about')">{{ messages.about }}</button>
