@@ -278,10 +278,10 @@ This custom WiX template exists so the installer can control:
 - Start-menu shortcut icon.
 - Desktop shortcut icon.
 - AppUserModel.ID on shortcuts.
-- A bilingual Chinese/English application-language selector, defaulting to
-  Chinese and persisted for the app's first launch.
+- An English application-language selector with one bilingual Chinese-default
+  option, persisted for the app's first launch.
 - English standard installer pages, with a locale code page that also preserves
-  the selector's Chinese labels.
+  the Chinese option text.
 - Installation of `neopad-mcp.exe` as the desktop app's MCP sidecar.
 
 Installer bitmap assets live in:

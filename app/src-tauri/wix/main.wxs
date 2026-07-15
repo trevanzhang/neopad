@@ -68,7 +68,7 @@
             <Dialog Id="LanguageDlg"
                     Width="370"
                     Height="270"
-                    Title="NeoPad Setup / NeoPad 安装">
+                    Title="NeoPad Setup">
                 <Control Id="BannerBmp"
                          Type="Bitmap"
                          X="0"
@@ -85,7 +85,7 @@
                          Height="15"
                          Transparent="yes"
                          NoPrefix="yes"
-                         Text="{\WixUI_Font_Title}选择 NeoPad 的界面语言 / Choose the NeoPad language" />
+                         Text="{\WixUI_Font_Title}Choose the NeoPad language" />
                 <Control Id="Description"
                          Type="Text"
                          X="25"
@@ -93,7 +93,7 @@
                          Width="320"
                          Height="28"
                          NoPrefix="yes"
-                         Text="请选择 NeoPad 首次启动时使用的语言。之后仍可在设置中更改。&#x0D;&#x0A;Choose the language NeoPad will use on first launch. You can change it later in Settings." />
+                         Text="Choose the language NeoPad will use on first launch. You can change it later in Settings." />
                 <Control Id="LanguageGroup"
                          Type="RadioButtonGroup"
                          X="25"
@@ -113,7 +113,7 @@
                                      Y="26"
                                      Width="280"
                                      Height="17"
-                                     Text="English / 英文" />
+                                     Text="English" />
                     </RadioButtonGroup>
                 </Control>
                 <Control Id="BottomLine"
@@ -128,7 +128,7 @@
                          Y="243"
                          Width="56"
                          Height="17"
-                         Text="返回 / Back" />
+                         Text="Back" />
                 <Control Id="Next"
                          Type="PushButton"
                          X="236"
@@ -136,7 +136,7 @@
                          Width="56"
                          Height="17"
                          Default="yes"
-                         Text="下一步 / Next" />
+                         Text="Next" />
                 <Control Id="Cancel"
                          Type="PushButton"
                          X="304"
@@ -144,7 +144,7 @@
                          Width="56"
                          Height="17"
                          Cancel="yes"
-                         Text="取消 / Cancel">
+                         Text="Cancel">
                     <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
                 </Control>
             </Dialog>

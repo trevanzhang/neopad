@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { messages } from '../lib/i18n'
-import { createNote } from '../lib/invoke'
+import { createNote, createNoteWithBody } from '../lib/invoke'
 import { isTauriRuntime } from '../lib/runtime'
 import type { NoteTab } from '../types/note'
 import { useNoteLifecycle } from './useNoteLifecycle'
@@ -10,6 +10,7 @@ vi.mock('../lib/invoke', () => ({
   archiveNote: vi.fn(),
   closeNote: vi.fn(),
   createNote: vi.fn(),
+  createNoteWithBody: vi.fn(),
   deleteNote: vi.fn(),
   renameNote: vi.fn(),
   saveClipboard: vi.fn(),
@@ -28,12 +29,13 @@ function createHarness(forceSave = vi.fn(async () => true)) {
       pinned: false, deleted: false, archived: false, open: true, systemTitle: false },
   ])
   const activeTabId = ref('inbox')
+  const content = ref('# Inbox')
   let generation = 0
   const lifecycle = useNoteLifecycle({
     tabs,
     activeTabId,
     activeTab: computed(() => tabs.value.find((tab) => tab.id === activeTabId.value)),
-    content: ref('# Inbox'),
+    content,
     saveState: ref<'Saved' | 'Saving' | 'Failed'>('Saved'),
     statusMessage: ref(''),
     language: ref('en'),
@@ -52,13 +54,14 @@ function createHarness(forceSave = vi.fn(async () => true)) {
     refreshLibrary: vi.fn(async () => undefined),
     upsertTab: (tab) => tabs.value.push(tab),
   })
-  return { lifecycle, tabs, activeTabId }
+  return { lifecycle, tabs, activeTabId, content }
 }
 
 describe('useNoteLifecycle', () => {
   beforeEach(() => {
     vi.mocked(isTauriRuntime).mockReturnValue(false)
     vi.mocked(createNote).mockReset()
+    vi.mocked(createNoteWithBody).mockReset()
   })
 
   it('does not switch tabs when the save barrier fails', async () => {
@@ -84,5 +87,32 @@ describe('useNoteLifecycle', () => {
 
     expect(tabs.value).toHaveLength(2)
     expect(activeTabId.value).toBe('inbox')
+  })
+
+  it('creates a browser draft with selected text in the note body', async () => {
+    const { lifecycle, tabs, content } = createHarness()
+
+    await lifecycle.createLocalTab('Selected text')
+
+    expect(tabs.value).toHaveLength(3)
+    expect(tabs.value.at(-1)?.title).toBe('Untitled')
+    expect(content.value).toBe('# Untitled\n\nSelected text')
+  })
+
+  it('uses the atomic native create-with-body command for selected text', async () => {
+    vi.mocked(isTauriRuntime).mockReturnValue(true)
+    vi.mocked(createNoteWithBody).mockResolvedValue({
+      id: 'page-selected',
+      title: 'Untitled',
+      fileName: 'page-selected.md',
+      content: '# Untitled\n\nSelected text',
+      updatedAt: 10,
+    })
+    const { lifecycle, activeTabId } = createHarness()
+
+    await lifecycle.createLocalTab('Selected text')
+
+    expect(createNoteWithBody).toHaveBeenCalledWith('Selected text')
+    expect(activeTabId.value).toBe('page-selected')
   })
 })

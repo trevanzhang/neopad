@@ -1,13 +1,14 @@
 use neopad_core::{
     append_to_clipboard_note, archive_note, archive_note_to_directory, claim_due_reminders,
     clear_trash, close_note, complete_due_reminders, complete_reminder, create_archive_directory,
-    create_note, delete_archive_directory_to_trash, delete_note_to_trash, export_binary_file,
-    export_note_file, list_archive_directories, list_archived_notes, list_notes, list_open_notes,
-    list_recent_notes, list_recoverable_note_writes, list_reminders, list_searchable_notes,
-    list_trashed_notes, load_config, lock_workspace_for_write, move_archive_directory,
-    move_archived_note, read_note, reconcile_note_metadata, rename_archive_directory, rename_note,
-    reopen_reminder, reorder_open_notes, restore_note_from_trash, restore_recoverable_note_write,
-    save_config, search_notes, write_note_atomic_checked, NoteContent, NoteTab, PreviewMode,
+    create_note, create_note_with_body, delete_archive_directory_to_trash, delete_note_to_trash,
+    export_binary_file, export_note_file, list_archive_directories, list_archived_notes,
+    list_notes, list_open_notes, list_recent_notes, list_recoverable_note_writes, list_reminders,
+    list_searchable_notes, list_trashed_notes, load_config, lock_workspace_for_write,
+    move_archive_directory, move_archived_note, read_note, reconcile_note_metadata,
+    rename_archive_directory, rename_note, rename_note_with_heading, reopen_reminder,
+    reorder_open_notes, restore_note_from_trash, restore_recoverable_note_write, save_config,
+    search_notes, write_note_atomic_checked, NoteContent, NoteTab, PreviewMode,
     RecoverableNoteWrite, Reminder, SearchResult, Theme, UiConfig, Workspace,
 };
 use serde::Serialize;
@@ -224,6 +225,15 @@ pub fn create_note_command(
 }
 
 #[tauri::command]
+pub fn create_note_with_body_command(
+    state: State<'_, AppState>,
+    body: String,
+) -> Result<NoteContent, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    create_note_with_body(&state.workspace, None, &body).map_err(display_error)
+}
+
+#[tauri::command]
 pub fn write_note_command(
     state: State<'_, AppState>,
     note_id: String,
@@ -244,6 +254,17 @@ pub fn rename_note_command(
 ) -> Result<NoteTab, String> {
     let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
     rename_note(&state.workspace, &note_id, title).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn rename_note_with_heading_command(
+    state: State<'_, AppState>,
+    note_id: String,
+    title: String,
+) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    reconcile_note_metadata(&state.workspace).map_err(display_error)?;
+    rename_note_with_heading(&state.workspace, &note_id, title).map_err(display_error)
 }
 
 #[tauri::command]

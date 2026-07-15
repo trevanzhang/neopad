@@ -190,6 +190,14 @@ pub fn read_note(workspace: &Workspace, note_id: &str) -> Result<NoteContent> {
 }
 
 pub fn create_note(workspace: &Workspace, title: Option<String>) -> Result<NoteContent> {
+    create_note_with_body(workspace, title, "")
+}
+
+pub fn create_note_with_body(
+    workspace: &Workspace,
+    title: Option<String>,
+    body: &str,
+) -> Result<NoteContent> {
     ensure_workspace_layout(workspace)?;
     let mut tabs = load_tabs(workspace)?;
     let now = now_ms()?;
@@ -197,7 +205,7 @@ pub fn create_note(workspace: &Workspace, title: Option<String>) -> Result<NoteC
     let system_title = title.as_ref().is_none_or(|value| value.trim().is_empty());
     let title = normalized_title(title);
     let file_name = format!("{id}.md");
-    let content = format!("# {title}\n\n");
+    let content = format!("# {title}\n\n{body}");
     let path = note_file_path(workspace, &file_name)?;
 
     write_atomic(&path, &content)?;
@@ -362,6 +370,41 @@ pub fn rename_note(workspace: &Workspace, note_id: &str, title: String) -> Resul
                 format!("failed to roll back note rename after metadata error: {error:#}")
             })?;
         }
+        return Err(error);
+    }
+
+    Ok(renamed)
+}
+
+pub fn rename_note_with_heading(
+    workspace: &Workspace,
+    note_id: &str,
+    title: String,
+) -> Result<NoteTab> {
+    if matches!(note_id, "inbox" | "clipboard") {
+        bail!("{note_id} is pinned and cannot be renamed");
+    }
+
+    let mut tabs = load_tabs(workspace)?;
+    let tab = find_note_tab_mut(&mut tabs, note_id)?;
+    let path = note_path(workspace, tab)?;
+    let previous_content = fs::read_to_string(&path)
+        .with_context(|| format!("failed to read note file {}", path.display()))?;
+    let next_title = normalized_title(Some(title));
+    let next_content = content_with_heading(&previous_content, &next_title);
+    let now = next_updated_at(tab.updated_at)?;
+
+    write_atomic(&path, &next_content)?;
+    tab.title = next_title;
+    tab.system_title = false;
+    tab.updated_at = now;
+    tab.content_revision = Some(content_revision(&next_content));
+    let renamed = tab.clone();
+
+    if let Err(error) = save_tabs(workspace, &tabs) {
+        write_atomic(&path, &previous_content).with_context(|| {
+            format!("failed to roll back AI note rename after metadata error: {error:#}")
+        })?;
         return Err(error);
     }
 
@@ -1366,6 +1409,32 @@ fn renamed_default_heading(
     Some(format!("# {next_title}{remainder}"))
 }
 
+fn content_with_heading(content: &str, title: &str) -> String {
+    let (first_line, remainder) = content
+        .split_once('\n')
+        .map_or((content, None), |(line, rest)| (line, Some(rest)));
+    let first_line_without_cr = first_line.strip_suffix('\r').unwrap_or(first_line);
+
+    if first_line_without_cr.starts_with("# ") {
+        return match remainder {
+            Some(rest) if first_line.ends_with('\r') => format!("# {title}\r\n{rest}"),
+            Some(rest) => format!("# {title}\n{rest}"),
+            None => format!("# {title}"),
+        };
+    }
+
+    if content.is_empty() {
+        return format!("# {title}\n\n");
+    }
+
+    let line_ending = if content.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+    format!("# {title}{line_ending}{line_ending}{content}")
+}
+
 fn unique_note_id(tabs: &TabsState, now: i64) -> String {
     let mut suffix = 0;
     loop {
@@ -1490,6 +1559,8 @@ mod tests {
         assert!(delete_note_to_trash(&workspace, "clipboard").is_err());
         assert!(rename_note(&workspace, "inbox", "Other".to_owned()).is_err());
         assert!(rename_note(&workspace, "clipboard", "Other".to_owned()).is_err());
+        assert!(rename_note_with_heading(&workspace, "inbox", "Other".to_owned()).is_err());
+        assert!(rename_note_with_heading(&workspace, "clipboard", "Other".to_owned()).is_err());
         assert!(workspace.inbox_path().is_file());
         assert!(workspace.clipboard_path().is_file());
     }
@@ -1765,6 +1836,64 @@ mod tests {
                 .expect("read note")
                 .content,
             "# Original heading\n\n"
+        );
+    }
+
+    #[test]
+    fn creating_a_note_with_body_preserves_the_default_heading() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+
+        let created = create_note_with_body(&workspace, None, "Selected text\nwith two lines")
+            .expect("create note with body");
+
+        assert_eq!(
+            created.content,
+            "# Untitled\n\nSelected text\nwith two lines"
+        );
+        assert_eq!(
+            read_note(&workspace, &created.id).expect("read note"),
+            created
+        );
+    }
+
+    #[test]
+    fn ai_rename_updates_a_custom_heading_and_metadata() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Old title".to_owned())).expect("create note");
+        write_note_atomic(&workspace, &created.id, "# Handwritten heading\n\nBody")
+            .expect("write note");
+
+        let renamed = rename_note_with_heading(&workspace, &created.id, "AI title".to_owned())
+            .expect("AI rename");
+
+        assert_eq!(renamed.title, "AI title");
+        assert!(!renamed.system_title);
+        assert_eq!(
+            read_note(&workspace, &created.id)
+                .expect("read note")
+                .content,
+            "# AI title\n\nBody"
+        );
+    }
+
+    #[test]
+    fn ai_rename_prepends_a_heading_without_discarding_plain_text() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Old title".to_owned())).expect("create note");
+        write_note_atomic(&workspace, &created.id, "First line\r\nSecond line")
+            .expect("write note");
+
+        rename_note_with_heading(&workspace, &created.id, "AI title".to_owned())
+            .expect("AI rename");
+
+        assert_eq!(
+            read_note(&workspace, &created.id)
+                .expect("read note")
+                .content,
+            "# AI title\r\n\r\nFirst line\r\nSecond line"
         );
     }
 

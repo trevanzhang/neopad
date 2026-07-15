@@ -87,7 +87,19 @@ same trigger. A single `/` or `、` has no AI behavior. The focused command set 
 - `//translate`
 
 Right-click a text selection to polish, summarize, or translate that exact
-selection without typing a Slash command.
+selection without typing a Slash command. **Open Selection in New Tab** opens
+the exact selection as the body of a new note; that local operation does not
+call AI and does not change the system clipboard.
+
+## AI note rename
+
+Right-click an ordinary, non-default note tab and choose **AI Rename**. NeoPad
+saves the note, sends its current content to the configured provider, and
+requests one concise plain-text title. The response is reduced to one bounded
+line before NeoPad updates both the tab metadata and the first `# title`
+heading. If the note has no level-one heading, NeoPad prepends one without
+discarding the existing first line. Inbox, Clipboard, prompt tabs, and external
+Markdown tabs are excluded.
 
 These commands are separate from `Ctrl+K` chat: they do not use chat history,
 the prompt library, or all-note context. Polish and translate target the

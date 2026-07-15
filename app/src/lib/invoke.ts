@@ -241,12 +241,20 @@ export function createNote(title?: string): Promise<NoteContent> {
   return invoke('create_note_command', { title })
 }
 
+export function createNoteWithBody(body: string): Promise<NoteContent> {
+  return invoke('create_note_with_body_command', { body })
+}
+
 export function writeNote(noteId: string, content: string, expectedUpdatedAt: number): Promise<NoteContent> {
   return invoke('write_note_command', { noteId, content, expectedUpdatedAt })
 }
 
 export function renameNote(noteId: string, title: string): Promise<NoteTab> {
   return invoke('rename_note_command', { noteId, title })
+}
+
+export function renameNoteWithHeading(noteId: string, title: string): Promise<NoteTab> {
+  return invoke('rename_note_with_heading_command', { noteId, title })
 }
 
 export function deleteNote(noteId: string): Promise<NoteTab> {

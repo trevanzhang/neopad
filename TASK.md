@@ -48,6 +48,8 @@ Implemented MVP capabilities:
   launches restore the saved default.
 - Page creation with incrementing untitled names, rename, archive, and trash
   actions with protected default pages.
+- Exact editor selections can be opened directly as the body of a new note;
+  this operation does not overwrite the system clipboard.
 - Persistent optional tab colors managed from the tab context menu.
 - English and Chinese display names for system-managed page titles.
 - Persistent day and night themes across the complete desktop interface.
@@ -91,6 +93,9 @@ Implemented MVP capabilities:
   chat results remain explicit insert, replace, or copy actions. Right-clicking
   an editor selection exposes direct polish, summarize, and translate actions.
   The Help menu documents setup, all three entry points, prompts, and privacy.
+  Ordinary note tabs also provide an explicit AI rename action that generates
+  a single-line title and atomically synchronizes the tab title with the first
+  Markdown level-one heading.
 - Prompt Markdown files are organized under `prompts/**/*.md` and managed from
   the compact `F4` file browser with local folders. Files and complete folder
   trees can be moved by drag and drop; folders can be renamed or deleted, with
@@ -194,9 +199,9 @@ Keep the right side visually quiet so default WiX text remains readable. The
 WiX banner must remain free of branding and text because native installer copy
 is drawn over its left side.
 
-The Windows MSI uses English for its standard installer pages and includes one
-bilingual application-language selection page. Chinese is selected by default,
-English is available, and the choice seeds only the first launch of a new
+The Windows MSI uses English throughout its installer pages. Its application-
+language selection page keeps only the Chinese-default option bilingual.
+Chinese is selected by default, English is available, and the choice seeds only the first launch of a new
 default workspace without replacing existing user preferences.
 
 ## Verification

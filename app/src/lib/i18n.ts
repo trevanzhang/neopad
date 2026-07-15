@@ -8,6 +8,8 @@ export type AppMessages = {
     clipboard: string
     untitled: string
     rename: string
+    aiRename: string
+    aiRenaming: string
     delete: string
     archive: string
     restore: string
@@ -61,6 +63,7 @@ export type AppMessages = {
     redo: string
     cut: string
     copy: string
+    openSelectionInNewTab: string
     paste: string
     find: string
     findNext: string
@@ -348,6 +351,8 @@ export type AppMessages = {
     continuePrompt: string
     inlineEmptyContext: string
     inlineFailed: string
+    renamePrompt: string
+    renameEmptyTitle: string
   }
   search: {
     title: string
@@ -477,6 +482,7 @@ export type AppMessages = {
     unpinned: string
     mcpConfigCopied: string
     mcpUpdated: string
+    aiRenamed: string
     chars: string
     switchToLight: string
     switchToDark: string
@@ -490,6 +496,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       clipboard: 'Clipboard',
       untitled: 'Untitled',
       rename: 'Rename',
+      aiRename: 'AI Rename',
+      aiRenaming: 'AI is renaming...',
       delete: 'Delete',
       archive: 'Archive',
       restore: 'Restore from Archive',
@@ -561,6 +569,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       redo: 'Redo',
       cut: 'Cut(X)',
       copy: 'Copy(C)',
+      openSelectionInNewTab: 'Open Selection in New Tab',
       paste: 'Paste(P)',
       find: 'Find(F)...',
       findNext: 'Find Next(N)',
@@ -848,6 +857,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       continuePrompt: 'Use <note_reference> to understand the whole note. Continue naturally at <insertion_point>, following the tone and format of <operation_target>. Return only the new text to insert.',
       inlineEmptyContext: 'There is no text here for this command.',
       inlineFailed: 'AI command failed',
+      renamePrompt: 'Create a concise, specific title for this note based only on its content. Return exactly one plain-text title with no Markdown, quotes, label, or explanation. Keep it under 40 characters when possible.',
+      renameEmptyTitle: 'AI did not return a usable title. The original title was kept; please try again.',
     },
     search: {
       title: 'Search',
@@ -977,6 +988,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       unpinned: 'Unpinned',
       mcpConfigCopied: 'MCP agent config copied',
       mcpUpdated: 'MCP settings updated',
+      aiRenamed: 'Renamed to "{title}"',
       chars: 'chars',
       switchToLight: 'Switch to light theme',
       switchToDark: 'Switch to dark theme',
@@ -988,6 +1000,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       clipboard: '\u526a\u8d34\u677f',
       untitled: '\u672a\u547d\u540d',
       rename: '\u91cd\u547d\u540d',
+      aiRename: 'AI\u4e00\u952e\u91cd\u547d\u540d',
+      aiRenaming: 'AI \u6b63\u5728\u91cd\u547d\u540d...',
       delete: '\u5220\u9664',
       archive: '\u5f52\u6863',
       restore: '\u4ece\u5f52\u6863\u4e2d\u6062\u590d',
@@ -1059,6 +1073,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       redo: '\u91cd\u505a',
       cut: '\u526a\u5207(X)',
       copy: '\u590d\u5236(C)',
+      openSelectionInNewTab: '\u9009\u4e2d\u5185\u5bb9\u5728\u65b0\u6807\u7b7e\u9875\u4e2d\u6253\u5f00',
       paste: '\u7c98\u8d34(P)',
       find: '\u67e5\u627e(F)...',
       findNext: '\u67e5\u627e\u4e0b\u4e00\u4e2a(N)',
@@ -1346,6 +1361,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
       continuePrompt: '使用 <note_reference> 理解整篇笔记，在 <insertion_point> 处自然续写，并延续 <operation_target> 的语气和格式。只返回需要插入的新内容。',
       inlineEmptyContext: '当前位置没有可供处理的文本。',
       inlineFailed: 'AI 处理失败',
+      renamePrompt: '仅根据这篇笔记的内容，生成一个简洁、具体的标题。只返回一行纯文本标题，不要 Markdown、引号、标签或解释；尽量不超过 20 个汉字。',
+      renameEmptyTitle: 'AI 未返回可用标题，已保留原标题，请重试。',
     },
     search: {
       title: '\u641c\u7d22',
@@ -1475,6 +1492,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       unpinned: '\u5df2\u53d6\u6d88\u7f6e\u9876',
       mcpConfigCopied: '\u5df2\u590d\u5236 MCP \u4ee3\u7406\u914d\u7f6e',
       mcpUpdated: 'MCP \u8bbe\u7f6e\u5df2\u66f4\u65b0',
+      aiRenamed: '\u5df2\u91cd\u547d\u540d\u4e3a\u201c{title}\u201d',
       chars: '\u5b57\u7b26',
       switchToLight: '\u5207\u6362\u81f3\u65e5\u95f4\u6a21\u5f0f',
       switchToDark: '\u5207\u6362\u81f3\u591c\u95f4\u6a21\u5f0f',

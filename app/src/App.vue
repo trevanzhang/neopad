@@ -50,6 +50,7 @@ import {
   restoreAiPrompt,
   revealAiPrompt,
   renameAiPrompt,
+  renameNoteWithHeading,
   moveAiPrompt,
   moveAiPromptDirectory,
   moveArchiveDirectory,
@@ -83,6 +84,7 @@ import { transformText } from './lib/text-transform'
 import { getHelpContent, getReferenceHelp, getShortcutHelpGroups, type HelpTopic } from './lib/help-content'
 import { createKeyboardHandler, isEditableElement } from './lib/keyboard-shortcuts'
 import { createAiInlinePlan, type AiInlinePlan } from './lib/ai-inline-command'
+import { normalizeAiNoteTitle } from './lib/ai-title'
 import { isCurrentAiRequest } from './lib/ai-request-state'
 import { initialJsonSetting } from './lib/preferences'
 import { isExternalTab, isNoteTab, isPromptTab, promptTabId } from './lib/document-tab'
@@ -159,6 +161,7 @@ const settingsInitialTab = ref<'general' | 'ai'>('general')
 const aiPanelSession = ref<AiPanelSession | null>(null)
 const aiChatSessions = ref<Record<string, AiChatState>>({})
 const aiInlineSession = ref<AiInlineSession | null>(null)
+const aiRenamingTabId = ref<string | null>(null)
 let aiInlineRequestId = 0
 const helpTopic = ref<HelpTopic | null>(null)
 const appVersion = ref('')
@@ -1629,6 +1632,56 @@ function displayAiRequestError(error: unknown) {
   return String(error)
 }
 
+async function aiRenamePageById(tabId: string) {
+  const tab = tabs.value.find((item) => item.id === tabId)
+  if (
+    aiRenamingTabId.value
+    || !tab
+    || !isNoteTab(tab)
+    || tab.id === 'inbox'
+    || tab.id === 'clipboard'
+  ) return
+
+  if (!aiReady.value) {
+    statusMessage.value = t.value.ai.disabled
+    openAiSettings()
+    return
+  }
+
+  aiRenamingTabId.value = tabId
+  statusMessage.value = t.value.tabs.aiRenaming
+  try {
+    if (activeTabId.value !== tabId) await selectTab(tabId)
+    if (activeTabId.value !== tabId || !(await forceSave())) return
+
+    const response = await requestAiText(
+      content.value,
+      [{ role: 'user', content: t.value.ai.renamePrompt }],
+      { searchLibrary: false, currentNoteId: tabId },
+    )
+    const nextTitle = normalizeAiNoteTitle(response.content)
+    if (!nextTitle) throw new Error(t.value.ai.renameEmptyTitle)
+
+    if (activeTabId.value === tabId && !(await forceSave())) return
+    const renamed = await renameNoteWithHeading(tabId, nextTitle)
+    const currentTab = tabs.value.find((item) => item.id === tabId)
+    if (currentTab) Object.assign(currentTab, renamed)
+    await Promise.all([refreshRecentNotes(), refreshNoteLibrary()])
+    if (activeTabId.value === tabId) {
+      await loadActiveNote()
+      focusEditorAfterPageAction()
+    }
+    statusMessage.value = t.value.status.aiRenamed.replace('{title}', nextTitle)
+  } catch (error) {
+    const detail = displayAiRequestError(error)
+    statusMessage.value = detail.includes('empty or incompatible response')
+      ? t.value.ai.renameEmptyTitle
+      : detail
+  } finally {
+    aiRenamingTabId.value = null
+  }
+}
+
 async function requestAiInlineResult(session: AiInlineSession) {
   if (!session.plan) return
   const requestId = session.requestId
@@ -2045,6 +2098,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         :tabs="displayTabs"
         :active-tab-id="activeTabId"
         :exporting-note="exportingNote"
+        :ai-renaming-tab-id="aiRenamingTabId"
         :messages="t.tabs"
         @select-tab="selectTab"
         @title-double-click="handleTabTitleDoubleClick"
@@ -2052,6 +2106,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @copy-tab-path="copyNoteFilePath"
         @export-tab="exportNote"
         @rename-tab="renamePageById"
+        @ai-rename-tab="aiRenamePageById"
         @delete-tab="deletePageById"
         @close-tab="closePageById"
         @archive-tab="archivePageById"
@@ -2135,6 +2190,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         :context-menu-labels="{
           cut: t.menu.cut,
           copy: t.menu.copy,
+          openInNewTab: t.menu.openSelectionInNewTab,
           paste: t.menu.paste,
           selectAll: t.menu.selectAll,
           aiActions: t.ai.selectionActions,
@@ -2145,6 +2201,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @vim-mode-change="activeVimMode = $event"
         @vim-tab-switch="cycleTab"
         @ai-command="runAiInlineCommand"
+        @open-selection-in-new-tab="createLocalTab"
       />
       <PreviewPane
         v-if="previewMode !== 'edit'"

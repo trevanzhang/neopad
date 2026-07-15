@@ -8,6 +8,7 @@ const props = defineProps<{
   tabs: NoteTab[]
   activeTabId: string
   exportingNote: boolean
+  aiRenamingTabId: string | null
   messages: AppMessages['tabs']
 }>()
 
@@ -15,6 +16,7 @@ const emit = defineEmits<{
   selectTab: [tabId: string]
   titleDoubleClick: [tabId: string]
   renameTab: [tabId: string]
+  aiRenameTab: [tabId: string]
   deleteTab: [tabId: string]
   closeTab: [tabId: string]
   archiveTab: [tabId: string]
@@ -69,11 +71,12 @@ function closeContextMenuOnEscape(event: KeyboardEvent) {
   contextMenu.value = null
 }
 
-function runContextAction(action: 'rename' | 'delete' | 'close' | 'archive' | 'unarchive' | 'reveal' | 'copy-path' | 'export-png-file' | 'export-png-clipboard' | 'export-pdf') {
+function runContextAction(action: 'rename' | 'ai-rename' | 'delete' | 'close' | 'archive' | 'unarchive' | 'reveal' | 'copy-path' | 'export-png-file' | 'export-png-clipboard' | 'export-pdf') {
   const tabId = contextMenu.value?.tabId
   if (!tabId) return
   contextMenu.value = null
   if (action === 'rename') emit('renameTab', tabId)
+  else if (action === 'ai-rename') emit('aiRenameTab', tabId)
   else if (action === 'delete') emit('deleteTab', tabId)
   else if (action === 'close') emit('closeTab', tabId)
   else if (action === 'archive') emit('archiveTab', tabId)
@@ -152,6 +155,16 @@ function contextTab() {
 
 function canRenameOrDelete(tab: NoteTab | undefined) {
   return Boolean(tab && tab.id !== 'inbox' && tab.id !== 'clipboard' && !isExternalTab(tab))
+}
+
+function canAiRename(tab: NoteTab | undefined) {
+  return Boolean(
+    tab
+      && isNoteTab(tab)
+      && tab.id !== 'inbox'
+      && tab.id !== 'clipboard'
+      && !props.aiRenamingTabId,
+  )
 }
 
 function tabTitle(tab: NoteTab) {
@@ -258,6 +271,15 @@ function endTabDrag() {
       <button
         type="button"
         role="menuitem"
+        :disabled="!canAiRename(contextTab())"
+        @click="runContextAction('ai-rename')"
+      >
+        {{ aiRenamingTabId === contextMenu.tabId ? messages.aiRenaming : messages.aiRename }}
+      </button>
+      <div class="menu-separator" role="separator" />
+      <button
+        type="button"
+        role="menuitem"
         :disabled="!canRenameOrDelete(contextTab())"
         @click="runContextAction('rename')"
       >
@@ -301,6 +323,7 @@ function endTabDrag() {
         <span>{{ messages.close }}</span>
         <span class="tab-context-shortcut">{{ messages.ctrlW }}</span>
       </button>
+      <div class="menu-separator" role="separator" />
       <button type="button" role="menuitem" @click="runContextAction('reveal')">
         {{ messages.revealInFileManager }}
       </button>

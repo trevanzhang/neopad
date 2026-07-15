@@ -15,11 +15,12 @@ pub use config::{
 pub use lock::{lock_workspace_for_write, WorkspaceWriteLock};
 pub use note::{
     append_to_clipboard_note, append_to_note, archive_note, archive_note_to_directory, clear_trash,
-    close_note, create_archive_directory, create_note, delete_archive_directory_to_trash,
-    delete_note_to_trash, list_archive_directories, list_archived_notes, list_notes,
-    list_open_notes, list_recent_notes, list_recoverable_note_writes, list_searchable_notes,
-    list_trashed_notes, move_archive_directory, move_archived_note, note_file_path_for_id,
-    open_note, read_note, reconcile_note_metadata, rename_archive_directory, rename_note,
+    close_note, create_archive_directory, create_note, create_note_with_body,
+    delete_archive_directory_to_trash, delete_note_to_trash, list_archive_directories,
+    list_archived_notes, list_notes, list_open_notes, list_recent_notes,
+    list_recoverable_note_writes, list_searchable_notes, list_trashed_notes,
+    move_archive_directory, move_archived_note, note_file_path_for_id, open_note, read_note,
+    reconcile_note_metadata, rename_archive_directory, rename_note, rename_note_with_heading,
     reorder_open_notes, restore_note_from_trash, restore_recoverable_note_write, set_note_color,
     unarchive_note, write_note_atomic, write_note_atomic_checked, NoteContent,
     RecoverableNoteWrite,

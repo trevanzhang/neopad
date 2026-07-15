@@ -27,3 +27,7 @@ or publishing a release.
 11. Press F4, create and edit a prompt, switch away with F2/F3, rename it with
     F8, and attach it from Ctrl+K. Then close and reopen its prompt tab, move it
     to Trash, restore it, and confirm its Markdown content remains intact.
+12. Select multi-line editor text, right-click it, and open it in a new tab;
+    verify the new note keeps the selection beneath `# Untitled` and leaves the
+    clipboard unchanged. Then run AI Rename on that tab and verify the tab title
+    and first `#` heading match.

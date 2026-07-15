@@ -48,6 +48,7 @@ const props = defineProps<{
   contextMenuLabels: {
     cut: string
     copy: string
+    openInNewTab: string
     paste: string
     selectAll: string
     aiActions: string
@@ -61,6 +62,7 @@ const emit = defineEmits<{
   vimModeChange: [mode: string]
   vimTabSwitch: [offset: -1 | 1]
   aiCommand: [command: AiInlineCommandName]
+  openSelectionInNewTab: [text: string]
 }>()
 
 const model = defineModel<string>({ required: true })
@@ -179,7 +181,7 @@ function openContextMenu(event: MouseEvent) {
   const x = Math.max(4, Math.min(event.clientX, window.innerWidth - 212))
   contextMenu.value = {
     x,
-    y: Math.max(4, Math.min(event.clientY, window.innerHeight - 240)),
+    y: Math.max(4, Math.min(event.clientY, window.innerHeight - 276)),
     openSubmenuLeft: x + 384 > window.innerWidth && x >= 180,
   }
   void nextTick(() => contextMenuElement.value?.querySelector<HTMLButtonElement>('button')?.focus())
@@ -243,11 +245,15 @@ function openAiSubmenu(focusFirst = false) {
   }
 }
 
-async function runContextAction(action: 'cut' | 'copy' | 'paste' | 'select-all' | AiInlineCommandName) {
+async function runContextAction(action: 'cut' | 'copy' | 'paste' | 'select-all' | 'open-new-tab' | AiInlineCommandName) {
+  const selection = action === 'open-new-tab' ? selectedText() : ''
   contextMenu.value = null
   aiSubmenuOpen.value = false
   if (action === 'cut') await cutSelection()
   else if (action === 'copy') await copySelection()
+  else if (action === 'open-new-tab') {
+    if (selection) emit('openSelectionInNewTab', selection)
+  }
   else if (action === 'paste') await pasteClipboard()
   else if (action === 'select-all') selectAllText()
   else {
@@ -390,18 +396,23 @@ async function copySelection() {
     return false
   }
 
-  const selectedText = editorView.state.selection.ranges
-    .filter((range) => !range.empty)
-    .map((range) => editorView?.state.doc.sliceString(range.from, range.to) ?? '')
-    .join('\n')
+  const text = selectedText()
 
-  if (!selectedText) {
+  if (!text) {
     return false
   }
 
-  await navigator.clipboard.writeText(selectedText)
+  await navigator.clipboard.writeText(text)
   editorView.focus()
   return true
+}
+
+function selectedText() {
+  if (!editorView) return ''
+  return editorView.state.selection.ranges
+    .filter((range) => !range.empty)
+    .map((range) => editorView?.state.doc.sliceString(range.from, range.to) ?? '')
+    .join('\n')
 }
 
 async function cutSelection() {
@@ -685,6 +696,9 @@ defineExpose({
       <button type="button" role="menuitem" @click="runContextAction('copy')">
         <span>{{ contextMenuLabels.copy }}</span>
         <span class="editor-context-shortcut">Ctrl+C</span>
+      </button>
+      <button type="button" role="menuitem" @click="runContextAction('open-new-tab')">
+        {{ contextMenuLabels.openInNewTab }}
       </button>
       <button type="button" role="menuitem" @click="runContextAction('cut')">
         <span>{{ contextMenuLabels.cut }}</span>

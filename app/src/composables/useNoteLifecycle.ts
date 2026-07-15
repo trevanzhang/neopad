@@ -3,6 +3,7 @@ import {
   archiveNote,
   closeNote,
   createNote,
+  createNoteWithBody,
   deleteNote,
   renameAiPrompt,
   renameNote,
@@ -217,12 +218,12 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
     } catch { fail() }
   }
 
-  async function createLocalTab() {
+  async function createLocalTab(initialBody = '') {
     const generation = o.nextNoteLoadGeneration()
     if (isTauriRuntime()) {
       if (!(await o.forceSave()) || !o.isCurrentNoteLoad(generation)) return
       try {
-        const note = await createNote()
+        const note = initialBody ? await createNoteWithBody(initialBody) : await createNote()
         if (!o.isCurrentNoteLoad(generation)) return
         o.upsertTab({ id: note.id, title: note.title, fileName: note.fileName,
           createdAt: note.updatedAt, updatedAt: note.updatedAt, pinned: false,
@@ -243,7 +244,7 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
       createdAt, updatedAt: createdAt, pinned: false, deleted: false, archived: false, open: true, systemTitle: true }
     o.tabs.value.push(tab)
     o.activeTabId.value = tab.id
-    o.content.value = `# ${tab.title}\n\n`
+    o.content.value = `# ${tab.title}\n\n${initialBody}`
     o.focusEditor()
     await o.refreshLibrary()
   }

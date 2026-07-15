@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WixLocalization Culture="en-US" Codepage="936" xmlns="http://schemas.microsoft.com/wix/2006/localization">
   <String Id="TauriLanguage">1033</String>
-  <!-- GBK stores both the English installer text and the bilingual language page. -->
+  <!-- GBK stores the English installer text and the Chinese language option. -->
   <String Id="TauriCodepage">936</String>
   <String Id="LaunchApp">Launch NeoPad</String>
   <String Id="DowngradeErrorMessage">A newer version of NeoPad is already installed.</String>

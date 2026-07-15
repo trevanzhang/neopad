@@ -62,7 +62,9 @@ The repository currently contains a working Windows-focused MVP:
   marked prompt tabs.
 - Right-click a tab or a single note or prompt in the file browser to reveal
   its Markdown file in the system file manager. The tab menu can also copy the
-  absolute Markdown file path for use with terminals and local agents.
+  absolute Markdown file path for use with terminals and local agents. For
+  ordinary notes, it can ask the configured AI provider for a concise title
+  and update both the tab title and the note's first-level heading.
 - The reorganized Settings center groups General, Editor, Preview, Vim,
   Shortcuts, AI, and MCP controls in a focused dialog, including configurable
   visibility and clipboard-capture shortcuts.
@@ -70,9 +72,11 @@ The repository currently contains a working Windows-focused MVP:
   Markdown prompts, bounded all-note context search, and independent `//`
   commands for continue, polish, summarize, and Chinese-English translation.
   A selected `//` command applies its result directly as one undoable edit;
-  right-clicking an exact editor selection exposes direct AI actions, while
-  chat results still require an explicit copy or insert action. The Help menu
-  includes structured Software, shortcut, Markdown, Vim, expression, and AI guides.
+  right-clicking an exact editor selection exposes direct AI actions and the
+  **Open Selection in New Tab** command, which creates a note from the selected
+  body without changing the system clipboard. Chat results still require an
+  explicit copy or insert action. The Help menu includes structured Software,
+  shortcut, Markdown, Vim, expression, and AI guides.
   Provider credentials stay in the operating system credential manager.
 - `Ctrl+W` closes the current non-pinned tab without changing its file. The tab
   context menu also provides explicit archive and trash actions, while recent
@@ -106,9 +110,9 @@ The repository currently contains a working Windows-focused MVP:
   lock, and interrupted archive/trash state is recovered from Markdown files.
 - Windows MSI packaging with app icon, branded WiX installer images, desktop and
   start-menu shortcut icons, and `.md` / `.markdown` file-association support.
-  A bilingual installer page selects the app language (Chinese by default or
-  English) for first launch. The MSI includes `neopad-mcp.exe` as a bundled
-  sidecar binary.
+  An English installer page selects the app language for first launch; only
+  the Chinese-default option itself is bilingual. The MSI includes
+  `neopad-mcp.exe` as a bundled sidecar binary.
 
 ## Workspace Layout
 

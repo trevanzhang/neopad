@@ -23,10 +23,13 @@ This file tracks the implemented MVP relative to the original task plan.
   immediately and is restored at startup. New installations start in Edit mode.
 - Page rename and trash actions with UI and core protection for default pages.
 - Tab context menu with rename, archive, trash, persistent color selection,
-  an external-file marker, Explorer reveal, and absolute-path copying.
+  AI-assisted note rename, an external-file marker, Explorer reveal, and
+  absolute-path copying.
 - Localized system page labels that preserve stable storage IDs and user titles.
 - CodeMirror 6 Markdown editor with Markdown and common fenced-code language
   highlighting.
+- Exact editor selections can be opened directly in a new note without
+  mutating the system clipboard.
 - Optional persisted Vim key bindings with Normal, Insert, and Visual status,
   plus a configurable Insert exit sequence in Vim settings.
 - Persistent light and dark themes with a destination-state status-bar toggle.
@@ -67,7 +70,8 @@ This file tracks the implemented MVP relative to the original task plan.
   auto-applying `//` commands for continue, polish, summarize, and translate
   with inline progress. Exact editor selections also expose direct AI actions
   from the context menu, while ordinary Slash operations retain current-note
-  reference context without expanding their write range.
+  reference context without expanding their write range. AI tab rename cleans
+  the model response to one title and synchronizes it with the note's H1.
 - Structured in-app Software, shortcut, Markdown, Vim, expression, and AI help
   references that reflect the current local-first workflows and boundaries.
 - MCP HTTP child-process integration tests.
