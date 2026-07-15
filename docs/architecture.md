@@ -202,7 +202,8 @@ the configured workspace.
   and writes use atomic replacement with a SHA-256 content-revision conflict
   check. The file remains outside NeoPad lifecycle operations unless copied
   into archive.
-- Tray menu: show, hide, new note, save clipboard, settings, quit.
+- Tray integration: a left click restores and focuses the main window; a right
+  click opens the show, hide, new note, save clipboard, settings, and quit menu.
 - Global shortcuts:
   - `Alt+Z`: toggle window.
   - `Ctrl+Shift+V`: append current text clipboard to `clipboard.md`.

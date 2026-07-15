@@ -17,8 +17,8 @@ The repository currently contains a working Windows-focused MVP:
 - Shared Rust core crate for workspace initialization, note CRUD, atomic writes
   with startup recovery for a preserved failed note write, trash moves, search,
   config, tabs, and path safety.
-- System tray menu, close-to-hide behavior, global shortcuts, and clipboard
-  append.
+- System tray integration with left-click window restore and a right-click
+  menu, close-to-hide behavior, global shortcuts, and clipboard append.
 - Flicker-free single-instance startup, first-launch placement at the screen's bottom-right,
   restoration of the last window position on later launches, and an option to
   keep the window hidden after any launch.

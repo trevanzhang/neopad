@@ -2,7 +2,7 @@ use crate::window::show_main_window;
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
-    tray::TrayIconBuilder,
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     App, AppHandle, Emitter, Manager, Wry,
 };
 
@@ -35,7 +35,19 @@ pub fn create_tray(app: &App) -> tauri::Result<()> {
         .icon(icon)
         .tooltip("NeoPad")
         .menu(&menu)
-        .show_menu_on_left_click(true)
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button,
+                button_state,
+                ..
+            } = event
+            {
+                if should_show_main_window(button, button_state) {
+                    let _ = show_main_window(tray.app_handle());
+                }
+            }
+        })
         .on_menu_event(|app, event| match event.id().as_ref() {
             "show" => {
                 let _ = show_main_window(app);
@@ -103,4 +115,34 @@ pub fn set_tray_language_command(app: AppHandle, language: String) -> Result<(),
 
 fn display_error(error: impl std::fmt::Display) -> String {
     error.to_string()
+}
+
+fn should_show_main_window(button: MouseButton, button_state: MouseButtonState) -> bool {
+    button == MouseButton::Left && button_state == MouseButtonState::Up
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_show_main_window;
+    use tauri::tray::{MouseButton, MouseButtonState};
+
+    #[test]
+    fn left_click_release_shows_the_main_window() {
+        assert!(should_show_main_window(
+            MouseButton::Left,
+            MouseButtonState::Up
+        ));
+    }
+
+    #[test]
+    fn other_tray_mouse_events_do_not_show_the_main_window() {
+        assert!(!should_show_main_window(
+            MouseButton::Left,
+            MouseButtonState::Down
+        ));
+        assert!(!should_show_main_window(
+            MouseButton::Right,
+            MouseButtonState::Up
+        ));
+    }
 }
