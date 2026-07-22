@@ -6,6 +6,27 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+## 0.6.2 - 2026-07-22
+
+### Added
+
+- Added `Powered by NeoPad` branding to the end of exported PNG images and PDF
+  documents without changing the source Markdown.
+- Added a high-density mobile PNG layout for copying phone-friendly long images
+  directly to the system clipboard.
+- Added preview-style PNG and PDF export using the active preview palette,
+  typography, and full-page PDF background, while preserving the existing
+  white GitHub Light print output.
+
+### Changed
+
+- Labeled export choices as Print and Preview for a shorter, clearer menu.
+
+### Fixed
+
+- Updated the transitive `linkify-it` dependency to the patched `5.0.2`
+  release to address a quadratic-complexity denial-of-service advisory.
+
 ## 0.6.0 - 2026-07-15
 
 ### Added

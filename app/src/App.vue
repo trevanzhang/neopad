@@ -249,6 +249,11 @@ const { exportingNote, exportNote } = useNoteExport({
   content,
   isLoadingNote,
   statusMessage,
+  previewTheme,
+  editorFontFamily,
+  previewFontFamily,
+  previewFontSize,
+  previewLineHeight,
   forceSave,
   text: () => t.value.status,
   safeFileName,
@@ -2052,7 +2057,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @save-clipboard="saveCurrentClipboard"
         @load-file="triggerLoadFile"
         @save-as-file="saveAsFile"
-        @export-note="(format, destination) => exportNote(activeTabId, format, destination)"
+        @export-note="(format, destination, style) => exportNote(activeTabId, format, destination, style)"
         @export-all="exportAllNotes"
         @open-data-folder="openWorkspaceFolder"
         @open-trash="openTrashFolder"

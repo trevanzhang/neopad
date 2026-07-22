@@ -3,8 +3,12 @@ import type { AppMessages } from '../lib/i18n'
 import { copyPngToClipboard, readAiPrompt, readExternalMarkdown, readNote, saveNoteExport } from '../lib/invoke'
 import { isExternalTab, isPromptTab } from '../lib/document-tab'
 import { isTauriRuntime } from '../lib/runtime'
-import type { NoteExportFormat } from '../lib/note-export'
+import type { NoteExportFormat, NoteExportLayout, NoteExportRenderOptions, NoteExportStyle } from '../lib/note-export'
+import { previewFontFamilyCss, previewLineHeightCss } from '../lib/preview-style'
+import type { PreviewFontFamily, PreviewLineHeight, PreviewTheme } from '../types/editor'
 import type { NoteTab } from '../types/note'
+
+export type NoteExportDestination = 'file' | 'clipboard' | 'clipboard-mobile'
 
 interface NoteExportOptions {
   tabs: Ref<NoteTab[]>
@@ -12,6 +16,11 @@ interface NoteExportOptions {
   content: Ref<string>
   isLoadingNote: Ref<boolean>
   statusMessage: Ref<string>
+  previewTheme: Ref<PreviewTheme>
+  editorFontFamily: Ref<string>
+  previewFontFamily: Ref<PreviewFontFamily>
+  previewFontSize: Ref<number>
+  previewLineHeight: Ref<PreviewLineHeight>
   forceSave: () => Promise<boolean>
   text: () => AppMessages['status']
   safeFileName: (title: string) => string
@@ -23,7 +32,8 @@ export function useNoteExport(options: NoteExportOptions) {
   async function exportNote(
     tabId: string,
     format: NoteExportFormat,
-    destination: 'file' | 'clipboard' = 'file',
+    destination: NoteExportDestination = 'file',
+    style: NoteExportStyle = 'print',
   ) {
     if (exportingNote.value) return
     const tab = options.tabs.value.find((item) => item.id === tabId)
@@ -39,8 +49,19 @@ export function useNoteExport(options: NoteExportOptions) {
         return
       }
       const { createNoteExportBlob } = await import('../lib/note-export')
-      const blob = await createNoteExportBlob(source, format)
-      if (destination === 'clipboard') {
+      const layout: NoteExportLayout = destination === 'clipboard-mobile' ? 'mobile' : 'standard'
+      const renderOptions: NoteExportRenderOptions = style === 'current-theme'
+        ? {
+            layout,
+            style,
+            previewTheme: options.previewTheme.value,
+            fontFamily: previewFontFamilyCss(options.previewFontFamily.value, options.editorFontFamily.value),
+            fontSizePx: options.previewFontSize.value,
+            lineHeight: Number(previewLineHeightCss(options.previewLineHeight.value)),
+          }
+        : { layout, style }
+      const blob = await createNoteExportBlob(source, format, renderOptions)
+      if (destination !== 'file') {
         if (format !== 'png') throw new Error('NOTE_EXPORT_CLIPBOARD_FORMAT')
         await copyPngBlobToClipboard(blob)
         options.statusMessage.value = options.text().copiedPng

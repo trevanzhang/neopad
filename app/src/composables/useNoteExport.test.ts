@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { messages } from '../lib/i18n'
 import { copyPngToClipboard, saveNoteExport } from '../lib/invoke'
 import { createNoteExportBlob } from '../lib/note-export'
+import type { PreviewFontFamily, PreviewLineHeight, PreviewTheme } from '../types/editor'
 import type { NoteTab } from '../types/note'
 import { useNoteExport } from './useNoteExport'
 
@@ -37,6 +38,11 @@ function createHarness() {
     content: ref('# Inbox'),
     isLoadingNote: ref(false),
     statusMessage,
+    previewTheme: ref<PreviewTheme>('dracula'),
+    editorFontFamily: ref('Consolas'),
+    previewFontFamily: ref<PreviewFontFamily>('serif'),
+    previewFontSize: ref(16),
+    previewLineHeight: ref<PreviewLineHeight>('relaxed'),
     forceSave: vi.fn(async () => true),
     text: () => messages.en.status,
     safeFileName: (title) => title,
@@ -68,9 +74,38 @@ describe('useNoteExport', () => {
 
     await exporter.exportNote(tab.id, 'png', 'clipboard')
 
+    expect(createNoteExportBlob).toHaveBeenCalledWith('# Inbox', 'png', { layout: 'standard', style: 'print' })
     expect(writeClipboard).toHaveBeenCalledOnce()
     expect(copyPngToClipboard).not.toHaveBeenCalled()
     expect(saveNoteExport).not.toHaveBeenCalled()
+    expect(statusMessage.value).toBe('PNG copied to clipboard')
+  })
+
+  it('renders the mobile layout before copying PNG to the clipboard', async () => {
+    const { exporter, statusMessage } = createHarness()
+
+    await exporter.exportNote(tab.id, 'png', 'clipboard-mobile')
+
+    expect(createNoteExportBlob).toHaveBeenCalledWith('# Inbox', 'png', { layout: 'mobile', style: 'print' })
+    expect(writeClipboard).toHaveBeenCalledOnce()
+    expect(saveNoteExport).not.toHaveBeenCalled()
+    expect(statusMessage.value).toBe('PNG copied to clipboard')
+  })
+
+  it('passes the current preview appearance to themed mobile rendering', async () => {
+    const { exporter, statusMessage } = createHarness()
+
+    await exporter.exportNote(tab.id, 'png', 'clipboard-mobile', 'current-theme')
+
+    expect(createNoteExportBlob).toHaveBeenCalledWith('# Inbox', 'png', {
+      layout: 'mobile',
+      style: 'current-theme',
+      previewTheme: 'dracula',
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontSizePx: 16,
+      lineHeight: 1.8,
+    })
+    expect(writeClipboard).toHaveBeenCalledOnce()
     expect(statusMessage.value).toBe('PNG copied to clipboard')
   })
 
@@ -91,6 +126,7 @@ describe('useNoteExport', () => {
 
     await exporter.exportNote(tab.id, 'png', 'file')
 
+    expect(createNoteExportBlob).toHaveBeenCalledWith('# Inbox', 'png', { layout: 'standard', style: 'print' })
     expect(saveNoteExport).toHaveBeenCalledWith('Inbox.png', 'png', new Uint8Array([1, 2, 3]))
     expect(copyPngToClipboard).not.toHaveBeenCalled()
     expect(statusMessage.value).toBe('PNG exported')

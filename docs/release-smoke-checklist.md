@@ -20,7 +20,14 @@ or publishing a release.
    prompt can restore the preserved note content.
 9. Preview a note containing a fenced JavaScript block, a KaTeX formula, and a
    Mermaid diagram, then export it from both the File menu and tab context menu.
-   Open the PNG and PDF and verify all three rendered elements are present.
+   Open the PNG and PDF and verify all three rendered elements are present and
+   `Powered by NeoPad` appears at the end. Copy the mobile PNG to the clipboard,
+   paste it into an image editor, and verify it is approximately 1080 pixels
+   wide with larger text and the same footer. Select a dark preview theme and
+   repeat the file, clipboard, mobile, and PDF exports using Preview;
+   verify colors and typography match the preview, the footer remains readable,
+   and every PDF page and margin uses the dark background. Confirm the Print
+   actions still produce the original white GitHub Light output.
 10. Use File > Open NeoPad Data Folder and verify the workspace root opens,
     then copy the file path from an internal and an external Markdown tab and
     verify each absolute path.

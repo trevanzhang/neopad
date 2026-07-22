@@ -99,8 +99,12 @@ The repository currently contains a working Windows-focused MVP:
   moving or deleting their originals. Native Save As dialogs export the active
   note as Markdown, PNG, or multi-page PDF, or export all notes as a ZIP archive
   containing one Markdown file per tab. PNG output can be saved to a file or
-  copied directly to the system clipboard for pasting into other apps. PNG and
-  PDF actions are available from both the File menu and the tab context menu.
+  copied directly to the system clipboard for pasting into other apps, with a
+  narrower mobile-sharing layout available for phone viewing. Users can keep
+  the white GitHub Light print output or export with the current preview theme
+  and typography; themed PDF pages carry the theme background through the full
+  page. Exported PNG and PDF output ends with a `Powered by NeoPad` footer. PNG
+  and PDF actions are available from both the File menu and the tab context menu.
 - Standalone local HTTP `neopad-mcp` service managed from Settings, with bearer
   token access for local agents. The dedicated MCP settings page can start or
   stop the service, show the local URL and token, regenerate the token, and copy

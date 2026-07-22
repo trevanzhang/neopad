@@ -1,13 +1,74 @@
 import { renderMarkdownInto } from './markdown'
+import { markdownThemeForPreview } from './preview-style'
+import type { PreviewTheme } from '../types/editor'
 
 export type NoteExportFormat = 'png' | 'pdf'
+export type NoteExportLayout = 'standard' | 'mobile'
+export type NoteExportStyle = 'print' | 'current-theme'
 
-const EXPORT_WIDTH_PX = 794
+export type NoteExportRenderOptions =
+  | { layout: NoteExportLayout; style: 'print' }
+  | {
+    layout: NoteExportLayout
+    style: 'current-theme'
+    previewTheme: PreviewTheme
+    fontFamily: string
+    fontSizePx: number
+    lineHeight: number
+  }
+
+interface NoteExportLayoutMetrics {
+  widthPx: number
+  padding: string
+  fontSizePx: number
+  lineHeight: number
+  footerFontSizePx: number
+}
+
 const EXPORT_TIMEOUT_MS = 30_000
 const MAX_CANVAS_DIMENSION = 16_384
 const MAX_CANVAS_AREA = 96_000_000
+const EXPORT_BRAND_TEXT = 'Powered by NeoPad'
+const exportLayouts: Record<NoteExportLayout, NoteExportLayoutMetrics> = {
+  standard: {
+    widthPx: 794,
+    padding: '56px 64px',
+    fontSizePx: 15,
+    lineHeight: 1.65,
+    footerFontSizePx: 12,
+  },
+  mobile: {
+    widthPx: 540,
+    padding: '48px 40px',
+    fontSizePx: 18,
+    lineHeight: 1.75,
+    footerFontSizePx: 14,
+  },
+}
 
-export async function createNoteExportBlob(markdown: string, format: NoteExportFormat): Promise<Blob> {
+export function getNoteExportLayoutMetrics(layout: NoteExportLayout): Readonly<NoteExportLayoutMetrics> {
+  return exportLayouts[layout]
+}
+
+export async function createNoteExportBlob(
+  markdown: string,
+  format: NoteExportFormat,
+  options: NoteExportRenderOptions = { layout: 'standard', style: 'print' },
+): Promise<Blob> {
+  const { layout } = options
+  const metrics = getNoteExportLayoutMetrics(layout)
+  const isThemed = options.style === 'current-theme'
+  const background = isThemed ? 'var(--np-preview-bg)' : '#fff'
+  const textColor = isThemed ? 'var(--np-preview-text)' : '#24292f'
+  const fontFamily = isThemed
+    ? options.fontFamily
+    : '"Segoe UI",Arial,"PingFang SC","Microsoft YaHei",sans-serif'
+  const fontSizePx = isThemed
+    ? layout === 'mobile' ? Math.max(options.fontSizePx, metrics.fontSizePx) : options.fontSizePx
+    : metrics.fontSizePx
+  const lineHeight = isThemed
+    ? layout === 'mobile' ? Math.max(options.lineHeight, metrics.lineHeight) : options.lineHeight
+    : metrics.lineHeight
   const host = document.createElement('div')
   host.style.cssText = [
     'position:fixed',
@@ -19,23 +80,24 @@ export async function createNoteExportBlob(markdown: string, format: NoteExportF
 
   const surface = document.createElement('section')
   surface.className = 'preview-pane note-export-surface'
-  surface.dataset.previewTheme = 'githubLight'
-  surface.style.cssText = 'padding:0;border:0;overflow:visible;background:#fff;'
+  surface.dataset.previewTheme = isThemed ? options.previewTheme : 'githubLight'
+  surface.style.cssText = `padding:0;border:0;overflow:visible;background:${background};`
 
   const article = document.createElement('article')
   article.className = 'markdown-preview note-export-content'
+  article.dataset.exportLayout = layout
   article.style.cssText = [
     `box-sizing:border-box`,
-    `width:${EXPORT_WIDTH_PX}px`,
+    `width:${metrics.widthPx}px`,
     'max-width:none',
     'min-height:1px',
     'margin:0',
-    'padding:56px 64px',
-    'color:#24292f',
-    'background:#fff',
-    'font-family:"Segoe UI",Arial,"PingFang SC","Microsoft YaHei",sans-serif',
-    'font-size:15px',
-    'line-height:1.65',
+    `padding:${metrics.padding}`,
+    `color:${textColor}`,
+    `background:${background}`,
+    `font-family:${fontFamily}`,
+    `font-size:${fontSizePx}px`,
+    `line-height:${lineHeight}`,
   ].join(';')
 
   surface.appendChild(article)
@@ -44,15 +106,18 @@ export async function createNoteExportBlob(markdown: string, format: NoteExportF
 
   try {
     return await withTimeout(async () => {
-      await renderMarkdownInto(article, markdown, 'light')
+      const markdownTheme = isThemed ? markdownThemeForPreview(options.previewTheme) : 'light'
+      await renderMarkdownInto(article, markdown, markdownTheme)
+      appendBrandFooter(article, metrics, isThemed)
       await nextPaint()
       sanitizeModernColors(article)
 
+      const backgroundColor = getComputedStyle(surface).backgroundColor || '#ffffff'
       const pageBreaks = collectBlockBreaks(article)
-      const canvas = await captureArticle(article, format)
+      const canvas = await captureArticle(article, format, backgroundColor)
       return format === 'png'
         ? canvasToBlob(canvas, 'image/png')
-        : canvasToPdfBlob(canvas, article.offsetWidth, article.offsetHeight, pageBreaks)
+        : canvasToPdfBlob(canvas, article.offsetWidth, article.offsetHeight, pageBreaks, backgroundColor)
     })
   } finally {
     host.remove()
@@ -60,7 +125,26 @@ export async function createNoteExportBlob(markdown: string, format: NoteExportF
   }
 }
 
-async function captureArticle(article: HTMLElement, format: NoteExportFormat) {
+function appendBrandFooter(article: HTMLElement, metrics: NoteExportLayoutMetrics, themed: boolean) {
+  const footer = document.createElement('footer')
+  footer.className = 'note-export-brand'
+  footer.textContent = EXPORT_BRAND_TEXT
+  footer.style.cssText = [
+    'box-sizing:border-box',
+    'margin-top:48px',
+    'padding-top:18px',
+    `border-top:1px solid ${themed ? 'var(--np-preview-border)' : '#d0d7de'}`,
+    `color:${themed ? 'var(--np-preview-muted)' : '#6e7781'}`,
+    `font-size:${metrics.footerFontSizePx}px`,
+    'font-weight:500',
+    'letter-spacing:.02em',
+    'line-height:1.4',
+    'text-align:center',
+  ].join(';')
+  article.appendChild(footer)
+}
+
+async function captureArticle(article: HTMLElement, format: NoteExportFormat, backgroundColor: string) {
   const width = Math.max(1, article.scrollWidth)
   const height = Math.max(1, article.scrollHeight)
   const desiredScale = format === 'png' ? 2 : 1.6
@@ -78,7 +162,7 @@ async function captureArticle(article: HTMLElement, format: NoteExportFormat) {
   return html2canvas(article, {
     scale: safeScale,
     useCORS: true,
-    backgroundColor: '#ffffff',
+    backgroundColor,
     logging: false,
   })
 }
@@ -97,6 +181,7 @@ async function canvasToPdfBlob(
   cssWidth: number,
   cssHeight: number,
   blockBreaks: number[],
+  backgroundColor: string,
 ) {
   const { jsPDF } = await import('jspdf')
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
@@ -106,9 +191,12 @@ async function canvasToPdfBlob(
   const cssPageHeight = cssWidth * printableHeightMm / printableWidthMm
   const slices = computePageSlices(cssHeight, cssPageHeight, blockBreaks)
   const pixelsPerCssPixel = canvas.height / cssHeight
+  const [backgroundRed, backgroundGreen, backgroundBlue] = parseCssColor(backgroundColor)
 
   for (const [index, slice] of slices.entries()) {
     if (index > 0) pdf.addPage('a4', 'portrait')
+    pdf.setFillColor(backgroundRed, backgroundGreen, backgroundBlue)
+    pdf.rect(0, 0, 210, 297, 'F')
     const sourceY = Math.max(0, Math.round(slice.start * pixelsPerCssPixel))
     const sourceEnd = Math.min(canvas.height, Math.round(slice.end * pixelsPerCssPixel))
     const sourceHeight = Math.max(1, sourceEnd - sourceY)
@@ -117,7 +205,7 @@ async function canvasToPdfBlob(
     pageCanvas.height = sourceHeight
     const context = pageCanvas.getContext('2d')
     if (!context) throw new Error('NOTE_EXPORT_CANVAS_FAILED')
-    context.fillStyle = '#ffffff'
+    context.fillStyle = backgroundColor
     context.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
     context.drawImage(
       canvas,
@@ -138,6 +226,15 @@ async function canvasToPdfBlob(
   }
 
   return pdf.output('blob')
+}
+
+export function parseCssColor(color: string): [number, number, number] {
+  const hex = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(color.trim())
+  if (hex) return [Number.parseInt(hex[1], 16), Number.parseInt(hex[2], 16), Number.parseInt(hex[3], 16)]
+  const channels = color.match(/[\d.]+/g)?.slice(0, 3).map((value) => Number(value))
+  return channels?.length === 3
+    ? channels.map((value) => Math.max(0, Math.min(255, Math.round(value)))) as [number, number, number]
+    : [255, 255, 255]
 }
 
 export function computePageSlices(

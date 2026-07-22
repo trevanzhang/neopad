@@ -1,8 +1,13 @@
 {
   "name": "neopad",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "private": true,
   "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "linkify-it": "5.0.2"
+    }
+  },
   "scripts": {
     "dev": "pnpm --filter neopad-app dev",
     "build": "pnpm --filter neopad-app build",

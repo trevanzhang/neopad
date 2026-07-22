@@ -8,14 +8,23 @@ from looking materially different after export.
 
 Export the active note from either location:
 
-- File > Export Current Note > As PNG Image > Export PNG to File / Export PNG
-  to Clipboard, or As PDF Document.
-- Right-click a tab > Export as PNG > Export PNG to File / Export PNG to
-  Clipboard, or Export as PDF.
+- File > Export Current Note > As PNG Image (Print) or As PNG Image (Preview),
+  then choose Export PNG to File / Export PNG to Clipboard / Export PNG
+  to Clipboard - Mobile. PDF has matching Print and Preview actions.
+- Right-click a tab and choose the equivalent PNG or PDF Print / Preview
+  action.
 
 Clipboard PNG export uses the same white-background rendering as file export.
 After NeoPad reports that the image was copied, paste it directly into a chat,
-document, image editor, or social app that accepts clipboard images.
+document, image editor, or social app that accepts clipboard images. The mobile
+variant uses a narrower 540 CSS pixel layout, larger type, and 2x capture for an
+approximately 1080-pixel-wide image that remains readable on phones.
+
+Print output preserves the original white-background GitHub Light palette for
+printing and general interchange. Preview output uses the selected preview
+theme plus the current preview font family, size, and line spacing. Mobile theme
+output keeps the selected appearance while enforcing the mobile layout's minimum
+18 px type and 1.75 line spacing for readability.
 
 The tab context menu can also copy the absolute path of its Markdown file. This
 is useful when handing a note to a terminal command or local agent. Internal
@@ -45,8 +54,13 @@ code block instead of replacing the note with an error surface.
 - PDF uses A4 portrait pages with 15 mm margins. Pagination prefers top-level
   Markdown block boundaries and falls back to a regular page cut for blocks
   taller than one page.
-- Both formats use the GitHub Light export palette so output is readable and
-  independent of the current app or preview theme.
+- Print output uses the GitHub Light export palette and remains independent of
+  the app and preview themes. Preview output uses the active preview
+  palette and typography. Theme PDF pages fill the full A4 page with the theme
+  background, including the margins.
+- Every PNG and PDF ends with a centered `Powered by NeoPad` footer. The footer
+  is added only to the rendered export and never changes the Markdown note. Its
+  muted text and divider colors follow the selected theme when applicable.
 - The suggested file name comes from the tab title and is sanitized before the
   native Save dialog opens.
 
@@ -66,6 +80,10 @@ export safely.
 Remote images depend on their server's cross-origin policy. A blocked or broken
 image does not stop the remaining Markdown from rendering, but it may be absent
 from the exported file.
+
+Mermaid diagrams follow the preview renderer's light/dark mode. Their palette is
+therefore coordinated with the selected theme, but it is not customized
+separately for every preview theme.
 
 ## Implementation Map
 
