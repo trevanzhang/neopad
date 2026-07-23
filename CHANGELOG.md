@@ -6,6 +6,12 @@ patch versions are reserved for compatible fixes.
 
 ## Unreleased
 
+### Changed
+
+- Simplified the current-note export menus to one PNG submenu and one PDF
+  command. All PNG and PDF exports now follow the active preview theme and
+  typography, with the mobile clipboard layout remaining available.
+
 ## 0.6.2 - 2026-07-22
 
 ### Added

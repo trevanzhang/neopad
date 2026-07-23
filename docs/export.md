@@ -8,23 +8,22 @@ from looking materially different after export.
 
 Export the active note from either location:
 
-- File > Export Current Note > As PNG Image (Print) or As PNG Image (Preview),
-  then choose Export PNG to File / Export PNG to Clipboard / Export PNG
-  to Clipboard - Mobile. PDF has matching Print and Preview actions.
-- Right-click a tab and choose the equivalent PNG or PDF Print / Preview
-  action.
+- File > Export Current Note > As PNG Image, then choose Export PNG to File /
+  Export PNG to Clipboard / Export PNG to Clipboard (Mobile), or choose As PDF
+  Document.
+- Right-click a tab and choose the equivalent PNG or PDF action.
 
-Clipboard PNG export uses the same white-background rendering as file export.
-After NeoPad reports that the image was copied, paste it directly into a chat,
-document, image editor, or social app that accepts clipboard images. The mobile
-variant uses a narrower 540 CSS pixel layout, larger type, and 2x capture for an
-approximately 1080-pixel-wide image that remains readable on phones.
+All exports use the active preview theme plus the current preview font family,
+size, and line spacing. After NeoPad reports that a PNG was copied, paste it
+directly into a chat, document, image editor, or social app that accepts
+clipboard images. The mobile variant uses a narrower 540 CSS pixel layout,
+larger type, and 2x capture for an approximately 1080-pixel-wide image that
+remains readable on phones.
 
-Print output preserves the original white-background GitHub Light palette for
-printing and general interchange. Preview output uses the selected preview
-theme plus the current preview font family, size, and line spacing. Mobile theme
-output keeps the selected appearance while enforcing the mobile layout's minimum
-18 px type and 1.75 line spacing for readability.
+Choose a light preview theme before exporting for white-background printing, or
+choose any other preview theme for sharing. Mobile output keeps the selected
+appearance while enforcing the mobile layout's minimum 18 px type and 1.75 line
+spacing for readability.
 
 The tab context menu can also copy the absolute path of its Markdown file. This
 is useful when handing a note to a terminal command or local agent. Internal
@@ -48,16 +47,13 @@ code block instead of replacing the note with an error surface.
 
 ## Output Rules
 
-- PNG is a white-background, content-only long image at a fixed reading width.
-  It can be saved to a file or copied directly to the operating-system
-  clipboard.
+- PNG is a content-only long image at a fixed reading width. It can be saved to
+  a file or copied directly to the operating-system clipboard.
 - PDF uses A4 portrait pages with 15 mm margins. Pagination prefers top-level
   Markdown block boundaries and falls back to a regular page cut for blocks
   taller than one page.
-- Print output uses the GitHub Light export palette and remains independent of
-  the app and preview themes. Preview output uses the active preview
-  palette and typography. Theme PDF pages fill the full A4 page with the theme
-  background, including the margins.
+- Output uses the active preview palette and typography. PDF pages fill the
+  full A4 page with the theme background, including the margins.
 - Every PNG and PDF ends with a centered `Powered by NeoPad` footer. The footer
   is added only to the rendered export and never changes the Markdown note. Its
   muted text and divider colors follow the selected theme when applicable.

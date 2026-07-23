@@ -3,7 +3,7 @@ import type { AppMessages } from '../lib/i18n'
 import { copyPngToClipboard, readAiPrompt, readExternalMarkdown, readNote, saveNoteExport } from '../lib/invoke'
 import { isExternalTab, isPromptTab } from '../lib/document-tab'
 import { isTauriRuntime } from '../lib/runtime'
-import type { NoteExportFormat, NoteExportLayout, NoteExportRenderOptions, NoteExportStyle } from '../lib/note-export'
+import type { NoteExportFormat, NoteExportLayout, NoteExportRenderOptions } from '../lib/note-export'
 import { previewFontFamilyCss, previewLineHeightCss } from '../lib/preview-style'
 import type { PreviewFontFamily, PreviewLineHeight, PreviewTheme } from '../types/editor'
 import type { NoteTab } from '../types/note'
@@ -33,7 +33,6 @@ export function useNoteExport(options: NoteExportOptions) {
     tabId: string,
     format: NoteExportFormat,
     destination: NoteExportDestination = 'file',
-    style: NoteExportStyle = 'print',
   ) {
     if (exportingNote.value) return
     const tab = options.tabs.value.find((item) => item.id === tabId)
@@ -50,16 +49,14 @@ export function useNoteExport(options: NoteExportOptions) {
       }
       const { createNoteExportBlob } = await import('../lib/note-export')
       const layout: NoteExportLayout = destination === 'clipboard-mobile' ? 'mobile' : 'standard'
-      const renderOptions: NoteExportRenderOptions = style === 'current-theme'
-        ? {
-            layout,
-            style,
-            previewTheme: options.previewTheme.value,
-            fontFamily: previewFontFamilyCss(options.previewFontFamily.value, options.editorFontFamily.value),
-            fontSizePx: options.previewFontSize.value,
-            lineHeight: Number(previewLineHeightCss(options.previewLineHeight.value)),
-          }
-        : { layout, style }
+      const renderOptions: NoteExportRenderOptions = {
+        layout,
+        style: 'current-theme',
+        previewTheme: options.previewTheme.value,
+        fontFamily: previewFontFamilyCss(options.previewFontFamily.value, options.editorFontFamily.value),
+        fontSizePx: options.previewFontSize.value,
+        lineHeight: Number(previewLineHeightCss(options.previewLineHeight.value)),
+      }
       const blob = await createNoteExportBlob(source, format, renderOptions)
       if (destination !== 'file') {
         if (format !== 'png') throw new Error('NOTE_EXPORT_CLIPBOARD_FORMAT')

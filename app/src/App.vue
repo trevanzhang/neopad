@@ -2057,7 +2057,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @save-clipboard="saveCurrentClipboard"
         @load-file="triggerLoadFile"
         @save-as-file="saveAsFile"
-        @export-note="(format, destination, style) => exportNote(activeTabId, format, destination, style)"
+        @export-note="(format, destination) => exportNote(activeTabId, format, destination)"
         @export-all="exportAllNotes"
         @open-data-folder="openWorkspaceFolder"
         @open-trash="openTrashFolder"

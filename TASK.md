@@ -66,14 +66,14 @@ Implemented MVP capabilities:
   Markdown lines.
 - Native Save As for exporting the active note to Markdown or all notes to a
   ZIP archive with one Markdown file per tab.
-- White-background PNG and multi-page PDF export for the current tab, including
+- PNG and multi-page PDF export for the current tab, including
   rendered code highlighting, KaTeX formulas, and Mermaid diagrams. PNG output
   can be saved to a file or copied directly to the system clipboard, including
-  a narrower high-density mobile-sharing layout. Users can choose the stable
-  white-background print palette or the current preview theme and typography;
-  themed PDF output fills the complete A4 page with the theme background. PNG
-  and PDF output ends with a `Powered by NeoPad` footer. Export rendering stays
-  content-focused and loads its heavier engines on demand.
+  a narrower high-density mobile-sharing layout. Output follows the current
+  preview theme and typography, and PDF pages use the theme background across
+  the complete A4 page. PNG and PDF output ends with a `Powered by NeoPad`
+  footer. Export rendering stays content-focused and loads its heavier engines
+  on demand.
 - `Ctrl+O`, native file drag and drop, and operating-system file associations
   open external Markdown files in place and autosave changes back to their
   original paths. Writes use content revisions to detect out-of-band edits.

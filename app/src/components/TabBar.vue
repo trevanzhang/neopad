@@ -2,7 +2,7 @@
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { AppMessages } from '../lib/i18n'
 import type { NoteExportDestination } from '../composables/useNoteExport'
-import type { NoteExportFormat, NoteExportStyle } from '../lib/note-export'
+import type { NoteExportFormat } from '../lib/note-export'
 import type { NoteTab } from '../types/note'
 import { isExternalTab, isNoteTab, isPromptTab } from '../lib/document-tab'
 
@@ -25,7 +25,7 @@ const emit = defineEmits<{
   unarchiveTab: [tabId: string]
   revealTab: [tabId: string]
   copyTabPath: [tabId: string]
-  exportTab: [tabId: string, format: NoteExportFormat, destination?: NoteExportDestination, style?: NoteExportStyle]
+  exportTab: [tabId: string, format: NoteExportFormat, destination?: NoteExportDestination]
   updateTabColor: [tabId: string, color: string | null]
   newTab: []
   toggleLibrary: []
@@ -90,12 +90,11 @@ function runContextAction(action: 'rename' | 'ai-rename' | 'delete' | 'close' | 
 function runExportContextAction(
   format: NoteExportFormat,
   destination: NoteExportDestination,
-  style: NoteExportStyle,
 ) {
   const tabId = contextMenu.value?.tabId
   if (!tabId) return
   contextMenu.value = null
-  emit('exportTab', tabId, format, destination, style)
+  emit('exportTab', tabId, format, destination)
 }
 
 function handleContextMenuKeydown(event: KeyboardEvent) {
@@ -351,43 +350,19 @@ function endTabDrag() {
           :class="{ 'open-left': contextMenu.openSubmenuLeft }"
           role="menu"
         >
-          <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('png', 'file', 'print')">
+          <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('png', 'file')">
             {{ messages.exportPngToFile }}
           </button>
-          <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('png', 'clipboard', 'print')">
+          <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('png', 'clipboard')">
             {{ messages.exportPngToClipboard }}
           </button>
-          <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('png', 'clipboard-mobile', 'print')">
+          <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('png', 'clipboard-mobile')">
             {{ messages.exportPngToClipboardMobile }}
           </button>
         </div>
       </div>
-      <div class="tab-context-subroot">
-        <button type="button" role="menuitem" aria-haspopup="menu" :disabled="exportingNote">
-          <span>{{ messages.exportAsPngThemed }}</span>
-          <span class="menu-arrow">&rsaquo;</span>
-        </button>
-        <div
-          class="tab-context-submenu"
-          :class="{ 'open-left': contextMenu.openSubmenuLeft }"
-          role="menu"
-        >
-          <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('png', 'file', 'current-theme')">
-            {{ messages.exportPngToFile }}
-          </button>
-          <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('png', 'clipboard', 'current-theme')">
-            {{ messages.exportPngToClipboard }}
-          </button>
-          <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('png', 'clipboard-mobile', 'current-theme')">
-            {{ messages.exportPngToClipboardMobile }}
-          </button>
-        </div>
-      </div>
-      <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('pdf', 'file', 'print')">
+      <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('pdf', 'file')">
         {{ messages.exportAsPdf }}
-      </button>
-      <button type="button" role="menuitem" :disabled="exportingNote" @click="runExportContextAction('pdf', 'file', 'current-theme')">
-        {{ messages.exportAsPdfThemed }}
       </button>
       <template v-if="isNoteTab(contextTab())">
         <div class="menu-separator" role="separator" />

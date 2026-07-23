@@ -25,9 +25,7 @@ export type AppMessages = {
     exportPngToFile: string
     exportPngToClipboard: string
     exportPngToClipboardMobile: string
-    exportAsPngThemed: string
     exportAsPdf: string
-    exportAsPdfThemed: string
     f8: string
     altDel: string
     f12: string
@@ -54,9 +52,7 @@ export type AppMessages = {
     exportPngToFile: string
     exportPngToClipboard: string
     exportPngToClipboardMobile: string
-    exportAsPngThemed: string
     exportAsPdf: string
-    exportAsPdfThemed: string
     exportAll: string
     openDataFolder: string
     trash: string
@@ -515,13 +511,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       library: 'Open note browser',
       revealInFileManager: 'Show in Explorer',
       copyFilePath: 'Copy Page File Path',
-      exportAsPng: 'Export as PNG (Print)',
+      exportAsPng: 'Export as PNG',
       exportPngToFile: 'Export PNG to File...',
       exportPngToClipboard: 'Export PNG to Clipboard',
-      exportPngToClipboardMobile: 'Export PNG to Clipboard - Mobile',
-      exportAsPngThemed: 'Export as PNG (Preview)',
-      exportAsPdf: 'Export as PDF (Print)...',
-      exportAsPdfThemed: 'Export as PDF (Preview)...',
+      exportPngToClipboardMobile: 'Export PNG to Clipboard (Mobile)',
+      exportAsPdf: 'Export as PDF...',
       f8: 'F8',
       altDel: 'Alt+Del',
       f12: 'F12',
@@ -562,13 +556,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       recentDocuments: 'Recent Documents',
       saveAsFile: 'Save As File(S)',
       exportCurrentNote: 'Export Current Note',
-      exportAsPng: 'As PNG Image (Print)',
+      exportAsPng: 'As PNG Image',
       exportPngToFile: 'Export PNG to File...',
       exportPngToClipboard: 'Export PNG to Clipboard',
-      exportPngToClipboardMobile: 'Export PNG to Clipboard - Mobile',
-      exportAsPngThemed: 'As PNG Image (Preview)',
-      exportAsPdf: 'As PDF Document (Print)...',
-      exportAsPdfThemed: 'As PDF Document (Preview)...',
+      exportPngToClipboardMobile: 'Export PNG to Clipboard (Mobile)',
+      exportAsPdf: 'As PDF Document...',
       exportAll: 'Export All(E)...',
       openDataFolder: 'Open NeoPad Data Folder(D)',
       trash: 'Trash(R)...',
@@ -1025,13 +1017,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       library: '\u6253\u5f00\u7b14\u8bb0\u6d4f\u89c8\u5668',
       revealInFileManager: '\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u663e\u793a',
       copyFilePath: '\u590d\u5236\u5f53\u524d\u9875\u9762\u6587\u4ef6\u5730\u5740',
-      exportAsPng: '\u5bfc\u51fa\u4e3a PNG\uff08\u6253\u5370\u7248\uff09',
+      exportAsPng: '\u5bfc\u51fa\u4e3a PNG',
       exportPngToFile: '\u5bfc\u51fa PNG \u5230\u6587\u4ef6...',
       exportPngToClipboard: '\u5bfc\u51fa PNG \u5230\u526a\u8d34\u677f',
-      exportPngToClipboardMobile: '\u5bfc\u51fa PNG \u5230\u526a\u8d34\u677f-\u624b\u673a',
-      exportAsPngThemed: '\u5bfc\u51fa\u4e3a PNG\uff08\u9884\u89c8\u7248\uff09',
-      exportAsPdf: '\u5bfc\u51fa\u4e3a PDF\uff08\u6253\u5370\u7248\uff09...',
-      exportAsPdfThemed: '\u5bfc\u51fa\u4e3a PDF\uff08\u9884\u89c8\u7248\uff09...',
+      exportPngToClipboardMobile: '\u5bfc\u51fa PNG \u5230\u526a\u8d34\u677f\uff08\u624b\u673a\uff09',
+      exportAsPdf: '\u5bfc\u51fa\u4e3a PDF...',
       f8: 'F8',
       altDel: 'Alt+Del',
       f12: 'F12',
@@ -1072,13 +1062,11 @@ export const messages: Record<AppLanguage, AppMessages> = {
       recentDocuments: '\u6700\u8fd1\u6253\u5f00\u7684\u6587\u6863',
       saveAsFile: '\u53e6\u5b58\u5230\u6587\u4ef6(S)',
       exportCurrentNote: '\u5bfc\u51fa\u5f53\u524d\u7b14\u8bb0',
-      exportAsPng: '\u5bfc\u51fa\u4e3a PNG \u56fe\u7247\uff08\u6253\u5370\u7248\uff09',
+      exportAsPng: '\u5bfc\u51fa\u4e3a PNG \u56fe\u7247',
       exportPngToFile: '\u5bfc\u51fa PNG \u5230\u6587\u4ef6...',
       exportPngToClipboard: '\u5bfc\u51fa PNG \u5230\u526a\u8d34\u677f',
-      exportPngToClipboardMobile: '\u5bfc\u51fa PNG \u5230\u526a\u8d34\u677f-\u624b\u673a',
-      exportAsPngThemed: '\u5bfc\u51fa\u4e3a PNG \u56fe\u7247\uff08\u9884\u89c8\u7248\uff09',
-      exportAsPdf: '\u5bfc\u51fa\u4e3a PDF \u6587\u4ef6\uff08\u6253\u5370\u7248\uff09...',
-      exportAsPdfThemed: '\u5bfc\u51fa\u4e3a PDF \u6587\u4ef6\uff08\u9884\u89c8\u7248\uff09...',
+      exportPngToClipboardMobile: '\u5bfc\u51fa PNG \u5230\u526a\u8d34\u677f\uff08\u624b\u673a\uff09',
+      exportAsPdf: '\u5bfc\u51fa\u4e3a PDF \u6587\u4ef6...',
       exportAll: '\u5168\u90e8\u5bfc\u51fa(E)...',
       openDataFolder: '\u6253\u5f00 NeoPad \u6570\u636e\u6587\u4ef6\u5939(D)',
       trash: '\u56de\u6536\u7ad9(R)...',

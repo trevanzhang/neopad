@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { AppMessages } from '../lib/i18n'
 import type { NoteExportDestination } from '../composables/useNoteExport'
-import type { NoteExportFormat, NoteExportStyle } from '../lib/note-export'
+import type { NoteExportFormat } from '../lib/note-export'
 import type { NoteTab } from '../types/note'
 
 const props = defineProps<{
@@ -26,7 +26,7 @@ const emit = defineEmits<{
   saveClipboard: []
   loadFile: []
   saveAsFile: []
-  exportNote: [format: NoteExportFormat, destination?: NoteExportDestination, style?: NoteExportStyle]
+  exportNote: [format: NoteExportFormat, destination?: NoteExportDestination]
   exportAll: []
   openDataFolder: []
   openTrash: []
@@ -242,39 +242,19 @@ function handleMenuKeydown(event: KeyboardEvent) {
                 <span class="menu-arrow">&rsaquo;</span>
               </button>
               <div class="menu-popover menu-subpopover">
-                <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png', 'file', 'print')">
+                <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png', 'file')">
                   {{ messages.exportPngToFile }}
                 </button>
-                <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png', 'clipboard', 'print')">
+                <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png', 'clipboard')">
                   {{ messages.exportPngToClipboard }}
                 </button>
-                <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png', 'clipboard-mobile', 'print')">
+                <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png', 'clipboard-mobile')">
                   {{ messages.exportPngToClipboardMobile }}
                 </button>
               </div>
             </div>
-            <div class="menu-subroot">
-              <button type="button" class="menu-command" :disabled="exportingNote">
-                <span>{{ messages.exportAsPngThemed }}</span>
-                <span class="menu-arrow">&rsaquo;</span>
-              </button>
-              <div class="menu-popover menu-subpopover">
-                <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png', 'file', 'current-theme')">
-                  {{ messages.exportPngToFile }}
-                </button>
-                <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png', 'clipboard', 'current-theme')">
-                  {{ messages.exportPngToClipboard }}
-                </button>
-                <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'png', 'clipboard-mobile', 'current-theme')">
-                  {{ messages.exportPngToClipboardMobile }}
-                </button>
-              </div>
-            </div>
-            <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'pdf', 'file', 'print')">
+            <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'pdf', 'file')">
               {{ messages.exportAsPdf }}
-            </button>
-            <button type="button" :disabled="exportingNote" @click="$emit('exportNote', 'pdf', 'file', 'current-theme')">
-              {{ messages.exportAsPdfThemed }}
             </button>
           </div>
         </div>

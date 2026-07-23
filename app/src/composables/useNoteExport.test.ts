@@ -69,12 +69,19 @@ describe('useNoteExport', () => {
     vi.unstubAllGlobals()
   })
 
-  it('copies rendered PNG through the Web Clipboard API', async () => {
+  it('copies a PNG rendered with the current preview appearance through the Web Clipboard API', async () => {
     const { exporter, statusMessage } = createHarness()
 
     await exporter.exportNote(tab.id, 'png', 'clipboard')
 
-    expect(createNoteExportBlob).toHaveBeenCalledWith('# Inbox', 'png', { layout: 'standard', style: 'print' })
+    expect(createNoteExportBlob).toHaveBeenCalledWith('# Inbox', 'png', {
+      layout: 'standard',
+      style: 'current-theme',
+      previewTheme: 'dracula',
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontSizePx: 16,
+      lineHeight: 1.8,
+    })
     expect(writeClipboard).toHaveBeenCalledOnce()
     expect(copyPngToClipboard).not.toHaveBeenCalled()
     expect(saveNoteExport).not.toHaveBeenCalled()
@@ -86,17 +93,6 @@ describe('useNoteExport', () => {
 
     await exporter.exportNote(tab.id, 'png', 'clipboard-mobile')
 
-    expect(createNoteExportBlob).toHaveBeenCalledWith('# Inbox', 'png', { layout: 'mobile', style: 'print' })
-    expect(writeClipboard).toHaveBeenCalledOnce()
-    expect(saveNoteExport).not.toHaveBeenCalled()
-    expect(statusMessage.value).toBe('PNG copied to clipboard')
-  })
-
-  it('passes the current preview appearance to themed mobile rendering', async () => {
-    const { exporter, statusMessage } = createHarness()
-
-    await exporter.exportNote(tab.id, 'png', 'clipboard-mobile', 'current-theme')
-
     expect(createNoteExportBlob).toHaveBeenCalledWith('# Inbox', 'png', {
       layout: 'mobile',
       style: 'current-theme',
@@ -106,7 +102,26 @@ describe('useNoteExport', () => {
       lineHeight: 1.8,
     })
     expect(writeClipboard).toHaveBeenCalledOnce()
+    expect(saveNoteExport).not.toHaveBeenCalled()
     expect(statusMessage.value).toBe('PNG copied to clipboard')
+  })
+
+  it('exports PDF with the current preview appearance', async () => {
+    vi.mocked(saveNoteExport).mockResolvedValue(true)
+    const { exporter, statusMessage } = createHarness()
+
+    await exporter.exportNote(tab.id, 'pdf')
+
+    expect(createNoteExportBlob).toHaveBeenCalledWith('# Inbox', 'pdf', {
+      layout: 'standard',
+      style: 'current-theme',
+      previewTheme: 'dracula',
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontSizePx: 16,
+      lineHeight: 1.8,
+    })
+    expect(saveNoteExport).toHaveBeenCalledWith('Inbox.pdf', 'pdf', new Uint8Array([1, 2, 3]))
+    expect(statusMessage.value).toBe('PDF exported')
   })
 
   it('falls back to the native clipboard when the Web Clipboard API is unavailable', async () => {
@@ -126,7 +141,14 @@ describe('useNoteExport', () => {
 
     await exporter.exportNote(tab.id, 'png', 'file')
 
-    expect(createNoteExportBlob).toHaveBeenCalledWith('# Inbox', 'png', { layout: 'standard', style: 'print' })
+    expect(createNoteExportBlob).toHaveBeenCalledWith('# Inbox', 'png', {
+      layout: 'standard',
+      style: 'current-theme',
+      previewTheme: 'dracula',
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontSizePx: 16,
+      lineHeight: 1.8,
+    })
     expect(saveNoteExport).toHaveBeenCalledWith('Inbox.png', 'png', new Uint8Array([1, 2, 3]))
     expect(copyPngToClipboard).not.toHaveBeenCalled()
     expect(statusMessage.value).toBe('PNG exported')
