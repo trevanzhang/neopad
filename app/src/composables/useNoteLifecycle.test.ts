@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { messages } from '../lib/i18n'
-import { createNote, createNoteWithBody } from '../lib/invoke'
+import { createNote, createNoteWithBody, importNeoCaptureClipboard } from '../lib/invoke'
 import { isTauriRuntime } from '../lib/runtime'
 import type { NoteTab } from '../types/note'
 import { useNoteLifecycle } from './useNoteLifecycle'
@@ -11,6 +11,7 @@ vi.mock('../lib/invoke', () => ({
   closeNote: vi.fn(),
   createNote: vi.fn(),
   createNoteWithBody: vi.fn(),
+  importNeoCaptureClipboard: vi.fn(),
   deleteNote: vi.fn(),
   renameNote: vi.fn(),
   saveClipboard: vi.fn(),
@@ -62,6 +63,7 @@ describe('useNoteLifecycle', () => {
     vi.mocked(isTauriRuntime).mockReturnValue(false)
     vi.mocked(createNote).mockReset()
     vi.mocked(createNoteWithBody).mockReset()
+    vi.mocked(importNeoCaptureClipboard).mockReset()
   })
 
   it('does not switch tabs when the save barrier fails', async () => {
@@ -114,5 +116,22 @@ describe('useNoteLifecycle', () => {
 
     expect(createNoteWithBody).toHaveBeenCalledWith('Selected text')
     expect(activeTabId.value).toBe('page-selected')
+  })
+
+  it('opens an imported NeoCapture payload as a separate note', async () => {
+    vi.mocked(isTauriRuntime).mockReturnValue(true)
+    vi.mocked(importNeoCaptureClipboard).mockResolvedValue({
+      id: 'page-captured',
+      title: 'Captured page',
+      fileName: 'page-captured.md',
+      content: '# Captured page\n\nBody',
+      updatedAt: 12,
+    })
+    const { lifecycle, activeTabId } = createHarness()
+
+    await lifecycle.importCaptureFromClipboard()
+
+    expect(importNeoCaptureClipboard).toHaveBeenCalledOnce()
+    expect(activeTabId.value).toBe('page-captured')
   })
 })

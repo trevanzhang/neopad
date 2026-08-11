@@ -374,6 +374,7 @@ const {
   deleteTab,
   createLocalTab,
   saveCurrentClipboard,
+  importCaptureFromClipboard,
 } = useNoteLifecycle({
   tabs, activeTabId, activeTab, content, saveState, statusMessage, language,
   titleDoubleClickAction, archiveListOpen, text: () => t.value, forceSave,
@@ -393,6 +394,7 @@ const {
   closeToMinimize,
   createLocalTab,
   saveCurrentClipboard,
+  importCaptureFromClipboard,
   openExternalDocuments: openExternalDocumentPaths,
   openPendingExternalDocuments,
   openSettings,

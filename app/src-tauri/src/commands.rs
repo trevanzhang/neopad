@@ -233,6 +233,65 @@ pub fn create_note_with_body_command(
     create_note_with_body(&state.workspace, None, &body).map_err(display_error)
 }
 
+const NEOCAPTURE_MARKER: &str = "<!-- neocapture:v1 -->";
+
+#[tauri::command]
+pub fn import_neocapture_clipboard_command(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<NoteContent, String> {
+    let clipboard_text = read_neocapture_clipboard_with_retry(&app)?;
+    let (title, body) = parse_neocapture_markdown(&clipboard_text)?;
+
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    create_note_with_body(&state.workspace, title, &body).map_err(display_error)
+}
+
+fn read_neocapture_clipboard_with_retry(app: &AppHandle) -> Result<String, String> {
+    let mut last_error = None;
+    for attempt in 0..3 {
+        match app.clipboard().read_text() {
+            Ok(value) => return Ok(value),
+            Err(error) => last_error = Some(error),
+        }
+        std::thread::sleep(std::time::Duration::from_millis(45 * (attempt + 1)));
+    }
+
+    Err(format!(
+        "failed to read NeoCapture clipboard payload: {}",
+        last_error
+            .map(|error| error.to_string())
+            .unwrap_or_else(|| "unknown clipboard error".to_owned())
+    ))
+}
+
+fn parse_neocapture_markdown(value: &str) -> Result<(Option<String>, String), String> {
+    let value = value.strip_prefix('\u{feff}').unwrap_or(value).trim_start();
+    let payload = value
+        .strip_prefix(NEOCAPTURE_MARKER)
+        .ok_or_else(|| "clipboard does not contain a NeoCapture payload".to_owned())?
+        .trim_start_matches(['\r', '\n']);
+
+    if payload.trim().is_empty() {
+        return Err("NeoCapture payload is empty".to_owned());
+    }
+
+    let (first_line, remainder) = payload.split_once('\n').unwrap_or((payload, ""));
+    let first_line = first_line.trim_end_matches('\r');
+    let title = first_line
+        .strip_prefix("# ")
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned);
+    let body = if title.is_some() {
+        remainder.trim_start_matches(['\r', '\n']).trim_end()
+    } else {
+        payload.trim_end()
+    };
+
+    Ok((title, body.to_owned()))
+}
+
 #[tauri::command]
 pub fn write_note_command(
     state: State<'_, AppState>,
@@ -1029,7 +1088,7 @@ pub(crate) fn display_error(error: anyhow::Error) -> String {
 mod tests {
     use super::{
         approve_external_markdown_path, approved_external_markdown_path, autostart_command_value,
-        external_revision, validate_external_url,
+        external_revision, parse_neocapture_markdown, validate_external_url,
     };
     use neopad_core::{init_workspace, lock_workspace_for_write};
     use std::{fs, path::Path};
@@ -1065,6 +1124,33 @@ mod tests {
         assert!(validate_external_url("http://127.0.0.1/docs").is_ok());
         assert!(validate_external_url("javascript:alert(1)").is_err());
         assert!(validate_external_url("file:///C:/secret.txt").is_err());
+    }
+
+    #[test]
+    fn neocapture_payload_uses_first_heading_as_title() {
+        let (title, body) = parse_neocapture_markdown(
+            "<!-- neocapture:v1 -->\r\n\r\n# Captured page\r\n\r\n> Source\r\n\r\nBody",
+        )
+        .expect("valid NeoCapture payload");
+
+        assert_eq!(title.as_deref(), Some("Captured page"));
+        assert_eq!(body, "> Source\r\n\r\nBody");
+    }
+
+    #[test]
+    fn neocapture_payload_rejects_unmarked_clipboard_text() {
+        assert!(parse_neocapture_markdown("# Ordinary clipboard text").is_err());
+    }
+
+    #[test]
+    fn neocapture_payload_preserves_unicode_content() {
+        let (title, body) = parse_neocapture_markdown(
+            "<!-- neocapture:v1 -->\n\n# \u{7f51}\u{9875}\u{6807}\u{9898}\n\n> \u{6765}\u{6e90}\u{ff1a}<https://example.com>\n\n\u{6b63}\u{6587}\u{5185}\u{5bb9}\u{3002}",
+        )
+        .expect("valid Unicode payload");
+
+        assert_eq!(title.as_deref(), Some("\u{7f51}\u{9875}\u{6807}\u{9898}"));
+        assert!(body.contains("\u{6b63}\u{6587}\u{5185}\u{5bb9}\u{3002}"));
     }
 
     #[test]

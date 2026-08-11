@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
+import { getCurrent, onOpenUrl } from '@tauri-apps/plugin-deep-link'
 import { hideWindow, quitApp } from '../lib/invoke'
 import { isTauriRuntime } from '../lib/runtime'
 
@@ -8,6 +9,7 @@ interface WindowLifecycleOptions {
   closeToMinimize: Ref<boolean>
   createLocalTab: () => void | Promise<void>
   saveCurrentClipboard: () => void | Promise<void>
+  importCaptureFromClipboard: () => void | Promise<void>
   openExternalDocuments: (paths: string[]) => void | Promise<void>
   openPendingExternalDocuments: () => void | Promise<void>
   openSettings: () => void
@@ -37,6 +39,13 @@ export function useWindowLifecycle(options: WindowLifecycleOptions) {
         }),
       ])
       unlisteners.push(...listeners)
+
+      const handleDeepLinks = (urls: string[]) => {
+        if (urls.some(isNeoCaptureUrl)) void options.importCaptureFromClipboard()
+      }
+      unlisteners.push(await onOpenUrl(handleDeepLinks))
+      const currentUrls = await getCurrent()
+      if (currentUrls) handleDeepLinks(currentUrls)
     } catch {
       options.onError()
     }
@@ -81,5 +90,18 @@ export function useWindowLifecycle(options: WindowLifecycleOptions) {
     hideMainWindow,
     exitApp,
     disposeWindowLifecycle,
+  }
+}
+
+function isNeoCaptureUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'neopad:'
+      && url.hostname === 'capture'
+      && (url.pathname === '' || url.pathname === '/')
+      && !url.search
+      && !url.hash
+  } catch {
+    return false
   }
 }

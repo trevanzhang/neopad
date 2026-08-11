@@ -215,6 +215,27 @@
                 <File Id="McpSidecarFile" Source="$(var.McpSidecarSource)" Name="neopad-mcp.exe" KeyPath="yes" Checksum="yes"/>
             </Component>
 
+            <Component Id="NeoPadDeepLinkProtocol" Guid="*" Win64="$(var.Win64)">
+                <RegistryValue Root="HKCU"
+                    Key="Software\Classes\neopad"
+                    Type="string"
+                    Value="URL:com.neopad.desktop protocol"
+                    KeyPath="yes" />
+                <RegistryValue Root="HKCU"
+                    Key="Software\Classes\neopad"
+                    Name="URL Protocol"
+                    Type="string"
+                    Value="" />
+                <RegistryValue Root="HKCU"
+                    Key="Software\Classes\neopad\DefaultIcon"
+                    Type="string"
+                    Value="&quot;[INSTALLDIR]neopad-app.exe&quot;,0" />
+                <RegistryValue Root="HKCU"
+                    Key="Software\Classes\neopad\shell\open\command"
+                    Type="string"
+                    Value="&quot;[INSTALLDIR]neopad-app.exe&quot; &quot;%1&quot;" />
+            </Component>
+
             <Component Id="CMP_UninstallShortcut" Guid="*">
                 <Shortcut Id="UninstallShortcut"
                     Name="Uninstall {{product_name}}"
@@ -257,6 +278,7 @@
                 Absent="disallow">
 
             <ComponentRef Id="RegistryEntries"/>
+            <ComponentRef Id="NeoPadDeepLinkProtocol"/>
 
             <Feature Id="ShortcutsFeature" Title="Shortcuts" Level="1">
                 <ComponentRef Id="Path"/>

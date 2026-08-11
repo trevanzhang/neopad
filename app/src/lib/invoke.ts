@@ -245,6 +245,10 @@ export function createNoteWithBody(body: string): Promise<NoteContent> {
   return invoke('create_note_with_body_command', { body })
 }
 
+export function importNeoCaptureClipboard(): Promise<NoteContent> {
+  return invoke('import_neocapture_clipboard_command')
+}
+
 export function writeNote(noteId: string, content: string, expectedUpdatedAt: number): Promise<NoteContent> {
   return invoke('write_note_command', { noteId, content, expectedUpdatedAt })
 }

@@ -454,6 +454,7 @@ export type AppMessages = {
     markdown: string
     clipboard: string
     clipboardSaved: string
+    captureSaved: string
     loadedFromFile: string
     savedAsFile: string
     exported: string
@@ -962,6 +963,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       markdown: 'Markdown',
       clipboard: 'Clipboard',
       clipboardSaved: 'Clipboard saved',
+      captureSaved: 'Web capture saved',
       loadedFromFile: 'Loaded from file',
       savedAsFile: 'Saved as file',
       exported: 'Exported',
@@ -1468,6 +1470,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       markdown: 'Markdown',
       clipboard: '\u526a\u8d34\u677f',
       clipboardSaved: '\u526a\u8d34\u677f\u5df2\u4fdd\u5b58',
+      captureSaved: '\u7f51\u9875\u6458\u5f55\u5df2\u4fdd\u5b58',
       loadedFromFile: '\u5df2\u4ece\u6587\u4ef6\u8f7d\u5165',
       savedAsFile: '\u5df2\u53e6\u5b58\u5230\u6587\u4ef6',
       exported: '\u5df2\u5168\u90e8\u5bfc\u51fa',

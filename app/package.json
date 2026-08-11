@@ -12,8 +12,8 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@codemirror/commands": "^6.10.4",
     "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.10.4",
     "@codemirror/lang-css": "^6.3.1",
     "@codemirror/lang-html": "^6.4.11",
     "@codemirror/lang-javascript": "^6.2.5",
@@ -29,6 +29,7 @@
     "@lezer/highlight": "^1.2.3",
     "@replit/codemirror-vim": "6.3.0",
     "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-deep-link": "^2.0.0",
     "@tauri-apps/plugin-notification": "^2.0.0",
     "@vscode/markdown-it-katex": "^1.1.2",
     "highlight.js": "^11.11.1",

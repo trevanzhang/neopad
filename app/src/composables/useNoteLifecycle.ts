@@ -5,6 +5,7 @@ import {
   createNote,
   createNoteWithBody,
   deleteNote,
+  importNeoCaptureClipboard,
   renameAiPrompt,
   renameNote,
   saveClipboard,
@@ -266,6 +267,25 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
     } catch { fail() }
   }
 
+  async function importCaptureFromClipboard() {
+    if (!isTauriRuntime()) return
+    const generation = o.nextNoteLoadGeneration()
+    try {
+      if (!(await o.forceSave()) || !o.isCurrentNoteLoad(generation)) return
+      const note = await importNeoCaptureClipboard()
+      if (!o.isCurrentNoteLoad(generation)) return
+      o.upsertTab({ id: note.id, title: note.title, fileName: note.fileName,
+        createdAt: note.updatedAt, updatedAt: note.updatedAt, pinned: false,
+        deleted: false, archived: false, open: true, systemTitle: false })
+      o.activeTabId.value = note.id
+      o.setContentFromLoad(note.content)
+      o.saveState.value = 'Saved'
+      o.statusMessage.value = o.text().status.captureSaved
+      o.focusEditor()
+      await o.refreshLibrary()
+    } catch { fail() }
+  }
+
   const runForActive = (action: (tab: NoteTab) => Promise<void>) => o.activeTab.value ? action(o.activeTab.value) : Promise.resolve()
   const runForId = (id: string, action: (tab: NoteTab) => Promise<void>) => {
     const tab = tabById(id)
@@ -295,5 +315,6 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
       try { const updated = await setNoteColor(id, color); tab.color = updated.color; tab.updatedAt = updated.updatedAt } catch { fail() }
     },
     renameTab, deleteTab, closeTab, archiveTab, unarchiveTab, createLocalTab, saveCurrentClipboard,
+    importCaptureFromClipboard,
   }
 }

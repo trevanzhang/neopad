@@ -14,18 +14,19 @@ use commands::{
     create_archive_directory_command, create_note_command, create_note_with_body_command,
     delete_archive_directory_command, delete_note_command, export_all_notes_zip_command,
     get_shortcut_warnings_command, get_ui_config_command, get_workspace_command,
-    hide_window_command, list_archive_directories_command, list_archived_notes_command,
-    list_library_notes_command, list_notes_command, list_recent_notes_command,
-    list_recoverable_note_writes_command, list_reminders_command, list_trashed_notes_command,
-    move_archive_directory_command, move_archived_note_command, open_external_markdown_command,
-    open_external_markdown_paths_command, open_external_url_command, open_note_command,
-    open_trash_command, open_workspace_in_file_manager_command, quit_app_command,
-    read_external_markdown_command, read_note_command, rename_archive_directory_command,
-    rename_note_command, rename_note_with_heading_command, reopen_reminder_command,
-    reorder_open_notes_command, restore_note_from_trash_command,
-    restore_recoverable_note_write_command, reveal_external_markdown_in_file_manager_command,
-    reveal_note_in_file_manager_command, save_clipboard_command, save_markdown_file_command,
-    save_note_export_command, save_ui_config_command, search_notes_command, set_autostart_command,
+    hide_window_command, import_neocapture_clipboard_command, list_archive_directories_command,
+    list_archived_notes_command, list_library_notes_command, list_notes_command,
+    list_recent_notes_command, list_recoverable_note_writes_command, list_reminders_command,
+    list_trashed_notes_command, move_archive_directory_command, move_archived_note_command,
+    open_external_markdown_command, open_external_markdown_paths_command,
+    open_external_url_command, open_note_command, open_trash_command,
+    open_workspace_in_file_manager_command, quit_app_command, read_external_markdown_command,
+    read_note_command, rename_archive_directory_command, rename_note_command,
+    rename_note_with_heading_command, reopen_reminder_command, reorder_open_notes_command,
+    restore_note_from_trash_command, restore_recoverable_note_write_command,
+    reveal_external_markdown_in_file_manager_command, reveal_note_in_file_manager_command,
+    save_clipboard_command, save_markdown_file_command, save_note_export_command,
+    save_ui_config_command, search_notes_command, set_autostart_command,
     set_close_to_minimize_command, set_note_color_command, set_snap_to_edges_command,
     set_start_hidden_command, set_window_opacity_command, show_window_command,
     take_pending_external_markdown_paths_command, toggle_always_on_top_command,
@@ -149,6 +150,7 @@ pub fn run() {
             let _ = window::show_main_window(app);
         }));
     }
+    builder = builder.plugin(tauri_plugin_deep_link::init());
 
     let app = builder
         .plugin(
@@ -165,6 +167,11 @@ pub fn run() {
                 .build(),
         )
         .setup(|app| {
+            #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                app.deep_link().register_all()?;
+            }
             window::install_main_window_icon(app);
             window::place_main_window_at_bottom_right(app);
             window::install_close_to_hide_handler(app);
@@ -214,6 +221,7 @@ pub fn run() {
             read_note_command,
             create_note_command,
             create_note_with_body_command,
+            import_neocapture_clipboard_command,
             write_note_command,
             rename_note_command,
             rename_note_with_heading_command,
