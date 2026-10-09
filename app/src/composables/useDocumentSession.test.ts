@@ -1,14 +1,12 @@
 import { computed, nextTick, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { readAiPrompt, readExternalMarkdown, readNote, writeAiPrompt, writeNote } from '../lib/invoke'
+import { readExternalMarkdown, readNote, writeNote } from '../lib/invoke'
 import type { NoteTab } from '../types/note'
 import { useDocumentSession } from './useDocumentSession'
 
 vi.mock('../lib/invoke', () => ({
-  readAiPrompt: vi.fn(),
   readExternalMarkdown: vi.fn(),
   readNote: vi.fn(),
-  writeAiPrompt: vi.fn(),
   writeExternalMarkdown: vi.fn(),
   writeNote: vi.fn(),
 }))
@@ -16,9 +14,7 @@ vi.mock('../lib/runtime', () => ({ isTauriRuntime: vi.fn(() => true) }))
 
 describe('useDocumentSession', () => {
   beforeEach(() => {
-    vi.mocked(readAiPrompt).mockReset()
     vi.mocked(readExternalMarkdown).mockReset()
-    vi.mocked(writeAiPrompt).mockReset()
     vi.mocked(readNote).mockReset()
     vi.mocked(writeNote).mockReset()
   })
@@ -54,44 +50,22 @@ describe('useDocumentSession', () => {
     session.disposeDocumentSession()
   })
 
-  it('loads and saves a prompt tab through the prompt document API', async () => {
+  it('uses ordinary note revision checks for project documents', async () => {
     const tab: NoteTab = {
-      id: 'prompt:Review.md', title: 'Review', fileName: 'Review.md',
-      createdAt: 1, updatedAt: 1, pinned: false, deleted: false, archived: false,
-      open: true, systemTitle: false, kind: 'prompt', promptId: 'Review.md',
-      promptRevision: 'old-revision',
+      id: 'project-review', title: 'Review', fileName: 'Review.md', projectRelativePath: 'Demo/Review.md',
+      createdAt: 1, updatedAt: 1, pinned: false, deleted: false, archived: false, open: true, systemTitle: false,
     }
     const tabs = ref([tab])
-    const activeTabId = ref(tab.id)
-    const onPromptSaved = vi.fn()
-    vi.mocked(readAiPrompt).mockResolvedValue({
-      id: 'Review.md', name: 'Review', fileName: 'Review.md', relativePath: 'Review.md',
-      content: 'Review carefully.', updatedAt: 2, revision: 'loaded-revision',
-    })
-    vi.mocked(writeAiPrompt).mockResolvedValue({
-      id: 'Review.md', name: 'Review', fileName: 'Review.md', relativePath: 'Review.md',
-      content: 'Review for correctness.', updatedAt: 3, revision: 'saved-revision',
-    })
-    const session = useDocumentSession({
-      tabs,
-      activeTabId,
-      activeTab: computed(() => tabs.value[0]),
-      statusMessage: ref(''),
-      failedMessage: () => 'failed',
-      rememberExternalDocument: vi.fn(),
-      onPromptSaved,
-    })
-
+    vi.mocked(readNote).mockResolvedValue({ id: tab.id, title: tab.title, fileName: tab.fileName, content: 'Original', updatedAt: 2 })
+    vi.mocked(writeNote).mockResolvedValue({ id: tab.id, title: tab.title, fileName: tab.fileName, content: 'Edited', updatedAt: 3 })
+    const session = useDocumentSession({ tabs, activeTabId: ref(tab.id), activeTab: computed(() => tabs.value[0]),
+      statusMessage: ref(''), failedMessage: () => 'failed', rememberExternalDocument: vi.fn() })
     expect(await session.loadActiveNote()).toBe(true)
-    expect(session.content.value).toBe('Review carefully.')
-    expect(tab.promptRevision).toBe('loaded-revision')
-
-    session.content.value = 'Review for correctness.'
+    session.content.value = 'Edited'
     await nextTick()
     expect(await session.forceSave()).toBe(true)
-    expect(writeAiPrompt).toHaveBeenCalledWith('Review.md', 'Review for correctness.', 'loaded-revision')
-    expect(tab.promptRevision).toBe('saved-revision')
-    expect(onPromptSaved).toHaveBeenCalledOnce()
+    expect(writeNote).toHaveBeenCalledWith(tab.id, 'Edited', 2)
+    expect(tab.updatedAt).toBe(3)
     session.disposeDocumentSession()
   })
   function noteSession() {

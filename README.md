@@ -10,8 +10,9 @@ under the user's local NeoPad workspace.
 
 ## Current Status
 
-Version **0.7.0** replaces MCP access with the bundled native CLI. Existing
-Agent connections require migration; note storage formats are unchanged.
+Version **0.7.1** replaces the prompt library with ordinary project notes and
+automatically migrates existing prompt files. Version 0.7.0 replaced MCP access
+with the bundled native CLI; existing Agent connections require migration.
 See [MCP-to-CLI migration](docs/cli.md#migrate-from-mcp) and the
 [changelog](CHANGELOG.md).
 
@@ -56,25 +57,24 @@ The repository currently contains a working Windows-focused MVP:
   and `F6` opens or closes the reminder list. "Mark Completed", "Mark Unfinished",
   and "Clear Due" update reminder checkboxes directly without deleting note
   content.
-- `F4` opens the compact file browser for active, archived, and trashed notes
-  plus reusable AI prompts. Active notes remain a flat work area, while
-  archived notes and prompts can be organized into local folders. Files and
-  whole folders can be moved by drag and drop; right-click a folder to rename
-  it or move all of its contents to NeoPad Trash. Selecting an archived note
-  opens it without restoring it to the active work area; restoration stays an
-  explicit action. Prompt Markdown files can be created, renamed, duplicated,
-  restored, or moved to Trash there, and open in the normal editor as clearly
-  marked prompt tabs.
-- Right-click a tab or a single note or prompt in the file browser to reveal
+- `F4` opens a compact browser for capture notes, projects, archive, and Trash.
+  Capture stays flat in `notes/`; project Markdown lives in `projects/<name>/`.
+  Project notes use the same editor, search, reminders, export, and native CLI
+  as capture notes. Drag notes into project folders, rename or move folders,
+  or archive an entire project while preserving its directory structure.
+  Deleting notes or projects moves their Markdown files to NeoPad Trash.
+  Existing reusable prompts migrate automatically to `projects/原提示词/`;
+  see [Projects and migration](docs/projects.md).
+- Right-click a tab or a single note in the file browser to reveal
   its Markdown file in the system file manager. The tab menu can also copy the
-  absolute Markdown file path for use with terminals and local agents. For
+  absolute Markdown file path for use with terminals and local agents, or move
+  a note directly into a project folder with **Move to project**. For
   ordinary notes, it can ask the configured AI provider for a concise title
   and update both the tab title and the note's first-level heading.
 - The reorganized Settings center groups General, Editor, Preview, Vim,
   Shortcuts, AI, and Agent tools controls in a focused dialog, including configurable
   visibility and clipboard-capture shortcuts.
-- Optional AI collaboration provides a compact `Ctrl+K` note chat, reusable
-  Markdown prompts, bounded all-note context search, and independent `//`
+- Optional AI collaboration provides a compact `Ctrl+K` note chat, bounded all-note context search, and independent `//`
   commands for continue, polish, summarize, and Chinese-English translation.
   A selected `//` command applies its result directly as one undoable edit;
   right-clicking an exact editor selection exposes direct AI actions and the
@@ -89,7 +89,7 @@ The repository currently contains a working Windows-focused MVP:
 - Archived notes move to `~/.neopad/archive/`, remain available to full-text
   search, and can be listed and restored from the note browser without using
   the trash. File > Open NeoPad Data Folder opens the complete local workspace,
-  including notes, archives, prompts, Trash, and metadata.
+  including notes, projects, archives, Trash, and metadata.
 - If a non-default note file is removed outside NeoPad, its stale tab and recent
   document record are removed on the next refresh; NeoPad does not recreate the
   missing file.
@@ -146,17 +146,15 @@ Important files and directories:
 ~/.neopad/
   notes/              Flat active Markdown work area
   archive/            Categorized archived notes, included in search
-  prompts/            Categorized reusable Markdown prompts
+  projects/           Active project Markdown notes
   meta/tabs.json      Tab and archive-path metadata
-  meta/prompts.json   Stable prompt identity and path metadata
   meta/reminders.json Notification delivery state
   config.json         App settings
   trash/              Deleted notes are moved here
 ```
 
-Active note content lives in the flat `notes/*.md` work area. Archived notes may
-live under `archive/**/*.md`, and reusable prompts may live under
-`prompts/**/*.md`. Emptying NeoPad's Trash moves its
+Capture note content lives in the flat `notes/*.md` work area. Project notes
+live under `projects/**/*.md`; archived notes live under `archive/**/*.md`. Emptying NeoPad's Trash moves its
 Markdown files to the operating system's Recycle Bin or Trash before removing
 their entries from NeoPad's library. Files restored to NeoPad's `trash/`
 directory by the operating system are rediscovered on refresh. Metadata files
@@ -254,7 +252,7 @@ Common local shortcuts:
 F1              Shortcut help
 F2              Switch to the previous tab
 F3              Switch to the next tab
-F4              Show or hide the note and prompt file browser
+F4              Show or hide the note and project file browser
 F5              Cycle edit, split, and preview modes
 F6              Open or close the reminder list
 F7              Toggle window on top

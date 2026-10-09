@@ -634,7 +634,21 @@ pub async fn export_all_notes_zip_command(
         for tab in list_searchable_notes(&workspace).map_err(display_error)? {
             let note = read_note(&workspace, &tab.id).map_err(display_error)?;
             archive
-                .start_file(&tab.file_name, options)
+                .start_file(
+                    if tab.archived {
+                        format!(
+                            "archive/{}",
+                            tab.archive_relative_path
+                                .as_deref()
+                                .unwrap_or(&tab.file_name)
+                        )
+                    } else if let Some(relative) = &tab.project_relative_path {
+                        format!("projects/{relative}")
+                    } else {
+                        format!("notes/{}", tab.file_name)
+                    },
+                    options,
+                )
                 .map_err(|error| error.to_string())?;
             archive
                 .write_all(note.content.as_bytes())
@@ -1168,4 +1182,89 @@ mod tests {
         );
         assert!(approved_external_markdown_path(&workspace, &unapproved).is_err());
     }
+}
+
+#[tauri::command]
+pub fn list_project_directories_command(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::list_project_directories(&state.workspace).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn create_project_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+) -> Result<String, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::create_project_directory(&state.workspace, &relative_path).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn move_project_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+    target_parent: String,
+) -> Result<String, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::move_project_directory(&state.workspace, &relative_path, &target_parent)
+        .map_err(display_error)
+}
+
+#[tauri::command]
+pub fn rename_project_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+    new_name: String,
+) -> Result<String, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::rename_project_directory(&state.workspace, &relative_path, &new_name)
+        .map_err(display_error)
+}
+
+#[tauri::command]
+pub fn archive_project_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+) -> Result<String, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::archive_project_directory(&state.workspace, &relative_path).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn delete_project_directory_command(
+    state: State<'_, AppState>,
+    relative_path: String,
+) -> Result<usize, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::delete_project_directory_to_trash(&state.workspace, &relative_path)
+        .map_err(display_error)
+}
+
+#[tauri::command]
+pub fn move_note_to_project_command(
+    state: State<'_, AppState>,
+    note_id: String,
+    directory: String,
+) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::move_note_to_project(&state.workspace, &note_id, &directory).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn move_note_to_capture_command(
+    state: State<'_, AppState>,
+    note_id: String,
+) -> Result<NoteTab, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::move_note_to_capture(&state.workspace, &note_id).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn create_project_note_command(
+    state: State<'_, AppState>,
+    directory: String,
+    title: Option<String>,
+) -> Result<NoteContent, String> {
+    let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+    neopad_core::create_project_note(&state.workspace, &directory, title, "").map_err(display_error)
 }

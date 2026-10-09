@@ -10,14 +10,7 @@ export function isNoteTab(tab: NoteTab | undefined) {
   return documentKind(tab) === 'note'
 }
 
-export function isPromptTab(tab: NoteTab | undefined) {
-  return documentKind(tab) === 'prompt'
-}
 
 export function isExternalTab(tab: NoteTab | undefined) {
   return documentKind(tab) === 'external'
-}
-
-export function promptTabId(promptId: string) {
-  return `prompt:${promptId}`
 }

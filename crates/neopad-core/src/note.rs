@@ -50,25 +50,34 @@ pub fn list_trashed_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
 }
 
 pub fn list_recoverable_note_writes(workspace: &Workspace) -> Result<Vec<RecoverableNoteWrite>> {
-    let mut recoveries = fs::read_dir(&workspace.notes_dir)
-        .with_context(|| {
-            format!(
-                "failed to read notes directory {}",
-                workspace.notes_dir.display()
-            )
-        })?
-        .filter_map(Result::ok)
-        .filter_map(|entry| {
-            let path = entry.path();
-            let recovery_file_name = path.file_name()?.to_str()?.to_owned();
-            let target_file_name =
-                crate::atomic_write::temporary_target_file_name(&recovery_file_name)?.to_owned();
-            (path.is_file() && target_file_name.ends_with(".md")).then_some(RecoverableNoteWrite {
+    let mut recoveries = Vec::new();
+    for (root, prefix) in [
+        (&workspace.notes_dir, ""),
+        (&workspace.projects_dir, "projects/"),
+        (&workspace.archive_dir, "archive/"),
+    ] {
+        for path in markdown_files_recursive(root)? {
+            let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            let Some(target_name) = crate::atomic_write::temporary_target_file_name(name) else {
+                continue;
+            };
+            if !target_name.ends_with(".md") {
+                continue;
+            }
+            crate::path::ensure_inside_workspace(&workspace.root, &path)?;
+            let recovery_file_name = format!("{prefix}{}", relative_path_string(root, &path)?);
+            let target_file_name = format!(
+                "{prefix}{}",
+                relative_path_string(root, &path.with_file_name(target_name))?
+            );
+            recoveries.push(RecoverableNoteWrite {
                 recovery_file_name,
                 target_file_name,
-            })
-        })
-        .collect::<Vec<_>>();
+            });
+        }
+    }
     recoveries.sort_by(|left, right| left.recovery_file_name.cmp(&right.recovery_file_name));
     Ok(recoveries)
 }
@@ -81,8 +90,24 @@ pub fn restore_recoverable_note_write(
         .into_iter()
         .find(|entry| entry.recovery_file_name == recovery_file_name)
         .with_context(|| "recoverable note write not found")?;
-    let recovery_path = workspace.notes_dir.join(&recovery.recovery_file_name);
-    let target_path = note_file_path(workspace, &recovery.target_file_name)?;
+    let (recovery_path, target_path) =
+        if let Some(relative) = recovery.target_file_name.strip_prefix("projects/") {
+            (
+                workspace.root.join(&recovery.recovery_file_name),
+                crate::path::project_file_path(workspace, relative)?,
+            )
+        } else if let Some(relative) = recovery.target_file_name.strip_prefix("archive/") {
+            (
+                workspace.root.join(&recovery.recovery_file_name),
+                archive_file_path(workspace, relative)?,
+            )
+        } else {
+            (
+                workspace.notes_dir.join(&recovery.recovery_file_name),
+                note_file_path(workspace, &recovery.target_file_name)?,
+            )
+        };
+    crate::path::ensure_inside_workspace(&workspace.root, &recovery_path)?;
     let contents = fs::read_to_string(&recovery_path)
         .with_context(|| format!("failed to read recovery file {}", recovery_path.display()))?;
     write_atomic(&target_path, &contents)?;
@@ -125,7 +150,7 @@ where
 
     let mut remaining_deleted_ids = HashSet::new();
     for tab in tabs.tabs.iter().filter(|tab| tab.deleted) {
-        if find_trashed_note_path(workspace, &tab.file_name)?.is_some() {
+        if trashed_path_for_tab(workspace, tab).is_ok_and(|path| path.is_file()) {
             remaining_deleted_ids.insert(tab.id.clone());
         }
     }
@@ -220,6 +245,8 @@ pub fn create_note_with_body(
         deleted: false,
         archived: false,
         archive_relative_path: None,
+        project_relative_path: None,
+        trash_file_name: None,
         open: true,
         last_opened_at: Some(now),
         system_title,
@@ -426,7 +453,7 @@ pub fn delete_note_to_trash(workspace: &Workspace, note_id: &str) -> Result<Note
     let mut tabs = load_tabs(workspace)?;
     let tab = find_note_tab_mut(&mut tabs, note_id)?;
     let source = note_path(workspace, tab)?;
-    let deleted_file_name = format!("deleted-{}-{}", now_ms()?, tab.file_name);
+    let deleted_file_name = unique_trash_file_name(workspace, &tab.file_name)?;
     let target = trash_file_path(workspace, &deleted_file_name)?;
 
     fs::rename(&source, &target).with_context(|| {
@@ -438,6 +465,7 @@ pub fn delete_note_to_trash(workspace: &Workspace, note_id: &str) -> Result<Note
     })?;
 
     tab.deleted = true;
+    tab.trash_file_name = Some(deleted_file_name);
     tab.open = false;
     tab.updated_at = next_updated_at(tab.updated_at)?;
     let deleted = tab.clone();
@@ -458,12 +486,15 @@ pub fn restore_note_from_trash(workspace: &Workspace, note_id: &str) -> Result<N
         .iter_mut()
         .find(|tab| tab.id == note_id && tab.deleted)
         .with_context(|| format!("trashed note not found: {note_id}"))?;
-    let source = trashed_note_path(workspace, &tab.file_name)?;
+    let source = trashed_path_for_tab(workspace, tab)?;
     let target = if tab.archived {
         archive_file_path(workspace, archive_relative_path(tab))?
     } else {
-        note_file_path(workspace, &tab.file_name)?
+        note_path(workspace, tab)?
     };
+    if target.exists() {
+        bail!("a note already exists at {}", target.display());
+    }
     if let Some(parent) = target.parent() {
         fs::create_dir_all(parent)
             .with_context(|| format!("failed to recreate note directory {}", parent.display()))?;
@@ -476,6 +507,7 @@ pub fn restore_note_from_trash(workspace: &Workspace, note_id: &str) -> Result<N
         )
     })?;
     tab.deleted = false;
+    tab.trash_file_name = None;
     tab.open = !tab.archived;
     tab.last_opened_at = if tab.archived { None } else { Some(now_ms()?) };
     tab.updated_at = next_updated_at(tab.updated_at)?;
@@ -540,7 +572,7 @@ pub fn note_file_path_for_id(workspace: &Workspace, note_id: &str) -> Result<std
         .find(|tab| tab.id == note_id)
         .with_context(|| format!("note not found: {note_id}"))?;
     if tab.deleted {
-        trashed_note_path(workspace, &tab.file_name)
+        trashed_path_for_tab(workspace, &tab)
     } else {
         note_path(workspace, &tab)
     }
@@ -561,7 +593,18 @@ pub fn archive_note_to_directory(
     let mut tabs = load_tabs(workspace)?;
     let tab = find_note_tab_mut(&mut tabs, note_id)?;
     let source = note_path(workspace, tab)?;
-    let relative_path = archive_target_relative_path(workspace, directory, &tab.file_name)?;
+    let relative_path = if directory.is_empty() {
+        tab.project_relative_path
+            .as_ref()
+            .map(|path| format!("projects/{path}"))
+    } else {
+        None
+    }
+    .unwrap_or(archive_target_relative_path(
+        workspace,
+        directory,
+        &tab.file_name,
+    )?);
     let target = archive_file_path(workspace, &relative_path)?;
     if let Some(parent) = target.parent() {
         fs::create_dir_all(parent)
@@ -593,7 +636,17 @@ pub fn unarchive_note(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
         bail!("note is not archived: {note_id}");
     }
     let source = archive_file_path(workspace, archive_relative_path(tab))?;
-    let target = note_file_path(workspace, &tab.file_name)?;
+    let target = if let Some(path) = &tab.project_relative_path {
+        crate::path::project_file_path(workspace, path)?
+    } else {
+        note_file_path(workspace, &tab.file_name)?
+    };
+    if target.exists() {
+        bail!("a note already exists at {}", target.display());
+    }
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent)?;
+    }
     fs::rename(&source, &target)
         .with_context(|| format!("failed to restore archived note {}", source.display()))?;
     tab.archived = false;
@@ -796,7 +849,7 @@ pub fn set_note_color(
     Ok(updated)
 }
 
-fn load_tabs(workspace: &Workspace) -> Result<TabsState> {
+pub(crate) fn load_tabs(workspace: &Workspace) -> Result<TabsState> {
     let contents = fs::read_to_string(&workspace.tabs_path)
         .with_context(|| format!("failed to read tabs file {}", workspace.tabs_path.display()))?;
     serde_json::from_str(&contents).with_context(|| {
@@ -807,7 +860,7 @@ fn load_tabs(workspace: &Workspace) -> Result<TabsState> {
     })
 }
 
-fn save_tabs(workspace: &Workspace, tabs: &TabsState) -> Result<()> {
+pub(crate) fn save_tabs(workspace: &Workspace, tabs: &TabsState) -> Result<()> {
     let contents = serde_json::to_string_pretty(tabs).context("failed to serialize tabs")?;
     write_atomic(&workspace.tabs_path, &contents)
 }
@@ -826,11 +879,11 @@ pub fn reconcile_note_metadata(workspace: &Workspace) -> Result<bool> {
 }
 
 fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result<bool> {
-    let mut changed = false;
+    let mut changed = crate::project::reconcile_project_locations(workspace, tabs)?;
 
     let mut stale_deleted_ids = HashSet::new();
     for tab in &tabs.tabs {
-        if tab.deleted && find_trashed_note_path(workspace, &tab.file_name)?.is_none() {
+        if tab.deleted && !trashed_path_for_tab(workspace, tab).is_ok_and(|path| path.is_file()) {
             stale_deleted_ids.insert(tab.id.clone());
         }
     }
@@ -839,6 +892,12 @@ fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result
         changed = true;
     }
 
+    let archive_paths = tabs
+        .tabs
+        .iter()
+        .filter(|tab| !tab.deleted && tab.archived)
+        .map(|tab| archive_relative_path(tab).to_owned())
+        .collect::<HashSet<_>>();
     for tab in &mut tabs.tabs {
         if tab.deleted {
             continue;
@@ -856,7 +915,7 @@ fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result
 
         let mut current_path = note_path(workspace, tab)?;
         if tab.archived && !current_path.is_file() && !tab.pinned {
-            if let Some(moved_path) = find_archive_note_path(workspace, &tab.file_name)? {
+            if let Some(moved_path) = find_archive_note_path(workspace, tab, &archive_paths)? {
                 tab.archive_relative_path =
                     Some(relative_path_string(&workspace.archive_dir, &moved_path)?);
                 tab.updated_at = next_updated_at(tab.updated_at)?;
@@ -864,7 +923,7 @@ fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result
                 changed = true;
             }
         }
-        if !current_path.is_file() && !tab.pinned {
+        if !current_path.is_file() && !tab.pinned && tab.project_relative_path.is_none() {
             let alternate = if tab.archived {
                 note_file_path(workspace, &tab.file_name)?
             } else {
@@ -900,6 +959,7 @@ fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result
         }
     }
 
+    changed |= crate::project::reconcile_project_notes(workspace, tabs)?;
     changed |= reconcile_orphaned_notes(workspace, tabs, false)?;
     changed |= reconcile_orphaned_notes(workspace, tabs, true)?;
     changed |= reconcile_orphaned_trashed_notes(workspace, tabs)?;
@@ -949,6 +1009,12 @@ fn reconcile_orphaned_trashed_notes(workspace: &Workspace, tabs: &mut TabsState)
         }
     }
 
+    candidates.retain(|(_, path)| {
+        !tabs.tabs.iter().any(|tab| {
+            tab.deleted
+                && trashed_path_for_tab(workspace, tab).is_ok_and(|existing| existing == *path)
+        })
+    });
     candidates.sort_by(|left, right| right.1.cmp(&left.1));
     let mut changed = false;
     for (file_name, path) in candidates {
@@ -992,6 +1058,11 @@ fn reconcile_orphaned_trashed_notes(workspace: &Workspace, tabs: &mut TabsState)
             deleted: true,
             archived: false,
             archive_relative_path: None,
+            project_relative_path: None,
+            trash_file_name: path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(str::to_owned),
             open: false,
             last_opened_at: None,
             system_title: false,
@@ -1027,7 +1098,11 @@ fn reconcile_orphaned_notes(
     let referenced = tabs
         .tabs
         .iter()
-        .filter(|tab| !tab.deleted && tab.archived == archived)
+        .filter(|tab| {
+            !tab.deleted
+                && tab.archived == archived
+                && (archived || tab.project_relative_path.is_none())
+        })
         .map(|tab| {
             if archived {
                 archive_relative_path(tab).to_owned()
@@ -1100,6 +1175,8 @@ fn reconcile_orphaned_notes(
             deleted: false,
             archived,
             archive_relative_path: archived.then_some(relative_path),
+            project_relative_path: None,
+            trash_file_name: None,
             open: !archived,
             last_opened_at: None,
             system_title: false,
@@ -1121,9 +1198,11 @@ fn existing_tabs(workspace: &Workspace, tabs: Vec<NoteTab>) -> Result<Vec<NoteTa
         .collect()
 }
 
-fn note_path(workspace: &Workspace, tab: &NoteTab) -> Result<std::path::PathBuf> {
+pub(crate) fn note_path(workspace: &Workspace, tab: &NoteTab) -> Result<std::path::PathBuf> {
     if tab.archived {
         archive_file_path(workspace, archive_relative_path(tab))
+    } else if let Some(path) = &tab.project_relative_path {
+        crate::path::project_file_path(workspace, path)
     } else {
         note_file_path(workspace, &tab.file_name)
     }
@@ -1148,7 +1227,7 @@ fn archive_target_relative_path(
     Ok(format!("{directory}/{file_name}"))
 }
 
-fn normalized_directory(relative_path: &str) -> Result<String> {
+pub(crate) fn normalized_directory(relative_path: &str) -> Result<String> {
     let normalized = Path::new(relative_path)
         .components()
         .map(|component| {
@@ -1168,7 +1247,7 @@ fn normalized_directory(relative_path: &str) -> Result<String> {
     Ok(normalized)
 }
 
-fn normalized_directory_name(name: &str) -> Result<String> {
+pub(crate) fn normalized_directory_name(name: &str) -> Result<String> {
     let normalized = normalized_directory(name.trim())?;
     if normalized.contains('/') {
         bail!("directory name must not contain path separators");
@@ -1226,10 +1305,10 @@ fn relocate_archive_directory(
     Ok(target_relative_path)
 }
 
-fn ensure_regular_directory(path: &Path, label: &str) -> Result<()> {
+pub(crate) fn ensure_regular_directory(path: &Path, label: &str) -> Result<()> {
     let metadata = fs::symlink_metadata(path)
         .with_context(|| format!("failed to inspect {label} directory {}", path.display()))?;
-    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+    if crate::path::metadata_is_link(&metadata) || !metadata.is_dir() {
         bail!(
             "{label} path is not a regular directory: {}",
             path.display()
@@ -1238,18 +1317,19 @@ fn ensure_regular_directory(path: &Path, label: &str) -> Result<()> {
     Ok(())
 }
 
-fn path_is_inside_directory(path: &str, directory: &str) -> bool {
+pub(crate) fn path_is_inside_directory(path: &str, directory: &str) -> bool {
     path.strip_prefix(directory)
         .is_some_and(|suffix| suffix.starts_with('/'))
 }
 
-fn replaced_directory_prefix(path: &str, source: &str, target: &str) -> Option<String> {
+pub(crate) fn replaced_directory_prefix(path: &str, source: &str, target: &str) -> Option<String> {
     path.strip_prefix(source)
         .filter(|suffix| suffix.starts_with('/'))
         .map(|suffix| format!("{target}{suffix}"))
 }
 
-fn regular_files_recursive_strict(directory: &Path) -> Result<Vec<std::path::PathBuf>> {
+pub(crate) fn regular_files_recursive_strict(directory: &Path) -> Result<Vec<std::path::PathBuf>> {
+    ensure_regular_directory(directory, "workspace")?;
     let mut files = Vec::new();
     let mut pending = vec![directory.to_path_buf()];
     while let Some(current) = pending.pop() {
@@ -1258,7 +1338,7 @@ fn regular_files_recursive_strict(directory: &Path) -> Result<Vec<std::path::Pat
         {
             let entry = entry?;
             let file_type = entry.file_type()?;
-            if file_type.is_symlink() {
+            if crate::path::metadata_is_link(&fs::symlink_metadata(entry.path())?) {
                 bail!(
                     "directory contains a symbolic link: {}",
                     entry.path().display()
@@ -1280,7 +1360,7 @@ fn regular_files_recursive_strict(directory: &Path) -> Result<Vec<std::path::Pat
     Ok(files)
 }
 
-fn relative_path_string(root: &Path, path: &Path) -> Result<String> {
+pub(crate) fn relative_path_string(root: &Path, path: &Path) -> Result<String> {
     Ok(path
         .strip_prefix(root)
         .with_context(|| format!("path is outside {}: {}", root.display(), path.display()))?
@@ -1293,7 +1373,8 @@ fn relative_path_string(root: &Path, path: &Path) -> Result<String> {
         .join("/"))
 }
 
-fn markdown_files_recursive(directory: &Path) -> Result<Vec<std::path::PathBuf>> {
+pub(crate) fn markdown_files_recursive(directory: &Path) -> Result<Vec<std::path::PathBuf>> {
+    ensure_regular_directory(directory, "workspace")?;
     let mut files = Vec::new();
     let mut pending = vec![directory.to_path_buf()];
     while let Some(current) = pending.pop() {
@@ -1302,7 +1383,7 @@ fn markdown_files_recursive(directory: &Path) -> Result<Vec<std::path::PathBuf>>
         {
             let entry = entry?;
             let file_type = entry.file_type()?;
-            if file_type.is_symlink() {
+            if crate::path::metadata_is_link(&fs::symlink_metadata(entry.path())?) {
                 continue;
             }
             if file_type.is_dir() {
@@ -1318,19 +1399,32 @@ fn markdown_files_recursive(directory: &Path) -> Result<Vec<std::path::PathBuf>>
 
 fn find_archive_note_path(
     workspace: &Workspace,
-    file_name: &str,
+    tab: &NoteTab,
+    owned: &HashSet<String>,
 ) -> Result<Option<std::path::PathBuf>> {
     let mut matches = markdown_files_recursive(&workspace.archive_dir)?
         .into_iter()
-        .filter(|path| path.file_name().and_then(|name| name.to_str()) == Some(file_name))
+        .filter(|path| {
+            path.file_name().and_then(|name| name.to_str()) == Some(&tab.file_name)
+                && relative_path_string(&workspace.archive_dir, path)
+                    .is_ok_and(|relative| !owned.contains(&relative))
+                && fs::read_to_string(path).is_ok_and(|content| {
+                    tab.content_revision
+                        .as_ref()
+                        .is_none_or(|revision| *revision == content_revision(&content))
+                })
+        })
         .collect::<Vec<_>>();
     if matches.len() > 1 {
-        bail!("multiple archived notes use the file name {file_name}");
+        bail!(
+            "multiple archived notes use the file name {}",
+            tab.file_name
+        );
     }
     Ok(matches.pop())
 }
 
-fn list_relative_directories(root: &Path) -> Result<Vec<String>> {
+pub(crate) fn list_relative_directories(root: &Path) -> Result<Vec<String>> {
     let mut directories = Vec::new();
     let mut pending = vec![root.to_path_buf()];
     while let Some(current) = pending.pop() {
@@ -1339,7 +1433,9 @@ fn list_relative_directories(root: &Path) -> Result<Vec<String>> {
         {
             let entry = entry?;
             let file_type = entry.file_type()?;
-            if file_type.is_dir() && !file_type.is_symlink() {
+            if file_type.is_dir()
+                && !crate::path::metadata_is_link(&fs::symlink_metadata(entry.path())?)
+            {
                 let path = entry.path();
                 directories.push(relative_path_string(root, &path)?);
                 pending.push(path);
@@ -1348,6 +1444,13 @@ fn list_relative_directories(root: &Path) -> Result<Vec<String>> {
     }
     directories.sort_by_key(|path| path.to_lowercase());
     Ok(directories)
+}
+
+fn trashed_path_for_tab(workspace: &Workspace, tab: &NoteTab) -> Result<std::path::PathBuf> {
+    if let Some(name) = &tab.trash_file_name {
+        return trash_file_path(workspace, name);
+    }
+    trashed_note_path(workspace, &tab.file_name)
 }
 
 fn trashed_note_path(workspace: &Workspace, file_name: &str) -> Result<std::path::PathBuf> {
@@ -1386,7 +1489,10 @@ fn find_note_tab(workspace: &Workspace, note_id: &str) -> Result<NoteTab> {
         .with_context(|| format!("note not found: {note_id}"))
 }
 
-fn find_note_tab_mut<'a>(tabs: &'a mut TabsState, note_id: &str) -> Result<&'a mut NoteTab> {
+pub(crate) fn find_note_tab_mut<'a>(
+    tabs: &'a mut TabsState,
+    note_id: &str,
+) -> Result<&'a mut NoteTab> {
     tabs.tabs
         .iter_mut()
         .find(|tab| tab.id == note_id && !tab.deleted)
@@ -1459,18 +1565,18 @@ fn unique_note_id(tabs: &TabsState, now: i64) -> String {
     }
 }
 
-fn now_ms() -> Result<i64> {
+pub(crate) fn now_ms() -> Result<i64> {
     let duration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .context("system time is before unix epoch")?;
     Ok(duration.as_millis() as i64)
 }
 
-fn next_updated_at(previous: i64) -> Result<i64> {
+pub(crate) fn next_updated_at(previous: i64) -> Result<i64> {
     Ok(now_ms()?.max(previous.saturating_add(1)))
 }
 
-fn content_revision(content: &str) -> String {
+pub(crate) fn content_revision(content: &str) -> String {
     format!("{:x}", Sha256::digest(content.as_bytes()))
 }
 
@@ -1486,7 +1592,7 @@ fn format_timestamp_separator(timestamp: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{create_prompt, init_workspace, trash_prompt};
+    use crate::{create_project_note, init_workspace};
 
     #[test]
     fn note_crud_round_trip_uses_markdown_files_and_tabs() {
@@ -1618,13 +1724,14 @@ mod tests {
         let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
         let created = create_note(&workspace, Some("Clear me".to_owned())).expect("create");
         delete_note_to_trash(&workspace, &created.id).expect("delete");
-        let prompt = create_prompt(&workspace, "Clear prompt").expect("create prompt");
-        fs::write(
-            workspace.prompts_dir.join(&prompt.file_name),
-            "Keep this prompt body.",
+        let project = create_project_note(
+            &workspace,
+            "Demo",
+            Some("Clear project".to_owned()),
+            "Keep this project body.",
         )
-        .expect("write prompt");
-        trash_prompt(&workspace, &prompt.id).expect("trash prompt");
+        .expect("project");
+        delete_note_to_trash(&workspace, &project.id).expect("trash project");
         let system_trash = temp_dir.path().join("system-trash");
         fs::create_dir(&system_trash).expect("system trash");
 
@@ -1651,27 +1758,14 @@ mod tests {
             .map(|entry| entry.expect("moved entry").path())
             .collect::<Vec<_>>();
         assert_eq!(moved_files.len(), 2);
-        let moved_note = moved_files
+        let bodies = moved_files
             .iter()
-            .find(|path| path.is_file())
-            .expect("moved note");
-        let moved_prompt_dir = moved_files
+            .map(|path| fs::read_to_string(path).unwrap())
+            .collect::<Vec<_>>();
+        assert!(bodies.iter().any(|body| body.contains("Clear me")));
+        assert!(bodies
             .iter()
-            .find(|path| path.is_dir())
-            .expect("moved prompt directory");
-        assert!(fs::read_to_string(moved_note)
-            .expect("preserved note")
-            .contains("Clear me"));
-        let moved_prompt = fs::read_dir(moved_prompt_dir)
-            .expect("prompt trash directory")
-            .next()
-            .expect("moved prompt entry")
-            .expect("moved prompt")
-            .path();
-        assert_eq!(
-            fs::read_to_string(moved_prompt).expect("preserved prompt"),
-            "Keep this prompt body."
-        );
+            .any(|body| body.contains("Keep this project body.")));
     }
 
     #[test]
@@ -2225,5 +2319,16 @@ mod tests {
                 .collect::<Vec<_>>(),
             ordered
         );
+    }
+}
+
+pub(crate) fn unique_trash_file_name(workspace: &Workspace, file_name: &str) -> Result<String> {
+    let mut timestamp = now_ms()?;
+    loop {
+        let name = format!("deleted-{timestamp}-{file_name}");
+        if !trash_file_path(workspace, &name)?.exists() {
+            return Ok(name);
+        }
+        timestamp += 1;
     }
 }

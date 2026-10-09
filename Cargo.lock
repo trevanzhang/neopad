@@ -2445,7 +2445,7 @@ dependencies = [
 
 [[package]]
 name = "neopad-app"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "keyring",
@@ -2472,7 +2472,7 @@ dependencies = [
 
 [[package]]
 name = "neopad-cli"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "neopad-core",
@@ -2482,7 +2482,7 @@ dependencies = [
 
 [[package]]
 name = "neopad-core"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "chrono",

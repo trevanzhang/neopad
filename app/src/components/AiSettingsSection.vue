@@ -16,8 +16,6 @@ const emit = defineEmits<{
   saveApiKey: [apiKey: string]
   clearApiKey: []
   testConnection: []
-  managePrompts: []
-  openPromptsFolder: []
 }>()
 
 const apiKeyDraft = ref('')
@@ -43,14 +41,6 @@ function saveKey() {
     </label>
   </fieldset>
 
-  <fieldset class="settings-fieldset ai-settings-section">
-    <legend>{{ messages.promptLibrarySection }}</legend>
-    <p class="settings-description">{{ messages.promptLibraryDescription }}</p>
-    <div class="ai-test-row">
-      <button type="button" @click="emit('managePrompts')">{{ messages.managePrompts }}</button>
-      <button type="button" @click="emit('openPromptsFolder')">{{ messages.openPromptsFolder }}</button>
-    </div>
-  </fieldset>
 
   <fieldset class="settings-fieldset ai-settings-section">
     <label class="ai-settings-field">

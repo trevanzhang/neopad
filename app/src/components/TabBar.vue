@@ -4,13 +4,16 @@ import type { AppMessages } from '../lib/i18n'
 import type { NoteExportDestination } from '../composables/useNoteExport'
 import type { NoteExportFormat } from '../lib/note-export'
 import type { NoteTab } from '../types/note'
-import { isExternalTab, isNoteTab, isPromptTab } from '../lib/document-tab'
+import { isExternalTab, isNoteTab } from '../lib/document-tab'
 
 const props = defineProps<{
   tabs: NoteTab[]
   activeTabId: string
   exportingNote: boolean
   aiRenamingTabId: string | null
+  projectDirectories: string[]
+  projectMenuLoading: boolean
+  projectMenuFailed: boolean
   messages: AppMessages['tabs']
 }>()
 
@@ -23,6 +26,8 @@ const emit = defineEmits<{
   closeTab: [tabId: string]
   archiveTab: [tabId: string]
   unarchiveTab: [tabId: string]
+  requestProjects: []
+  moveTabToProject: [tabId: string, directory: string]
   revealTab: [tabId: string]
   copyTabPath: [tabId: string]
   exportTab: [tabId: string, format: NoteExportFormat, destination?: NoteExportDestination]
@@ -36,6 +41,7 @@ const emit = defineEmits<{
 
 const contextMenu = ref<{ tabId: string; x: number; y: number; openSubmenuLeft: boolean } | null>(null)
 const contextMenuElement = ref<HTMLElement | null>(null)
+const projectSubmenuHeight = ref(280)
 const colors = ['#F4B8B8', '#F6D58A', '#BFE3A4', '#A9DCEB', '#BFC7F3', '#DCB8ED']
 const draggedTabId = ref<string | null>(null)
 const dragTargetTabId = ref<string | null>(null)
@@ -52,13 +58,29 @@ onBeforeUnmount(() => {
 function openContextMenu(event: MouseEvent, tab: NoteTab) {
   event.preventDefault()
   emit('selectTab', tab.id)
+  if (canMoveToProject(tab)) emit('requestProjects')
   contextMenu.value = {
     tabId: tab.id,
     x: Math.max(4, Math.min(event.clientX, window.innerWidth - 210)),
     y: Math.max(4, Math.min(event.clientY, window.innerHeight - 305)),
     openSubmenuLeft: event.clientX + 520 > window.innerWidth,
   }
-  void nextTick(() => contextMenuElement.value?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus())
+  void nextTick(async () => {
+    const menu = contextMenuElement.value
+    if (!menu || !contextMenu.value) return
+    const bounds = menu.getBoundingClientRect()
+    contextMenu.value.x = Math.max(4, Math.min(contextMenu.value.x, window.innerWidth - bounds.width - 4))
+    contextMenu.value.y = Math.max(4, Math.min(contextMenu.value.y, window.innerHeight - bounds.height - 4))
+    contextMenu.value.openSubmenuLeft = contextMenu.value.x + bounds.width + 310 > window.innerWidth
+    if (contextMenu.value.openSubmenuLeft && canMoveToProject(tab)) {
+      const submenuWidth = Math.min(300, window.innerWidth - 225)
+      contextMenu.value.x = Math.min(window.innerWidth - bounds.width - 4, Math.max(contextMenu.value.x, submenuWidth + 4))
+    }
+    await nextTick()
+    const projectRow = menu.querySelector('.tab-project-subroot')?.getBoundingClientRect()
+    if (projectRow) projectSubmenuHeight.value = Math.max(29, Math.min(280, window.innerHeight - projectRow.top - 8))
+    menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+  })
 }
 
 function closeContextMenu(event?: Event) {
@@ -95,6 +117,18 @@ function runExportContextAction(
   if (!tabId) return
   contextMenu.value = null
   emit('exportTab', tabId, format, destination)
+}
+
+function moveToProject(directory: string) {
+  const tab = contextTab()
+  if (!tab || !canMoveToProject(tab) || props.projectMenuLoading || props.projectMenuFailed) return
+  contextMenu.value = null
+  emit('moveTabToProject', tab.id, directory)
+}
+
+function isCurrentProject(directory: string) {
+  const tab = contextTab()
+  return !tab?.archived && tab?.projectRelativePath?.slice(0, tab.projectRelativePath.lastIndexOf('/')) === directory
 }
 
 function handleContextMenuKeydown(event: KeyboardEvent) {
@@ -136,7 +170,6 @@ function archiveTabWithShortcut(event: KeyboardEvent, tabId: string) {
   event.stopPropagation()
   contextMenu.value = null
   const tab = props.tabs.find((item) => item.id === tabId)
-  if (isPromptTab(tab)) return
   if (tab?.archived) emit('unarchiveTab', tabId)
   else emit('archiveTab', tabId)
 }
@@ -176,8 +209,11 @@ function canAiRename(tab: NoteTab | undefined) {
   )
 }
 
+function canMoveToProject(tab: NoteTab | undefined) {
+  return Boolean(tab && isNoteTab(tab) && !tab.pinned && !tab.deleted && tab.id !== 'inbox' && tab.id !== 'clipboard')
+}
+
 function tabTitle(tab: NoteTab) {
-  if (isPromptTab(tab)) return `prompts/${tab.fileName}`
   if (tab.archived) return `${props.messages.archive}: ${tab.title}`
   return tab.externalPath ?? tab.title
 }
@@ -249,7 +285,6 @@ function endTabDrag() {
       @keydown.ctrl.w="closeTabWithShortcut($event, tab.id)"
     >
       <span v-if="isExternalTab(tab)" class="tab-external-icon" aria-hidden="true" />
-      <span v-else-if="isPromptTab(tab)" class="tab-prompt-icon" aria-hidden="true">P</span>
       <svg v-else-if="tab.archived" class="tab-archive-icon" aria-hidden="true" viewBox="0 0 16 16"><path d="M1.75 5.25h12.5v8.5H1.75zM1.25 2.5h13.5v2.75H1.25zM6.25 8.75h3.5" /></svg>
       <span class="tab-label">{{ tab.title }}</span>
     </button>
@@ -317,12 +352,51 @@ function endTabDrag() {
         v-else
         type="button"
         role="menuitem"
-        :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard' || isPromptTab(contextTab())"
+        :disabled="contextMenu.tabId === 'inbox' || contextMenu.tabId === 'clipboard'"
         @click="runContextAction('archive')"
       >
         <span>{{ messages.archive }}</span>
         <span class="tab-context-shortcut">{{ messages.f12 }}</span>
       </button>
+      <div class="tab-context-subroot tab-project-subroot">
+        <button type="button" role="menuitem" aria-haspopup="menu" :disabled="!canMoveToProject(contextTab())">
+          <span>{{ messages.moveToProject }}</span>
+          <span class="menu-arrow">&rsaquo;</span>
+        </button>
+        <div
+          v-if="canMoveToProject(contextTab())"
+          class="tab-context-submenu tab-project-submenu"
+          :class="{ 'open-left': contextMenu.openSubmenuLeft }"
+          :style="{ maxHeight: `${projectSubmenuHeight}px` }"
+          role="menu"
+          :aria-label="messages.moveToProject"
+          :aria-busy="projectMenuLoading"
+        >
+          <button
+            v-if="projectMenuLoading || projectMenuFailed || !projectDirectories.length"
+            type="button"
+            role="menuitem"
+            :title="projectMenuLoading ? messages.loadingProjects : projectMenuFailed ? messages.loadProjectsFailed : messages.noProjects"
+            disabled
+          >
+            <span class="tab-project-path">{{ projectMenuLoading ? messages.loadingProjects : projectMenuFailed ? messages.loadProjectsFailed : messages.noProjects }}</span>
+          </button>
+          <template v-else>
+            <button
+              v-for="directory in projectDirectories"
+              :key="directory"
+              type="button"
+              role="menuitem"
+              :title="directory"
+              :disabled="isCurrentProject(directory)"
+              @click="moveToProject(directory)"
+            >
+              <span class="tab-project-path">{{ directory }}</span>
+              <span v-if="isCurrentProject(directory)" aria-hidden="true">✓</span>
+            </button>
+          </template>
+        </div>
+      </div>
       <button
         type="button"
         role="menuitem"

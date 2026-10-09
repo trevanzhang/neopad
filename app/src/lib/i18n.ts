@@ -13,6 +13,10 @@ export type AppMessages = {
     delete: string
     archive: string
     restore: string
+    moveToProject: string
+    loadingProjects: string
+    loadProjectsFailed: string
+    noProjects: string
     close: string
     color: string
     defaultColor: string
@@ -291,10 +295,6 @@ export type AppMessages = {
     testingConnection: string
     connectionOk: string
     aiPrivacy: string
-    promptLibrarySection: string
-    promptLibraryDescription: string
-    managePrompts: string
-    openPromptsFolder: string
   }
   ai: {
     title: string
@@ -315,13 +315,6 @@ export type AppMessages = {
     copied: string
     clearChat: string
     replaceSelection: string
-    promptLibrary: string
-    searchPrompts: string
-    refreshPrompts: string
-    loadingPrompts: string
-    noPrompts: string
-    openPromptsFolder: string
-    managePrompts: string
     noteScope: string
     libraryScope: string
     noteScopeHint: string
@@ -400,22 +393,21 @@ export type AppMessages = {
   library: {
     title: string
     notes: string
-    prompts: string
+    projects: string
     archive: string
     trash: string
     emptyNotes: string
-    emptyPrompts: string
+    emptyProjects: string
     emptyArchive: string
     emptyTrash: string
     newNote: string
-    newPrompt: string
+    newProject: string
     newFolder: string
     renameFolderTitle: string
     deleteFolderTitle: string
     deleteFolderMessage: string
     deleteFolderConfirm: string
-    newPromptTitle: string
-    duplicatePromptTitle: string
+    newProjectTitle: string
     copySuffix: string
     refresh: string
     restore: string
@@ -495,6 +487,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       delete: 'Delete',
       archive: 'Archive',
       restore: 'Restore from Archive',
+      moveToProject: 'Move to project',
+      loadingProjects: 'Loading projects...',
+      loadProjectsFailed: 'Could not load projects',
+      noProjects: 'No projects. Press F4 to create one.',
       close: 'Close',
       color: 'Tab color',
       defaultColor: 'Default',
@@ -791,10 +787,6 @@ export const messages: Record<AppLanguage, AppMessages> = {
       testingConnection: 'Testing...',
       connectionOk: 'Connection succeeded',
       aiPrivacy: 'NeoPad sends note text only when you send an AI request. All-notes scope adds only locally matched excerpts. API keys are not stored in config.json.',
-      promptLibrarySection: 'Prompt library',
-      promptLibraryDescription: 'Create and edit local Markdown prompts in the F4 file browser.',
-      managePrompts: 'Manage prompts',
-      openPromptsFolder: 'Open prompts folder',
     },
     ai: {
       title: 'AI chat',
@@ -815,13 +807,6 @@ export const messages: Record<AppLanguage, AppMessages> = {
       copied: 'Copied',
       clearChat: 'Clear',
       replaceSelection: 'Replace selection',
-      promptLibrary: 'Prompt library',
-      searchPrompts: 'Search prompts',
-      refreshPrompts: 'Refresh prompts',
-      loadingPrompts: 'Loading prompts...',
-      noPrompts: 'No Markdown prompts yet',
-      openPromptsFolder: 'Open prompts folder',
-      managePrompts: 'Manage prompts in Files',
       noteScope: 'Current note',
       libraryScope: 'Full access',
       noteScopeHint: 'Use the current note as context',
@@ -900,22 +885,21 @@ export const messages: Record<AppLanguage, AppMessages> = {
     library: {
       title: 'FILES',
       notes: 'Notes',
-      prompts: 'Prompts',
+      projects: 'Projects',
       archive: 'Archive',
       trash: 'Trash',
       emptyNotes: 'No notes yet',
-      emptyPrompts: 'No prompts yet',
+      emptyProjects: 'No project notes yet',
       emptyArchive: 'No archived notes',
       emptyTrash: 'Trash is empty',
       newNote: 'New note',
-      newPrompt: 'New prompt',
+      newProject: 'New project note',
       newFolder: 'New folder',
       renameFolderTitle: 'Rename folder',
       deleteFolderTitle: 'Delete folder?',
       deleteFolderMessage: 'Delete "{name}"? Files inside it will be moved to NeoPad Trash.',
       deleteFolderConfirm: 'Delete folder',
-      newPromptTitle: 'Create prompt',
-      duplicatePromptTitle: 'Duplicate prompt',
+      newProjectTitle: 'Create project note',
       copySuffix: 'copy',
       refresh: 'Refresh files',
       restore: 'Restore',
@@ -928,7 +912,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       clearTrashMessage: 'Move everything in NeoPad Trash to the system Recycle Bin or Trash? You can restore it there.',
       clearTrashConfirm: 'Empty Trash',
       revealInFileManager: 'Show in Explorer',
-      help: 'Browse notes, prompts, archived notes, and Trash. Ctrl-click selects individual files; Shift-click selects a range. Right-click to manage the selection.',
+      help: 'Browse notes, projects, archived notes, and Trash. Ctrl-click selects individual files; Shift-click selects a range. Right-click to manage the selection.',
     },
     recovery: {
       title: 'Recover unsaved note?',
@@ -993,6 +977,10 @@ export const messages: Record<AppLanguage, AppMessages> = {
       delete: '\u5220\u9664',
       archive: '\u5f52\u6863',
       restore: '\u4ece\u5f52\u6863\u4e2d\u6062\u590d',
+      moveToProject: '移动到项目',
+      loadingProjects: '正在加载项目...',
+      loadProjectsFailed: '项目加载失败',
+      noProjects: '暂无项目，按 F4 新建',
       close: '\u5173\u95ed',
       color: '\u4fee\u6539\u6807\u7b7e\u9875\u989c\u8272',
       defaultColor: '\u9ed8\u8ba4\u989c\u8272',
@@ -1289,10 +1277,6 @@ export const messages: Record<AppLanguage, AppMessages> = {
       testingConnection: '测试中...',
       connectionOk: '连接成功',
       aiPrivacy: '仅在主动发送 AI 请求时发送笔记内容；全部笔记范围只会附加本地匹配的片段。API Key 不会写入 config.json。',
-      promptLibrarySection: '提示词库',
-      promptLibraryDescription: '在 F4 文件浏览器中创建和编辑本地 Markdown 提示词。',
-      managePrompts: '管理提示词',
-      openPromptsFolder: '打开提示词目录',
     },
     ai: {
       title: 'AI 对话',
@@ -1313,13 +1297,6 @@ export const messages: Record<AppLanguage, AppMessages> = {
       copied: '已复制',
       clearChat: '清空',
       replaceSelection: '替换选区',
-      promptLibrary: '提示词库',
-      searchPrompts: '搜索提示词',
-      refreshPrompts: '刷新提示词',
-      loadingPrompts: '正在读取提示词……',
-      noPrompts: '还没有 Markdown 提示词',
-      openPromptsFolder: '打开提示词目录',
-      managePrompts: '在文件浏览器中管理提示词',
       noteScope: '当前笔记',
       libraryScope: '完全访问',
       noteScopeHint: '使用当前笔记作为上下文',
@@ -1398,22 +1375,21 @@ export const messages: Record<AppLanguage, AppMessages> = {
     library: {
       title: '\u6587\u4ef6',
       notes: '\u7b14\u8bb0',
-      prompts: '\u63d0\u793a\u8bcd',
+      projects: '项目',
       archive: '\u5b58\u6863',
       trash: '\u56de\u6536\u7ad9',
       emptyNotes: '\u6682\u65e0\u7b14\u8bb0',
-      emptyPrompts: '\u6682\u65e0\u63d0\u793a\u8bcd',
+      emptyProjects: '暂无项目笔记',
       emptyArchive: '\u6682\u65e0\u5b58\u6863\u7b14\u8bb0',
       emptyTrash: '\u56de\u6536\u7ad9\u4e3a\u7a7a',
       newNote: '\u65b0\u5efa\u7b14\u8bb0',
-      newPrompt: '\u65b0\u5efa\u63d0\u793a\u8bcd',
+      newProject: '新建项目笔记',
       newFolder: '\u65b0\u5efa\u76ee\u5f55',
       renameFolderTitle: '\u91cd\u547d\u540d\u76ee\u5f55',
       deleteFolderTitle: '\u5220\u9664\u76ee\u5f55\uff1f',
       deleteFolderMessage: '\u786e\u5b9a\u5220\u9664\u201c{name}\u201d\u5417\uff1f\u5176\u4e2d\u7684\u6587\u4ef6\u5c06\u79fb\u81f3 NeoPad \u56de\u6536\u7ad9\u3002',
       deleteFolderConfirm: '\u5220\u9664\u76ee\u5f55',
-      newPromptTitle: '\u521b\u5efa\u63d0\u793a\u8bcd',
-      duplicatePromptTitle: '\u521b\u5efa\u63d0\u793a\u8bcd\u526f\u672c',
+      newProjectTitle: '新建项目笔记',
       copySuffix: '\u526f\u672c',
       refresh: '\u5237\u65b0\u6587\u4ef6',
       restore: '\u6062\u590d',
@@ -1426,7 +1402,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       clearTrashMessage: '\u8981\u5c06 NeoPad \u56de\u6536\u7ad9\u4e2d\u7684\u5168\u90e8\u5185\u5bb9\u79fb\u81f3\u7cfb\u7edf\u56de\u6536\u7ad9\u5417\uff1f\u4ecd\u53ef\u4ece\u7cfb\u7edf\u56de\u6536\u7ad9\u6062\u590d\u3002',
       clearTrashConfirm: '\u6e05\u7a7a\u56de\u6536\u7ad9',
       revealInFileManager: '\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u663e\u793a',
-      help: '\u6d4f\u89c8\u7b14\u8bb0\u3001\u63d0\u793a\u8bcd\u3001\u5b58\u6863\u548c\u56de\u6536\u7ad9\u3002Ctrl+\u70b9\u51fb\u53ef\u591a\u9009\uff0cShift+\u70b9\u51fb\u53ef\u8fde\u7eed\u9009\u4e2d\uff1b\u53f3\u952e\u7ba1\u7406\u5f53\u524d\u9009\u533a\u3002',
+      help: '\u6d4f\u89c8\u7b14\u8bb0\u3001项目\u3001\u5b58\u6863\u548c\u56de\u6536\u7ad9\u3002Ctrl+\u70b9\u51fb\u53ef\u591a\u9009\uff0cShift+\u70b9\u51fb\u53ef\u8fde\u7eed\u9009\u4e2d\uff1b\u53f3\u952e\u7ba1\u7406\u5f53\u524d\u9009\u533a\u3002',
     },
     recovery: {
       title: '\u6062\u590d\u672a\u4fdd\u5b58\u7684\u7b14\u8bb0\uff1f',

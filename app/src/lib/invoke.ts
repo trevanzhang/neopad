@@ -13,8 +13,6 @@ import type {
   AiConfig,
   AiConversationMessage,
   AiGenerateResponse,
-  AiPromptEntry,
-  AiTrashedPromptEntry,
 } from '../types/ai'
 
 export interface UiConfig {
@@ -103,7 +101,7 @@ export function testAiConnection(): Promise<void> {
 export function generateAiText(
   context: string,
   messages: AiConversationMessage[],
-  options: { searchLibrary: boolean; currentNoteId: string; prompt?: string; maxTokens?: number },
+  options: { searchLibrary: boolean; currentNoteId: string; maxTokens?: number },
 ): Promise<AiGenerateResponse> {
   return invoke('generate_ai_text_command', {
     request: {
@@ -111,86 +109,9 @@ export function generateAiText(
       messages,
       searchLibrary: options.searchLibrary,
       currentNoteId: options.currentNoteId,
-      prompt: options.prompt,
       maxTokens: options.maxTokens,
     },
   })
-}
-
-export function listAiPrompts(): Promise<AiPromptEntry[]> {
-  return invoke('list_ai_prompts_command')
-}
-
-export function listAiPromptFiles(): Promise<AiPromptEntry[]> {
-  return invoke('list_ai_prompt_files_command')
-}
-
-export function listAiTrashedPrompts(): Promise<AiTrashedPromptEntry[]> {
-  return invoke('list_ai_trashed_prompts_command')
-}
-
-export function readAiPrompt(promptId: string): Promise<AiPromptEntry> {
-  return invoke('read_ai_prompt_command', { promptId })
-}
-
-export function createAiPrompt(name: string, directory?: string): Promise<AiPromptEntry> {
-  return invoke('create_ai_prompt_command', { name, directory })
-}
-
-export function listAiPromptDirectories(): Promise<string[]> {
-  return invoke('list_ai_prompt_directories_command')
-}
-
-export function createAiPromptDirectory(relativePath: string): Promise<string> {
-  return invoke('create_ai_prompt_directory_command', { relativePath })
-}
-
-export function moveAiPromptDirectory(relativePath: string, targetParent: string): Promise<string> {
-  return invoke('move_ai_prompt_directory_command', { relativePath, targetParent })
-}
-
-export function renameAiPromptDirectory(relativePath: string, newName: string): Promise<string> {
-  return invoke('rename_ai_prompt_directory_command', { relativePath, newName })
-}
-
-export function deleteAiPromptDirectory(relativePath: string): Promise<number> {
-  return invoke('delete_ai_prompt_directory_command', { relativePath })
-}
-
-export function moveAiPrompt(promptId: string, directory: string): Promise<AiPromptEntry> {
-  return invoke('move_ai_prompt_command', { promptId, directory })
-}
-
-export function writeAiPrompt(
-  promptId: string,
-  content: string,
-  expectedRevision: string,
-): Promise<AiPromptEntry> {
-  return invoke('write_ai_prompt_command', { promptId, content, expectedRevision })
-}
-
-export function renameAiPrompt(promptId: string, name: string): Promise<AiPromptEntry> {
-  return invoke('rename_ai_prompt_command', { promptId, name })
-}
-
-export function trashAiPrompt(promptId: string): Promise<AiTrashedPromptEntry> {
-  return invoke('trash_ai_prompt_command', { promptId })
-}
-
-export function restoreAiPrompt(trashedPromptId: string): Promise<AiPromptEntry> {
-  return invoke('restore_ai_prompt_command', { trashedPromptId })
-}
-
-export function revealAiPrompt(promptId: string): Promise<void> {
-  return invoke('reveal_ai_prompt_command', { promptId })
-}
-
-export function copyAiPromptPath(promptId: string): Promise<void> {
-  return invoke('copy_ai_prompt_path_command', { promptId })
-}
-
-export function openAiPromptsFolder(): Promise<void> {
-  return invoke('open_ai_prompts_folder_command')
 }
 
 export function listNotes(): Promise<NoteTab[]> {
@@ -498,4 +419,40 @@ export function getAgentToolsStatus(): Promise<AgentToolsStatus> {
 
 export function installAgentCli(): Promise<AgentToolsStatus> {
   return invoke('install_agent_cli_command')
+}
+
+export function listProjectDirectories(): Promise<string[]> {
+  return invoke('list_project_directories_command')
+}
+
+export function createProjectDirectory(relativePath: string): Promise<string> {
+  return invoke('create_project_directory_command', { relativePath })
+}
+
+export function moveProjectDirectory(relativePath: string, targetParent: string): Promise<string> {
+  return invoke('move_project_directory_command', { relativePath, targetParent })
+}
+
+export function renameProjectDirectory(relativePath: string, newName: string): Promise<string> {
+  return invoke('rename_project_directory_command', { relativePath, newName })
+}
+
+export function archiveProjectDirectory(relativePath: string): Promise<string> {
+  return invoke('archive_project_directory_command', { relativePath })
+}
+
+export function deleteProjectDirectory(relativePath: string): Promise<number> {
+  return invoke('delete_project_directory_command', { relativePath })
+}
+
+export function moveNoteToProject(noteId: string, directory: string): Promise<NoteTab> {
+  return invoke('move_note_to_project_command', { noteId, directory })
+}
+
+export function moveNoteToCapture(noteId: string): Promise<NoteTab> {
+  return invoke('move_note_to_capture_command', { noteId })
+}
+
+export function createProjectNote(directory: string, title?: string): Promise<NoteContent> {
+  return invoke('create_project_note_command', { directory, title })
 }

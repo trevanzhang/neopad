@@ -1,4 +1,4 @@
-use crate::{AppConfig, PromptState, TabsState};
+use crate::{AppConfig, TabsState};
 use anyhow::{Context, Result};
 use std::fs;
 use std::io::Write;
@@ -12,10 +12,9 @@ pub struct Workspace {
     pub meta_dir: PathBuf,
     pub archive_dir: PathBuf,
     pub trash_dir: PathBuf,
-    pub prompts_dir: PathBuf,
+    pub projects_dir: PathBuf,
     pub config_path: PathBuf,
     pub tabs_path: PathBuf,
-    pub prompts_meta_path: PathBuf,
     pub reminders_path: PathBuf,
 }
 
@@ -26,10 +25,9 @@ impl Workspace {
             meta_dir: root.join("meta"),
             archive_dir: root.join("archive"),
             trash_dir: root.join("trash"),
-            prompts_dir: root.join("prompts"),
+            projects_dir: root.join("projects"),
             config_path: root.join("config.json"),
             tabs_path: root.join("meta").join("tabs.json"),
-            prompts_meta_path: root.join("meta").join("prompts.json"),
             reminders_path: root.join("meta").join("reminders.json"),
             root,
         }
@@ -60,6 +58,7 @@ pub fn init_workspace(path: Option<PathBuf>) -> Result<Workspace> {
     })?;
     let _lock = crate::lock_workspace_for_write(&workspace)?;
     ensure_workspace_layout(&workspace)?;
+    crate::project::migrate_legacy_prompts(&workspace)?;
     Ok(workspace)
 }
 
@@ -88,15 +87,14 @@ pub fn ensure_workspace_layout(workspace: &Workspace) -> Result<()> {
             workspace.trash_dir.display()
         )
     })?;
-    fs::create_dir_all(&workspace.prompts_dir).with_context(|| {
+    fs::create_dir_all(&workspace.projects_dir).with_context(|| {
         format!(
-            "failed to create prompts directory at {}",
-            workspace.prompts_dir.display()
+            "failed to create projects directory at {}",
+            workspace.projects_dir.display()
         )
     })?;
     write_file_if_missing(&workspace.config_path, &default_config_json(workspace)?)?;
     write_file_if_missing(&workspace.tabs_path, &default_tabs_json()?)?;
-    write_file_if_missing(&workspace.prompts_meta_path, &default_prompts_json()?)?;
     write_file_if_missing(&workspace.reminders_path, default_reminders_json())?;
     write_file_if_missing(&workspace.inbox_path(), "# Inbox\n\n")?;
     write_file_if_missing(&workspace.clipboard_path(), "# Clipboard\n\n")?;
@@ -139,11 +137,6 @@ fn default_tabs_json() -> Result<String> {
     serde_json::to_string_pretty(&tabs).context("failed to serialize default tabs")
 }
 
-fn default_prompts_json() -> Result<String> {
-    serde_json::to_string_pretty(&PromptState::default())
-        .context("failed to serialize default prompt metadata")
-}
-
 fn default_reminders_json() -> &'static str {
     "{\n  \"version\": 1,\n  \"delivered\": []\n}"
 }
@@ -181,7 +174,7 @@ mod tests {
         assert!(workspace.meta_dir.is_dir());
         assert!(workspace.archive_dir.is_dir());
         assert!(workspace.trash_dir.is_dir());
-        assert!(workspace.prompts_dir.is_dir());
+        assert!(workspace.projects_dir.is_dir());
         assert_eq!(
             fs::read_to_string(workspace.inbox_path()).expect("inbox"),
             "# Inbox\n\n"
@@ -216,7 +209,8 @@ mod tests {
         assert_eq!(tabs.tabs[1].file_name, "clipboard.md");
         assert!(tabs.tabs[1].pinned);
         assert!(workspace.reminders_path.is_file());
-        assert!(workspace.prompts_meta_path.is_file());
+        assert!(!workspace.meta_dir.join("prompts.json").exists());
+        assert!(!workspace.root.join("prompts").exists());
     }
 
     #[test]

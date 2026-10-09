@@ -8,11 +8,9 @@ import SearchPanel from './components/SearchPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import TabBar from './components/TabBar.vue'
 import {
-  copyAiPromptPath,
-  createAiPrompt,
-  createAiPromptDirectory,
+  listProjectDirectories, createProjectDirectory, moveProjectDirectory, renameProjectDirectory, deleteProjectDirectory,
+  archiveProjectDirectory, moveNoteToProject, moveNoteToCapture, createProjectNote,
   createArchiveDirectory,
-  deleteAiPromptDirectory,
   deleteArchiveDirectory,
   createNote,
   clearTrash,
@@ -24,10 +22,7 @@ import {
   getShortcutWarnings,
   getWorkspace,
   listLibraryNotes,
-  listAiPromptFiles,
-  listAiPromptDirectories,
   listArchiveDirectories,
-  listAiTrashedPrompts,
   listTrashedNotes,
   listNotes,
   listRecentNotes,
@@ -37,7 +32,6 @@ import {
   openNote,
   openExternalMarkdown,
   openExternalMarkdownPaths,
-  readAiPrompt,
   saveMarkdownFile,
   readExternalMarkdown,
   restoreRecoverableNoteWrite,
@@ -47,20 +41,12 @@ import {
   toggleMainWindowMaximize,
   toggleAlwaysOnTop,
   restoreNoteFromTrash,
-  restoreAiPrompt,
-  revealAiPrompt,
-  renameAiPrompt,
   renameNoteWithHeading,
-  moveAiPrompt,
-  moveAiPromptDirectory,
   moveArchiveDirectory,
   moveArchivedNote,
-  renameAiPromptDirectory,
   renameArchiveDirectory,
   archiveNoteToDirectory,
   reorderOpenNotes,
-  trashAiPrompt,
-  writeAiPrompt,
   writeNote,
 } from './lib/invoke'
 import { messages } from './lib/i18n'
@@ -87,7 +73,7 @@ import { createAiInlinePlan, type AiInlinePlan } from './lib/ai-inline-command'
 import { normalizeAiNoteTitle } from './lib/ai-title'
 import { isCurrentAiRequest } from './lib/ai-request-state'
 import { initialJsonSetting } from './lib/preferences'
-import { isExternalTab, isNoteTab, isPromptTab, promptTabId } from './lib/document-tab'
+import { isExternalTab, isNoteTab } from './lib/document-tab'
 import type { NoteTab, Reminder, SearchResult } from './types/note'
 import type {
   AiChatState,
@@ -96,8 +82,6 @@ import type {
   AiConversationMessage,
   AiInlineCommandName,
   AiPanelSession,
-  AiPromptEntry,
-  AiTrashedPromptEntry,
 } from './types/ai'
 import {
   nextEditorMode,
@@ -213,10 +197,11 @@ const workspacePath = ref('~/.neopad')
 const noteLibraryOpen = ref(false)
 const libraryNotes = ref<NoteTab[]>([])
 const trashedNotes = ref<NoteTab[]>([])
-const libraryPrompts = ref<AiPromptEntry[]>([])
-const trashedPrompts = ref<AiTrashedPromptEntry[]>([])
+const projectNotes = ref<NoteTab[]>([])
+const projectDirectories = ref<string[]>([])
+const projectMenuLoading = ref(false)
+const projectMenuFailed = ref(false)
 const archiveDirectories = ref<string[]>([])
-const promptDirectories = ref<string[]>([])
 const libraryLoading = ref(false)
 const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value) ?? tabs.value[0])
 const t = computed(() => messages[language.value])
@@ -238,11 +223,6 @@ const {
   statusMessage,
   failedMessage: () => t.value.status.failed,
   rememberExternalDocument,
-  onPromptSaved: (saved) => {
-    const index = libraryPrompts.value.findIndex((prompt) => prompt.id === saved.id)
-    if (index === -1) libraryPrompts.value.push(saved)
-    else libraryPrompts.value[index] = saved
-  },
 })
 const { exportingNote, exportNote } = useNoteExport({
   tabs,
@@ -301,15 +281,11 @@ const {
   aiError,
   aiTesting,
   aiTestSucceeded,
-  aiPrompts,
-  aiPromptsLoading,
   loadAiConfig,
   updateAiConfig,
   storeApiKey,
   removeApiKey,
   checkConnection,
-  loadAiPrompts,
-  revealAiPromptsFolder,
   requestAiText,
   disposeAiAssistant,
 } = useAiAssistant()
@@ -367,8 +343,6 @@ const {
   nextNoteLoadGeneration, isCurrentNoteLoad, loadActiveNote, setContentFromLoad,
   requestInput, focusEditor: focusEditorAfterPageAction,
   refreshRecentNotes, refreshArchivedNotes, refreshLibrary: refreshNoteLibrary, upsertTab,
-  onPromptRenamed: reconcilePromptRename,
-  onPromptTrashed: reconcilePromptTrash,
 })
 const {
   registerNativeEventListeners,
@@ -543,7 +517,7 @@ async function refreshWorkspaceNotes() {
     // Keep the revision belonging to the displayed content until the next read.
     const notes = loaded.map((tab) => tab.id === id && active ? { ...tab, updatedAt: active.updatedAt } : tab)
     const incoming = new Map(notes.map((tab) => [tab.id, tab]))
-    // Preserve interleaved prompt/external tabs and the user's current tab order.
+    // Preserve external tabs and the user's current tab order.
     const current = tabs.value.flatMap((tab) => {
       if (!isNoteTab(tab)) return [tab]
       const updated = incoming.get(tab.id)
@@ -819,8 +793,7 @@ async function revealNoteInExplorer(noteId: string) {
   if (!isTauriRuntime() || !(await forceSave())) return
   try {
     const tab = tabs.value.find((item) => item.id === noteId)
-    if (isPromptTab(tab) && tab?.promptId) await revealAiPrompt(tab.promptId)
-    else if (tab?.externalPath) await revealExternalMarkdownInFileManager(tab.externalPath)
+    if (tab?.externalPath) await revealExternalMarkdownInFileManager(tab.externalPath)
     else await revealNoteInFileManager(noteId)
   } catch {
     saveState.value = 'Failed'
@@ -833,11 +806,10 @@ async function copyNoteFilePath(noteId: string) {
 
   try {
     if (isTauriRuntime()) {
-      if (isPromptTab(tab) && tab.promptId) await copyAiPromptPath(tab.promptId)
-      else if (tab.externalPath) await copyExternalMarkdownPathToClipboard(tab.externalPath)
+      if (tab.externalPath) await copyExternalMarkdownPathToClipboard(tab.externalPath)
       else await copyNotePathToClipboard(noteId)
     } else {
-      await navigator.clipboard.writeText(isPromptTab(tab) ? `prompts/${tab.fileName}` : tab.externalPath ?? tab.fileName)
+      await navigator.clipboard.writeText(tab.externalPath ?? (tab.projectRelativePath ? `projects/${tab.projectRelativePath}` : tab.fileName))
     }
     statusMessage.value = t.value.status.notePathCopied
   } catch {
@@ -886,79 +858,23 @@ function toggleNoteLibrary() {
   if (noteLibraryOpen.value) void refreshNoteLibrary()
 }
 
-function reconcilePromptRename(previousPromptId: string, previousTabId: string, prompt: AiPromptEntry) {
-  const nextTabId = promptTabId(prompt.id)
-  const sessions: Record<string, AiChatState> = {}
-  for (const [noteId, chat] of Object.entries(aiChatSessions.value)) {
-    const nextNoteId = noteId === previousTabId ? nextTabId : noteId
-    sessions[nextNoteId] = chat.promptId === previousPromptId
-      ? { ...chat, promptId: prompt.id }
-      : chat
-  }
-  aiChatSessions.value = sessions
-  if (aiPanelSession.value) {
-    const panel = aiPanelSession.value
-    aiPanelSession.value = {
-      ...panel,
-      noteId: panel.noteId === previousTabId ? nextTabId : panel.noteId,
-      noteTitle: panel.noteId === previousTabId ? prompt.name : panel.noteTitle,
-      chat: panel.chat.promptId === previousPromptId
-        ? { ...panel.chat, promptId: prompt.id }
-        : panel.chat,
-    }
-  }
-  void loadAiPrompts()
-}
 
-function reconcilePromptTrash(promptId: string, tabId: string) {
-  const sessions: Record<string, AiChatState> = {}
-  for (const [noteId, chat] of Object.entries(aiChatSessions.value)) {
-    if (noteId === tabId) continue
-    sessions[noteId] = chat.promptId === promptId
-      ? { ...chat, promptId: undefined }
-      : chat
-  }
-  aiChatSessions.value = sessions
-  if (aiPanelSession.value?.chat.promptId === promptId) {
-    aiPanelSession.value = {
-      ...aiPanelSession.value,
-      chat: { ...aiPanelSession.value.chat, promptId: undefined },
-    }
-  }
-  void loadAiPrompts()
-}
 
 async function refreshNoteLibrary() {
   libraryLoading.value = true
   try {
-    if (isTauriRuntime()) {
-      const [notes, trashed, prompts, promptTrash, archiveFolders, promptFolders] = await Promise.all([
-        listLibraryNotes(),
-        listTrashedNotes(),
-        listAiPromptFiles(),
-        listAiTrashedPrompts(),
-        listArchiveDirectories(),
-        listAiPromptDirectories(),
-        refreshArchivedNotes(),
-      ])
-      libraryNotes.value = notes
-      trashedNotes.value = trashed
-      libraryPrompts.value = prompts
-      trashedPrompts.value = promptTrash
-      archiveDirectories.value = archiveFolders
-      promptDirectories.value = promptFolders
-    } else {
-      libraryNotes.value = tabs.value.filter((tab) => isNoteTab(tab) && !tab.archived && !tab.deleted)
-      archivedNotes.value = tabs.value.filter((tab) => isNoteTab(tab) && tab.archived && !tab.deleted)
-      trashedNotes.value = tabs.value.filter((tab) => isNoteTab(tab) && tab.deleted)
-    }
-  } catch {
-    saveState.value = 'Failed'
-  } finally {
-    libraryLoading.value = false
-  }
+    const [notes, trashed, archiveFolders, projectFolders] = isTauriRuntime()
+      ? await Promise.all([listLibraryNotes(), listTrashedNotes(), listArchiveDirectories(), listProjectDirectories()])
+      : [tabs.value.filter(tab => isNoteTab(tab) && !tab.archived && !tab.deleted), tabs.value.filter(tab => tab.deleted), archiveDirectories.value, projectDirectories.value]
+    libraryNotes.value = notes.filter(note => !note.projectRelativePath)
+    projectNotes.value = notes.filter(note => !!note.projectRelativePath)
+    trashedNotes.value = trashed
+    archiveDirectories.value = archiveFolders
+    projectDirectories.value = projectFolders
+    await refreshArchivedNotes()
+  } catch (error) { saveState.value = 'Failed'; statusMessage.value = displayAiRequestError(error) }
+  finally { libraryLoading.value = false }
 }
-
 async function selectLibraryNote(noteId: string): Promise<boolean> {
   if (noteId === activeTabId.value) {
     focusEditorAfterPageAction()
@@ -969,7 +885,7 @@ async function selectLibraryNote(noteId: string): Promise<boolean> {
   try {
     const opened = isTauriRuntime()
       ? await openNote(noteId)
-      : [...libraryNotes.value, ...archivedNotes.value].find((tab) => tab.id === noteId)
+      : [...libraryNotes.value, ...projectNotes.value, ...archivedNotes.value].find((tab) => tab.id === noteId)
     if (!opened || !isCurrentNoteLoad(generation)) return false
     upsertTab(opened)
     activeTabId.value = opened.id
@@ -983,243 +899,52 @@ async function selectLibraryNote(noteId: string): Promise<boolean> {
   }
 }
 
-async function selectLibraryPrompt(promptId: string): Promise<boolean> {
-  const tabId = promptTabId(promptId)
-  if (tabId === activeTabId.value) {
-    focusEditorAfterPageAction()
-    return true
-  }
-  const generation = nextNoteLoadGeneration()
-  if (!(await forceSave()) || !isCurrentNoteLoad(generation)) return false
-  try {
-    const prompt = isTauriRuntime()
-      ? await readAiPrompt(promptId)
-      : libraryPrompts.value.find((item) => item.id === promptId)
-    if (!prompt || !isCurrentNoteLoad(generation)) return false
-    upsertTab({
-      id: tabId,
-      title: prompt.name,
-      fileName: prompt.fileName,
-      createdAt: prompt.updatedAt,
-      updatedAt: prompt.updatedAt,
-      pinned: false,
-      deleted: false,
-      archived: false,
-      open: true,
-      systemTitle: false,
-      kind: 'prompt',
-      promptId: prompt.id,
-      promptRevision: prompt.revision,
-    })
-    activeTabId.value = tabId
-    setContentFromLoad(prompt.content)
-    saveState.value = 'Saved'
-    statusMessage.value = `${t.value.library.prompts}: ${prompt.name}`
-    focusEditorAfterPageAction()
-    return true
-  } catch {
-    saveState.value = 'Failed'
-    return false
-  }
-}
 
-async function createLibraryPrompt(directory = '') {
-  const suggestedName = language.value === 'zh' ? '未命名提示词' : 'Untitled prompt'
-  const name = (await requestInput(t.value.library.newPromptTitle, suggestedName))?.trim()
-  if (!name) return
-  try {
-    const prompt = isTauriRuntime()
-      ? await createAiPrompt(name, directory || undefined)
-      : {
-          id: `${name}.md`,
-          name,
-          fileName: `${name}.md`,
-          relativePath: directory ? `${directory}/${name}.md` : `${name}.md`,
-          content: '',
-          updatedAt: Date.now(),
-          revision: '',
-        }
-    if (!isTauriRuntime()) libraryPrompts.value.push(prompt)
-    await refreshNoteLibrary()
-    await selectLibraryPrompt(prompt.id)
-  } catch (error) {
-    saveState.value = 'Failed'
-    statusMessage.value = displayAiRequestError(error)
-  }
-}
 
-async function createLibraryDirectory(kind: 'archive' | 'prompt', parent = '') {
-  const label = language.value === 'zh' ? '新建目录' : 'New folder'
-  const name = (await requestInput(label, language.value === 'zh' ? '新分类' : 'New category'))?.trim()
+async function createLibraryDirectory(kind: 'archive' | 'project', parent = '') {
+  const name = (await requestInput(t.value.library.newFolder, ''))?.trim()
   if (!name) return
   const relativePath = parent ? `${parent}/${name}` : name
   try {
-    if (isTauriRuntime()) {
-      if (kind === 'archive') await createArchiveDirectory(relativePath)
-      else await createAiPromptDirectory(relativePath)
-    } else if (kind === 'archive') archiveDirectories.value.push(relativePath)
-    else promptDirectories.value.push(relativePath)
+    if (kind === 'archive') await createArchiveDirectory(relativePath)
+    else await createProjectDirectory(relativePath)
     await refreshNoteLibrary()
-  } catch (error) {
-    saveState.value = 'Failed'
-    statusMessage.value = displayAiRequestError(error)
-  }
+  } catch (error) { statusMessage.value = displayAiRequestError(error) }
 }
-
-function pathBelongsToDirectory(path: string, directory: string) {
-  return path.startsWith(`${directory}/`)
-}
-
-function replaceDirectoryPrefix(path: string, source: string, target: string) {
-  return pathBelongsToDirectory(path, source) ? `${target}${path.slice(source.length)}` : path
-}
-
 function directoryName(path: string) {
   return path.slice(path.lastIndexOf('/') + 1)
 }
 
-async function moveLibraryDirectory(
-  kind: 'archive' | 'prompt',
-  path: string,
-  targetParent: string,
-) {
+async function moveLibraryDirectory(kind: 'archive' | 'project', path: string, targetParent: string) {
+  if (!(await forceSave())) return
   try {
-    const target = targetParent ? `${targetParent}/${directoryName(path)}` : directoryName(path)
-    if (target === path) return
-    if (isTauriRuntime()) {
-      if (kind === 'archive') await moveArchiveDirectory(path, targetParent)
-      else await moveAiPromptDirectory(path, targetParent)
-    } else if (kind === 'archive') {
-      archiveDirectories.value = archiveDirectories.value.map((item) => (
-        item === path ? target : replaceDirectoryPrefix(item, path, target)
-      ))
-      archivedNotes.value = archivedNotes.value.map((note) => ({
-        ...note,
-        archiveRelativePath: note.archiveRelativePath
-          ? replaceDirectoryPrefix(note.archiveRelativePath, path, target)
-          : note.archiveRelativePath,
-      }))
-    } else {
-      promptDirectories.value = promptDirectories.value.map((item) => (
-        item === path ? target : replaceDirectoryPrefix(item, path, target)
-      ))
-      libraryPrompts.value = libraryPrompts.value.map((prompt) => ({
-        ...prompt,
-        relativePath: replaceDirectoryPrefix(prompt.relativePath, path, target),
-      }))
-    }
+    if (kind === 'archive') await moveArchiveDirectory(path, targetParent)
+    else await moveProjectDirectory(path, targetParent)
+    await refreshWorkspaceNotes()
     await refreshNoteLibrary()
-  } catch (error) {
-    saveState.value = 'Failed'
-    statusMessage.value = displayAiRequestError(error)
-    await refreshNoteLibrary().catch(() => undefined)
-  }
+  } catch (error) { statusMessage.value = displayAiRequestError(error) }
 }
-
-async function renameLibraryDirectory(kind: 'archive' | 'prompt', path: string) {
+async function renameLibraryDirectory(kind: 'archive' | 'project', path: string) {
   const name = (await requestInput(t.value.library.renameFolderTitle, directoryName(path)))?.trim()
-  if (!name || name === directoryName(path)) return
-  const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : ''
-  const target = parent ? `${parent}/${name}` : name
+  if (!name || !(await forceSave())) return
   try {
-    if (isTauriRuntime()) {
-      if (kind === 'archive') await renameArchiveDirectory(path, name)
-      else await renameAiPromptDirectory(path, name)
-    } else if (kind === 'archive') {
-      archiveDirectories.value = archiveDirectories.value.map((item) => (
-        item === path ? target : replaceDirectoryPrefix(item, path, target)
-      ))
-      archivedNotes.value = archivedNotes.value.map((note) => ({
-        ...note,
-        archiveRelativePath: note.archiveRelativePath
-          ? replaceDirectoryPrefix(note.archiveRelativePath, path, target)
-          : note.archiveRelativePath,
-      }))
-    } else {
-      promptDirectories.value = promptDirectories.value.map((item) => (
-        item === path ? target : replaceDirectoryPrefix(item, path, target)
-      ))
-      libraryPrompts.value = libraryPrompts.value.map((prompt) => ({
-        ...prompt,
-        relativePath: replaceDirectoryPrefix(prompt.relativePath, path, target),
-      }))
-    }
+    if (kind === 'archive') await renameArchiveDirectory(path, name)
+    else await renameProjectDirectory(path, name)
+    await refreshWorkspaceNotes()
     await refreshNoteLibrary()
-  } catch (error) {
-    saveState.value = 'Failed'
-    statusMessage.value = displayAiRequestError(error)
-    await refreshNoteLibrary().catch(() => undefined)
-  }
+  } catch (error) { statusMessage.value = displayAiRequestError(error) }
 }
-
-async function deleteLibraryDirectory(kind: 'archive' | 'prompt', path: string) {
-  const confirmed = await requestConfirmation(
-    t.value.library.deleteFolderTitle,
-    t.value.library.deleteFolderMessage.replace('{name}', directoryName(path)),
-    t.value.library.deleteFolderConfirm,
-    true,
-  )
-  if (!confirmed) return
-
-  const affectedArchiveNotes = kind === 'archive'
-    ? archivedNotes.value.filter((note) => (
-        Boolean(note.archiveRelativePath && pathBelongsToDirectory(note.archiveRelativePath, path))
-      ))
-    : []
-  const affectedArchiveIds = new Set(affectedArchiveNotes.map((note) => note.id))
-  const affectedPrompts = kind === 'prompt'
-    ? libraryPrompts.value.filter((prompt) => pathBelongsToDirectory(prompt.relativePath, path))
-    : []
-  const affectedPromptIds = new Set(affectedPrompts.map((prompt) => prompt.id))
-  const activeArchiveWillBeDeleted = isNoteTab(activeTab.value)
-    && Boolean(activeTab.value && affectedArchiveIds.has(activeTab.value.id))
-  const activePromptWillBeDeleted = isPromptTab(activeTab.value)
-    && Boolean(activeTab.value?.promptId && affectedPromptIds.has(activeTab.value.promptId))
-  if ((activeArchiveWillBeDeleted || activePromptWillBeDeleted) && !(await forceSave())) return
-
+async function deleteLibraryDirectory(kind: 'archive' | 'project', path: string) {
+  if (!(await requestConfirmation(t.value.library.deleteFolderTitle,
+    t.value.library.deleteFolderMessage.replace('{name}', directoryName(path)), t.value.library.deleteFolderConfirm, true))
+    || !(await forceSave())) return
   try {
-    if (isTauriRuntime()) {
-      if (kind === 'archive') await deleteArchiveDirectory(path)
-      else await deleteAiPromptDirectory(path)
-    } else if (kind === 'archive') {
-      archiveDirectories.value = archiveDirectories.value.filter((item) => item !== path && !pathBelongsToDirectory(item, path))
-      archivedNotes.value = archivedNotes.value.filter((note) => (
-        !note.archiveRelativePath || !pathBelongsToDirectory(note.archiveRelativePath, path)
-      ))
-      trashedNotes.value.push(...affectedArchiveNotes.map((note) => ({
-        ...note,
-        deleted: true,
-        open: false,
-      })))
-    } else {
-      promptDirectories.value = promptDirectories.value.filter((item) => item !== path && !pathBelongsToDirectory(item, path))
-      libraryPrompts.value = libraryPrompts.value.filter((prompt) => !affectedPromptIds.has(prompt.id))
-    }
-
-    if (kind === 'archive') {
-      tabs.value = tabs.value.filter((tab) => !affectedArchiveIds.has(tab.id))
-      if (activeArchiveWillBeDeleted) {
-        activeTabId.value = tabs.value[0]?.id ?? 'inbox'
-        await loadActiveNote()
-        focusEditorAfterPageAction()
-      }
-    } else {
-      for (const prompt of affectedPrompts) reconcilePromptTrash(prompt.id, promptTabId(prompt.id))
-      tabs.value = tabs.value.filter((tab) => !isPromptTab(tab) || !tab.promptId || !affectedPromptIds.has(tab.promptId))
-      if (activePromptWillBeDeleted) {
-        activeTabId.value = tabs.value[0]?.id ?? 'inbox'
-        await loadActiveNote()
-        focusEditorAfterPageAction()
-      }
-    }
+    if (kind === 'archive') await deleteArchiveDirectory(path)
+    else await deleteProjectDirectory(path)
+    await refreshWorkspaceNotes()
     await refreshNoteLibrary()
-  } catch (error) {
-    saveState.value = 'Failed'
-    statusMessage.value = displayAiRequestError(error)
-    await refreshNoteLibrary().catch(() => undefined)
-  }
+  } catch (error) { statusMessage.value = displayAiRequestError(error); await refreshNoteLibrary() }
 }
-
 async function archiveLibraryNotesTo(notes: NoteTab[], directory: string) {
   try {
     if (notes.some((note) => tabs.value.some((tab) => tab.id === note.id)) && !(await forceSave())) return
@@ -1234,28 +959,72 @@ async function archiveLibraryNotesTo(notes: NoteTab[], directory: string) {
         if (note.id === activeTabId.value) activeTabId.value = tabs.value[0]?.id ?? 'inbox'
       }
     }
+    await loadActiveNote()
     await refreshNoteLibrary()
   } catch (error) {
     saveState.value = 'Failed'
     statusMessage.value = displayAiRequestError(error)
+    await loadActiveNote()
     await refreshNoteLibrary().catch(() => undefined)
   }
 }
 
-async function moveLibraryPromptsTo(prompts: AiPromptEntry[], directory: string) {
+async function moveLibraryNotesToProject(notes: NoteTab[], directory: string) {
+  if (!directory || !(await forceSave())) return
   try {
-    for (const prompt of prompts) {
-      const moved = await moveAiPrompt(prompt.id, directory)
-      reconcilePromptRename(prompt.id, promptTabId(prompt.id), moved)
+    for (const note of notes) {
+      const moved = await moveNoteToProject(note.id, directory)
+      const index = tabs.value.findIndex(tab => tab.id === note.id)
+      if (index >= 0) tabs.value[index] = moved
     }
+    await refreshWorkspaceNotes()
     await refreshNoteLibrary()
-  } catch (error) {
-    saveState.value = 'Failed'
-    statusMessage.value = displayAiRequestError(error)
-    await refreshNoteLibrary().catch(() => undefined)
-  }
+  } catch (error) { statusMessage.value = displayAiRequestError(error); await refreshNoteLibrary() }
 }
-
+async function refreshProjectMenu() {
+  if (projectMenuLoading.value) return
+  projectMenuLoading.value = true
+  projectMenuFailed.value = false
+  try {
+    if (isTauriRuntime()) projectDirectories.value = await listProjectDirectories()
+  } catch (error) {
+    projectMenuFailed.value = true
+    statusMessage.value = displayAiRequestError(error)
+  } finally { projectMenuLoading.value = false }
+}
+async function moveTabToProject(tabId: string, directory: string) {
+  const tab = tabs.value.find(tab => tab.id === tabId)
+  if (!tab || !isNoteTab(tab) || tab.pinned || tab.deleted) return
+  await moveLibraryNotesToProject([tab], directory)
+  if (activeTabId.value === tabId) focusEditorAfterPageAction()
+}
+async function moveLibraryNotesToCapture(notes: NoteTab[]) {
+  if (!(await forceSave())) return
+  try {
+    for (const note of notes) await moveNoteToCapture(note.id)
+    await refreshWorkspaceNotes()
+    await refreshNoteLibrary()
+  } catch (error) { statusMessage.value = displayAiRequestError(error) }
+}
+async function archiveLibraryProject(path: string) {
+  if (!(await forceSave())) return
+  try {
+    await archiveProjectDirectory(path)
+    await refreshWorkspaceNotes()
+    await refreshNoteLibrary()
+  } catch (error) { statusMessage.value = displayAiRequestError(error) }
+}
+async function createLibraryProjectNote(directory = '') {
+  if (!directory) directory = (await requestInput(t.value.library.projects, ''))?.trim() ?? ''
+  if (!directory) return
+  const title = (await requestInput(t.value.library.newProjectTitle, ''))?.trim()
+  if (!title || !(await forceSave())) return
+  try {
+    const created = await createProjectNote(directory, title)
+    await refreshNoteLibrary()
+    await selectLibraryNote(created.id)
+  } catch (error) { statusMessage.value = displayAiRequestError(error) }
+}
 async function reorderTabs(orderedIds: string[]) {
   const byId = new Map(tabs.value.map((tab) => [tab.id, tab]))
   const ordered = orderedIds.map((id) => byId.get(id)).filter((tab): tab is NoteTab => Boolean(tab))
@@ -1269,96 +1038,10 @@ async function reorderTabs(orderedIds: string[]) {
   }
 }
 
-async function renameLibraryPrompt(prompt: AiPromptEntry) {
-  const openTab = tabs.value.find((tab) => isPromptTab(tab) && tab.promptId === prompt.id)
-  if (openTab) {
-    await renameTab(openTab)
-    return
-  }
-  const name = (await requestInput(t.value.settings.renameTitle, prompt.name))?.trim()
-  if (!name) return
-  try {
-    const previousPromptId = prompt.id
-    const renamed = isTauriRuntime()
-      ? await renameAiPrompt(prompt.id, name)
-      : Object.assign(prompt, {
-          name,
-          fileName: `${name}.md`,
-          relativePath: prompt.relativePath.replace(/[^/]+$/, `${name}.md`),
-          updatedAt: Date.now(),
-        })
-    reconcilePromptRename(previousPromptId, promptTabId(previousPromptId), renamed)
-    await refreshNoteLibrary()
-  } catch (error) {
-    saveState.value = 'Failed'
-    statusMessage.value = displayAiRequestError(error)
-  }
-}
 
-async function duplicateLibraryPrompt(prompt: AiPromptEntry) {
-  const suggestedName = `${prompt.name} ${t.value.library.copySuffix}`
-  const name = (await requestInput(t.value.library.duplicatePromptTitle, suggestedName))?.trim()
-  if (!name) return
-  try {
-    if (isTauriRuntime()) {
-      const directory = prompt.relativePath.includes('/')
-        ? prompt.relativePath.slice(0, prompt.relativePath.lastIndexOf('/'))
-        : undefined
-      const created = await createAiPrompt(name, directory)
-      const copy = await writeAiPrompt(created.id, prompt.content, created.revision)
-      await refreshNoteLibrary()
-      await selectLibraryPrompt(copy.id)
-    } else {
-      const copy = { ...prompt, id: `${name}.md`, name, fileName: `${name}.md`, updatedAt: Date.now() }
-      libraryPrompts.value.push(copy)
-      await selectLibraryPrompt(copy.id)
-    }
-  } catch (error) {
-    saveState.value = 'Failed'
-    statusMessage.value = displayAiRequestError(error)
-  }
-}
 
-async function deleteLibraryPrompts(prompts: AiPromptEntry[]) {
-  try {
-    for (const prompt of prompts) {
-      const openTab = tabs.value.find((tab) => isPromptTab(tab) && tab.promptId === prompt.id)
-      if (openTab) await deleteTab(openTab)
-      else if (isTauriRuntime()) {
-        await trashAiPrompt(prompt.id)
-        reconcilePromptTrash(prompt.id, promptTabId(prompt.id))
-      } else {
-        libraryPrompts.value = libraryPrompts.value.filter((item) => item.id !== prompt.id)
-        reconcilePromptTrash(prompt.id, promptTabId(prompt.id))
-      }
-    }
-    await refreshNoteLibrary()
-  } catch (error) {
-    saveState.value = 'Failed'
-    statusMessage.value = displayAiRequestError(error)
-  }
-}
 
-async function restoreTrashedLibraryPrompts(prompts: AiTrashedPromptEntry[]) {
-  try {
-    if (isTauriRuntime()) {
-      for (const prompt of prompts) await restoreAiPrompt(prompt.id)
-    }
-    await refreshNoteLibrary()
-  } catch (error) {
-    saveState.value = 'Failed'
-    statusMessage.value = displayAiRequestError(error)
-  }
-}
 
-async function revealPromptInExplorer(prompt: AiPromptEntry) {
-  if (!isTauriRuntime() || !(await forceSave())) return
-  try {
-    await revealAiPrompt(prompt.id)
-  } catch {
-    saveState.value = 'Failed'
-  }
-}
 
 async function restoreLibraryNote(notes: NoteTab[]) {
   for (const tab of notes) await unarchiveTab(tab)
@@ -1389,7 +1072,6 @@ async function clearLibraryTrash() {
     if (isTauriRuntime()) await clearTrash()
     else {
       tabs.value = tabs.value.filter((tab) => !tab.deleted)
-      trashedPrompts.value = []
     }
     await refreshNoteLibrary()
   } catch {
@@ -1576,13 +1258,6 @@ function closeSettings(returnFocusToEditor = true) {
   if (returnFocusToEditor) focusEditorAfterPageAction()
 }
 
-function openPromptLibrary() {
-  closeAiPanel(false)
-  closeSettings(false)
-  noteLibraryOpen.value = true
-  statusMessage.value = t.value.ai.promptLibrary
-  void refreshNoteLibrary()
-}
 
 function openAiPanel() {
   const snapshot = editorPane.value?.captureAiSnapshot()
@@ -1596,10 +1271,8 @@ function openAiPanel() {
     chat: {
       messages: savedChat?.messages.map((message) => ({ ...message, sources: message.sources?.map((source) => ({ ...source })) })) ?? [],
       scope: savedChat?.scope ?? 'note',
-      promptId: savedChat?.promptId,
     },
   }
-  void loadAiPrompts()
 }
 
 function closeAiPanel(returnFocusToEditor = true) {
@@ -1625,7 +1298,6 @@ function updateAiChatState(chat: AiChatState) {
         sources: message.sources?.map((source) => ({ ...source })),
       })),
       scope: chat.scope,
-      promptId: chat.promptId,
     },
   }
 }
@@ -1633,7 +1305,6 @@ function updateAiChatState(chat: AiChatState) {
 async function generateForAiPanel(
   conversation: AiConversationMessage[],
   scope: AiContextScope,
-  prompt?: string,
 ) {
   const session = aiPanelSession.value
   if (!session) throw new Error(t.value.ai.staleContext)
@@ -1646,7 +1317,6 @@ async function generateForAiPanel(
   return requestAiText(context.text, conversation, {
     searchLibrary: scope === 'library',
     currentNoteId: session.noteId,
-    prompt,
   })
 }
 
@@ -2131,6 +1801,9 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         :active-tab-id="activeTabId"
         :exporting-note="exportingNote"
         :ai-renaming-tab-id="aiRenamingTabId"
+        :project-directories="projectDirectories"
+        :project-menu-loading="projectMenuLoading"
+        :project-menu-failed="projectMenuFailed"
         :messages="t.tabs"
         @select-tab="selectTab"
         @title-double-click="handleTabTitleDoubleClick"
@@ -2142,6 +1815,8 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @delete-tab="deletePageById"
         @close-tab="closePageById"
         @archive-tab="archivePageById"
+        @request-projects="refreshProjectMenu"
+        @move-tab-to-project="moveTabToProject"
         @unarchive-tab="unarchiveTab(tabs.find((tab) => tab.id === $event)!)"
         @update-tab-color="updateTabColor"
         @new-tab="createLocalTab"
@@ -2156,34 +1831,29 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       <NoteLibrary
         v-if="noteLibraryOpen"
         :notes="libraryNotes"
-        :prompts="libraryPrompts"
+        :projects="projectNotes"
+        :project-directories="projectDirectories"
+        @new-project-note="createLibraryProjectNote"
+        @move-project-notes="moveLibraryNotesToProject"
+        @move-to-capture="moveLibraryNotesToCapture"
+        @archive-project="archiveLibraryProject"
         :archived-notes="archivedNotes"
         :archive-directories="archiveDirectories"
         :trashed-notes="trashedNotes"
-        :trashed-prompts="trashedPrompts"
-        :prompt-directories="promptDirectories"
         :active-note-id="activeTabId"
         :loading="libraryLoading"
         :messages="t.library"
         @select="selectLibraryNote"
-        @select-prompt="selectLibraryPrompt"
         @restore="restoreLibraryNote"
         @restore-trash="restoreTrashedLibraryNotes"
-        @restore-prompts="restoreTrashedLibraryPrompts"
         @clear-trash="clearLibraryTrash"
         @rename="runLibraryNoteAction($event, 'rename')"
-        @rename-prompt="renameLibraryPrompt"
-        @duplicate-prompt="duplicateLibraryPrompt"
         @archive="runLibraryNoteAction($event, 'archive')"
         @delete="runLibraryNoteAction($event, 'delete')"
-        @delete-prompts="deleteLibraryPrompts"
         @reveal="revealNoteInExplorer($event.id)"
-        @reveal-prompt="revealPromptInExplorer"
         @new-note="createLocalTab"
-        @new-prompt="createLibraryPrompt"
         @create-directory="createLibraryDirectory"
         @archive-to="archiveLibraryNotesTo"
-        @move-prompts="moveLibraryPromptsTo"
         @move-directory="moveLibraryDirectory"
         @rename-directory="renameLibraryDirectory"
         @delete-directory="deleteLibraryDirectory"
@@ -2357,8 +2027,6 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       @save-ai-api-key="storeApiKey"
       @clear-ai-api-key="removeApiKey"
       @test-ai-connection="checkConnection"
-      @manage-ai-prompts="openPromptLibrary"
-      @open-ai-prompts-folder="revealAiPromptsFolder"
     />
 
     <AiAssistantPanel
@@ -2366,15 +2034,11 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       :session="aiPanelSession"
       :ready="aiReady"
       :messages="t.ai"
-      :prompts="aiPrompts"
-      :prompts-loading="aiPromptsLoading"
       :generate="generateForAiPanel"
       :apply-result="applyAiResult"
       @close="closeAiPanel"
       @configure="openAiSettings"
       @update-chat="updateAiChatState"
-      @refresh-prompts="loadAiPrompts"
-      @manage-prompts="openPromptLibrary"
     />
 
     <InputDialog

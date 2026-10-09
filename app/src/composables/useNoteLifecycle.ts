@@ -6,18 +6,15 @@ import {
   createNoteWithBody,
   deleteNote,
   importNeoCaptureClipboard,
-  renameAiPrompt,
   renameNote,
   saveClipboard,
   setNoteColor,
-  trashAiPrompt,
   unarchiveNote,
   writeNote,
 } from '../lib/invoke'
 import { isTauriRuntime } from '../lib/runtime'
-import { isExternalTab, isNoteTab, isPromptTab, promptTabId } from '../lib/document-tab'
+import { isExternalTab, isNoteTab } from '../lib/document-tab'
 import { messages, type AppLanguage } from '../lib/i18n'
-import type { AiPromptEntry } from '../types/ai'
 import type { NoteTab } from '../types/note'
 import type { TitleDoubleClickAction } from '../lib/preferences'
 
@@ -43,8 +40,6 @@ interface NoteLifecycleOptions {
   refreshArchivedNotes: () => Promise<void>
   refreshLibrary: () => Promise<void>
   upsertTab: (tab: NoteTab) => void
-  onPromptRenamed?: (previousPromptId: string, previousTabId: string, prompt: AiPromptEntry) => void
-  onPromptTrashed?: (promptId: string, tabId: string) => void
 }
 
 export function useNoteLifecycle(o: NoteLifecycleOptions) {
@@ -78,26 +73,7 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
     if (isTauriRuntime()) {
       try {
         if (tab.id === o.activeTabId.value && !(await o.forceSave())) return
-        if (isPromptTab(tab)) {
-          if (!tab.promptId) throw new Error('prompt id is missing')
-          const previousPromptId = tab.promptId
-          const previousId = tab.id
-          const renamed = await renameAiPrompt(tab.promptId, nextTitle)
-          const nextId = promptTabId(renamed.id)
-          Object.assign(tab, {
-            id: nextId,
-            title: renamed.name,
-            fileName: renamed.fileName,
-            updatedAt: renamed.updatedAt,
-            promptId: renamed.id,
-            promptRevision: renamed.revision,
-          })
-          if (o.activeTabId.value === previousId) o.activeTabId.value = nextId
-          o.onPromptRenamed?.(previousPromptId, previousId, renamed)
-          await o.refreshLibrary()
-          o.focusEditor()
-          return
-        }
+
         const renamed = await renameNote(tab.id, nextTitle)
         Object.assign(tab, { title: renamed.title, updatedAt: renamed.updatedAt, systemTitle: renamed.systemTitle })
         if (tab.id === o.activeTabId.value && await o.loadActiveNote()) o.focusEditor()
@@ -132,19 +108,10 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
       try {
         if (!(await o.forceSave())) { fail(); return }
         if (wasActive) { o.activeTabId.value = nextId; await o.loadActiveNote() }
-        if (isPromptTab(tab)) {
-          if (!tab.promptId) throw new Error('prompt id is missing')
-          const promptId = tab.promptId
-          await trashAiPrompt(promptId)
-          o.onPromptTrashed?.(promptId, tab.id)
-        } else {
-          await deleteNote(tab.id)
-        }
+        await deleteNote(tab.id)
       } catch { fail(); return } finally { deletingTabIds.delete(tab.id) }
     }
-    if (!isTauriRuntime() && isPromptTab(tab) && tab.promptId) {
-      o.onPromptTrashed?.(tab.promptId, tab.id)
-    }
+
     o.tabs.value = o.tabs.value.filter((item) => item.id !== tab.id)
     await o.refreshLibrary()
     if (o.activeTabId.value === tab.id) {
@@ -173,7 +140,6 @@ export function useNoteLifecycle(o: NoteLifecycleOptions) {
 
   async function archiveTab(tab: NoteTab) {
     if (tab.id === 'inbox' || tab.id === 'clipboard') return
-    if (isPromptTab(tab)) return
     if (isExternalTab(tab)) {
       /*
       const confirmed = await o.requestConfirmation(

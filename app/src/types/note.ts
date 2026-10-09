@@ -1,4 +1,4 @@
-export type DocumentKind = 'note' | 'prompt' | 'external'
+export type DocumentKind = 'note' | 'external'
 
 export type NoteTab = {
   id: string
@@ -10,6 +10,8 @@ export type NoteTab = {
   deleted: boolean
   archived: boolean
   archiveRelativePath?: string
+  projectRelativePath?: string
+  trashFileName?: string
   open: boolean
   lastOpenedAt?: number
   external?: boolean
@@ -19,8 +21,6 @@ export type NoteTab = {
   color?: string
   contentRevision?: string
   kind?: DocumentKind
-  promptId?: string
-  promptRevision?: string
 }
 
 export type ExternalDocument = {

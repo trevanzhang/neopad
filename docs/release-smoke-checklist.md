@@ -32,9 +32,11 @@ or publishing a release.
 10. Use File > Open NeoPad Data Folder and verify the workspace root opens,
     then copy the file path from an internal and an external Markdown tab and
     verify each absolute path.
-11. Press F4, create and edit a prompt, switch away with F2/F3, rename it with
-    F8, and attach it from Ctrl+K. Then close and reopen its prompt tab, move it
-    to Trash, restore it, and confirm its Markdown content remains intact.
+11. Press F4, create a project and a note, edit and rename it, move the project
+    into another folder, archive it, restore the note, delete and restore it.
+    Confirm Ctrl+Shift+F search and reminders include project notes. Verify old
+    nested and trashed prompts migrate once with unchanged bodies.
+
 12. Select multi-line editor text, right-click it, and open it in a new tab;
     verify the new note keeps the selection beneath `# Untitled` and leaves the
     clipboard unchanged. Then run AI Rename on that tab and verify the tab title

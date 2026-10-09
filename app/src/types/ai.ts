@@ -18,25 +18,6 @@ export interface AiChatMessage extends AiConversationMessage {
   sources?: AiContextSource[]
 }
 
-export interface AiPromptEntry {
-  id: string
-  name: string
-  fileName: string
-  relativePath: string
-  content: string
-  updatedAt: number
-  revision: string
-}
-
-export interface AiTrashedPromptEntry {
-  id: string
-  name: string
-  fileName: string
-  originalFileName: string
-  originalRelativePath: string
-  deletedAt: number
-}
-
 export interface AiContextSource {
   noteId: string
   title: string
@@ -52,7 +33,6 @@ export interface AiGenerateResponse {
 export interface AiChatState {
   messages: AiChatMessage[]
   scope: AiContextScope
-  promptId?: string
 }
 
 export interface AiEditorContext {

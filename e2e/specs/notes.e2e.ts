@@ -217,7 +217,7 @@ describe('NeoPad desktop note workflow', () => {
     }, { timeoutMsg: 'dragging a tab did not update its position' })
   })
 
-  it('organizes archive notes and prompts into folders from the library', async () => {
+  it('organizes archive notes and projects into folders from the library', async () => {
     await browser.keys('F4')
     await expect($('.note-library')).toBeDisplayed()
 
@@ -240,45 +240,42 @@ describe('NeoPad desktop note workflow', () => {
     await expect($("//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]"))
       .toBeDisplayed()
 
-    await click('.note-library-prompt-root .note-library-create-folder')
+    await click('.note-library-project-root .note-library-create-folder')
     await (await $('.input-dialog input')).setValue('Writing')
     await browser.keys('Enter')
-    await expect($("//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]"))
+    await expect($("//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]"))
       .toBeDisplayed()
 
-    await click('.note-library-create-prompt')
-    await (await $('.input-dialog input')).setValue('Review prompt')
+    const writingFolder = "//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]"
+    await contextClick(writingFolder)
+    await click("//div[contains(@class, 'note-library-context-menu')]//button[normalize-space()='New project note']")
+    await (await $('.input-dialog input')).setValue('Review project')
     await browser.keys('Enter')
-    await expect($('.note-library')).toBeDisplayed()
-    await dragAndDrop(
-      "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Review prompt']]",
-      "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]",
-    )
-    await click("//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]")
-    await expect($("//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Review prompt']]"))
+    await click(writingFolder)
+    await expect($("//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Review project']]"))
       .toBeDisplayed()
 
-    await click('.note-library-prompt-root .note-library-create-folder')
+    await click('.note-library-project-root .note-library-create-folder')
     await (await $('.input-dialog input')).setValue('Reference')
     await browser.keys('Enter')
     await browser.pause(250)
     await dragAndDrop(
-      "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]",
-      "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Reference']]",
+      "//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]",
+      "//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Reference']]",
     )
 
-    await click("//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Reference']]")
-    const movedDirectory = "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]"
+    await click("//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Reference']]")
+    const movedDirectory = "//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]"
     await expect($(movedDirectory)).toBeDisplayed()
     await click(movedDirectory)
-    await expect($("//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Review prompt']]"))
+    await expect($("//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Review project']]"))
       .toBeDisplayed()
 
     await contextClick(movedDirectory)
     await click("//div[contains(@class, 'note-library-context-menu')]//button[normalize-space()='Rename']")
     await (await $('.input-dialog input')).setValue('Drafts')
     await browser.keys('Enter')
-    const renamedDirectory = "//section[contains(@class, 'prompt-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Drafts']]"
+    const renamedDirectory = "//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Drafts']]"
     await expect($(renamedDirectory)).toBeDisplayed()
 
     await contextClick(renamedDirectory)
@@ -286,12 +283,97 @@ describe('NeoPad desktop note workflow', () => {
     await expect($('.confirmation-dialog-message')).toHaveText(expect.stringContaining('Drafts'))
     await click('.input-dialog-actions .danger')
     await expect($(renamedDirectory)).not.toExist()
-    const trashedPrompt = $("//button[contains(@class, 'trashed') and .//span[normalize-space()='Review prompt']]")
-    if (!(await trashedPrompt.isDisplayed().catch(() => false))) {
+    const trashedProject = $("//button[contains(@class, 'trashed') and .//span[normalize-space()='Review project']]")
+    if (!(await trashedProject.isDisplayed().catch(() => false))) {
       await click('.note-library-trash-root .note-library-root-toggle')
     }
-    await expect(trashedPrompt)
+    await expect(trashedProject)
       .toBeDisplayed()
+  })
+
+  it('moves the current note into freshly created projects from the tab menu', async () => {
+    if (await $('.note-library').isDisplayed()) await click('.tab-menu')
+    const workspace = process.env.NEOPAD_WORKSPACE!
+    const cli = path.join(workspace, '.agents', 'bin', 'neopad-cli.exe')
+    const metadata = () => JSON.parse(fs.readFileSync(path.join(workspace, 'meta', 'tabs.json'), 'utf8'))
+    const moveRoot = '.tab-project-subroot > button'
+    const moveTarget = (directory: string) => `.tab-project-submenu button[title="${directory}"]`
+
+    for (const title of ['Inbox', 'Clipboard']) {
+      await contextClick(`.tab-item=${title}`)
+      await expect($(moveRoot)).toBeDisabled()
+      await browser.keys('Escape')
+    }
+
+    await click('.tab-add')
+    await browser.waitUntil(async () => (await $('.tab-item.active').getText()) === 'Untitled')
+    await (await $('.tab-item=Untitled')).doubleClick()
+    await (await $('.input-dialog input')).setValue('Quick move note')
+    await browser.keys('Enter')
+    await expect($('.tab-item=Quick move note')).toBeDisplayed()
+    const original = metadata().tabs.find((tab: { title: string }) => tab.title === 'Quick move note')
+
+    // Create nested folders via the deployed CLI while the file browser is closed.
+    for (const directory of ['Quick move/Ideas', 'Quick move/Final']) {
+      expect(JSON.parse(execFileSync(cli, ['project-create', directory], {
+        encoding: 'utf8', windowsHide: true,
+      })).ok).toBe(true)
+    }
+    const editor = await $('.cm-content')
+    await browser.execute((element) => (element as HTMLElement).focus(), editor)
+    await browser.keys(['Control', 'a'])
+    await browser.keys('Unsaved edit before moving to a project')
+    await contextClick('.tab-item=Quick move note')
+    await (await $(moveRoot)).click()
+    await expect($(moveTarget('Quick move/Ideas'))).toBeDisplayed()
+    await click(moveTarget('Quick move/Ideas'))
+    await browser.waitUntil(() => metadata().tabs.find((tab: { id: string }) => tab.id === original.id)
+      ?.projectRelativePath === `Quick move/Ideas/${original.fileName}`)
+    expect(fs.existsSync(path.join(workspace, 'notes', original.fileName))).toBe(false)
+    expect(fs.readFileSync(path.join(workspace, 'projects', 'Quick move', 'Ideas', original.fileName), 'utf8'))
+      .toContain('Unsaved edit before moving to a project')
+    await expect($('.tab-item.active')).toHaveText('Quick move note')
+
+    await contextClick('.tab-item=Quick move note')
+    await (await $(moveRoot)).click()
+    await expect($(moveTarget('Quick move/Ideas'))).toBeDisabled()
+    await browser.saveScreenshot(path.resolve(import.meta.dirname, '../../target/project-move-menu.png'))
+    await click(moveTarget('Quick move/Final'))
+    await browser.waitUntil(() => metadata().tabs.find((tab: { id: string }) => tab.id === original.id)
+      ?.projectRelativePath === `Quick move/Final/${original.fileName}`)
+
+    // Continue editing after the move: the tab must carry the new save revision.
+    await browser.execute((element) => (element as HTMLElement).focus(), editor)
+    await browser.keys(['Control', 'End'])
+    await browser.keys(' - edited after move')
+    await browser.waitUntil(() => fs.readFileSync(path.join(workspace, 'projects', 'Quick move', 'Final', original.fileName), 'utf8')
+      .includes('edited after move'))
+    await expect($('.status-bar')).toHaveText(expect.stringContaining('Saved'))
+    await expect($('.tab-item.active')).toHaveText('Quick move note')
+
+    const windowSize = await browser.getWindowSize()
+    try {
+      await browser.setWindowSize(420, 360)
+      for (const edge of ['left', 'right']) {
+        await browser.execute((side) => document.querySelector('.tab-item.active')!.dispatchEvent(
+          new MouseEvent('contextmenu', { bubbles: true, cancelable: true,
+            clientX: side === 'left' ? 8 : innerWidth - 8, clientY: 50 }),
+        ), edge)
+        await (await $(moveRoot)).click()
+        await expect($(moveTarget('Quick move/Final'))).toBeDisabled()
+        const bounds = await browser.execute(() => {
+          const menu = document.querySelector('.tab-context-menu')!.getBoundingClientRect()
+          const submenu = document.querySelector('.tab-project-submenu')!.getBoundingClientRect()
+          return { left: submenu.left, right: submenu.right, bottom: submenu.bottom,
+            menuBottom: menu.bottom, width: innerWidth, height: innerHeight }
+        })
+        expect(bounds.left).toBeGreaterThanOrEqual(0)
+        expect(bounds.right).toBeLessThanOrEqual(bounds.width)
+        expect(bounds.bottom).toBeLessThanOrEqual(bounds.height)
+        expect(bounds.menuBottom).toBeLessThanOrEqual(bounds.height)
+        await browser.keys('Escape')
+      }
+    } finally { await browser.setWindowSize(windowSize.width, windowSize.height) }
   })
 
   it('maximizes and restores with Alt+Enter while edge snapping is enabled', async () => {

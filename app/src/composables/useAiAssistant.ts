@@ -3,14 +3,12 @@ import {
   clearAiApiKey,
   generateAiText,
   getAiConfig,
-  listAiPrompts,
-  openAiPromptsFolder,
   saveAiApiKey,
   saveAiConfig,
   testAiConnection,
 } from '../lib/invoke'
 import { isTauriRuntime } from '../lib/runtime'
-import type { AiConfig, AiConversationMessage, AiPromptEntry } from '../types/ai'
+import type { AiConfig, AiConversationMessage } from '../types/ai'
 
 const emptyConfig = (): AiConfig => ({
   enabled: false,
@@ -31,8 +29,6 @@ export function useAiAssistant() {
   const aiError = ref<string | null>(null)
   const aiTesting = ref(false)
   const aiTestSucceeded = ref(false)
-  const aiPrompts = ref<AiPromptEntry[]>([])
-  const aiPromptsLoading = ref(false)
   let persistTimer: number | null = null
 
   async function loadAiConfig() {
@@ -114,33 +110,10 @@ export function useAiAssistant() {
     }
   }
 
-  async function loadAiPrompts() {
-    if (!isTauriRuntime()) return
-    aiPromptsLoading.value = true
-    try {
-      aiPrompts.value = await listAiPrompts()
-      aiError.value = null
-    } catch (error) {
-      aiError.value = errorMessage(error)
-    } finally {
-      aiPromptsLoading.value = false
-    }
-  }
-
-  async function revealAiPromptsFolder() {
-    try {
-      await openAiPromptsFolder()
-      return true
-    } catch (error) {
-      aiError.value = errorMessage(error)
-      return false
-    }
-  }
-
   async function requestAiText(
     context: string,
     conversation: AiConversationMessage[],
-    options: { searchLibrary: boolean; currentNoteId: string; prompt?: string; maxTokens?: number },
+    options: { searchLibrary: boolean; currentNoteId: string; maxTokens?: number },
   ) {
     let timeoutId = 0
     const timeout = new Promise<never>((_resolve, reject) => {
@@ -164,16 +137,12 @@ export function useAiAssistant() {
     aiError,
     aiTesting,
     aiTestSucceeded,
-    aiPrompts,
-    aiPromptsLoading,
     loadAiConfig,
     updateAiConfig,
     persistAiConfig,
     storeApiKey,
     removeApiKey,
     checkConnection,
-    loadAiPrompts,
-    revealAiPromptsFolder,
     requestAiText,
     disposeAiAssistant,
   }

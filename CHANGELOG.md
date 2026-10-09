@@ -2,10 +2,31 @@
 
 NeoPad follows Semantic Versioning. During the initial 0.x development phase,
 minor versions may change public interfaces; incompatible changes are documented
-explicitly. Patch versions are reserved for compatible fixes. From 1.0.0 onward,
+explicitly. Patch versions normally contain compatible fixes; 0.7.1 is a
+documented exception for retiring the prompt library with automatic data
+migration. From 1.0.0 onward,
 incompatible public interface changes require a major version bump.
 
 ## Unreleased
+
+## 0.7.1 - 2026-10-09
+
+### Breaking Changes
+
+- Replace the reusable prompt library with ordinary project Markdown notes.
+  Remove prompt-only APIs, marked prompt tabs, and the Ctrl+K attachment picker.
+- Automatically migrate old prompt files and trash records without modifying
+  their bodies. Preserve categories, resume interrupted moves, and avoid
+  overwriting existing project documents; see [migration](docs/projects.md).
+- Add project folder and note management, whole-project archive, and native CLI
+  project commands. Project notes share search, reminders, conflict checks,
+  Trash recovery, and export; ZIP export preserves note directory structure.
+
+### Added
+
+- Add a tab context-menu **Move to project** submenu listing project folders
+  and nested directories. Save edits before moving and keep the current tab open;
+  pinned default pages and external files cannot be moved.
 
 ## 0.7.0 - 2026-10-09
 

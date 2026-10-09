@@ -24,12 +24,14 @@ pub fn archive_directory_path(workspace: &Workspace, relative_path: &str) -> Res
     safe_relative_path(&workspace.archive_dir, relative_path, false)
 }
 
-pub fn prompt_relative_path(workspace: &Workspace, relative_path: &str) -> Result<PathBuf> {
-    safe_relative_path(&workspace.prompts_dir, relative_path, true)
+pub fn project_file_path(workspace: &Workspace, relative_path: &str) -> Result<PathBuf> {
+    ensure_inside_workspace(&workspace.root, &workspace.projects_dir)?;
+    safe_relative_path(&workspace.projects_dir, relative_path, true)
 }
 
-pub fn prompt_directory_path(workspace: &Workspace, relative_path: &str) -> Result<PathBuf> {
-    safe_relative_path(&workspace.prompts_dir, relative_path, false)
+pub fn project_directory_path(workspace: &Workspace, relative_path: &str) -> Result<PathBuf> {
+    ensure_inside_workspace(&workspace.root, &workspace.projects_dir)?;
+    safe_relative_path(&workspace.projects_dir, relative_path, false)
 }
 
 pub fn ensure_inside_workspace(workspace: &Path, target: &Path) -> Result<()> {
@@ -137,6 +139,9 @@ fn validate_path_component(name: &str) -> Result<()> {
 }
 
 fn ensure_inside_existing_root(root: &Path, target: &Path) -> Result<()> {
+    if metadata_is_link(&std::fs::symlink_metadata(root)?) {
+        bail!("links are not allowed in workspace paths");
+    }
     let canonical_root = normalize_existing_path(root)
         .with_context(|| format!("failed to resolve workspace path {}", root.display()))?;
     let relative = target
@@ -148,7 +153,7 @@ fn ensure_inside_existing_root(root: &Path, target: &Path) -> Result<()> {
         if current.exists() {
             let metadata = std::fs::symlink_metadata(&current)
                 .with_context(|| format!("failed to inspect path {}", current.display()))?;
-            if metadata.file_type().is_symlink() {
+            if metadata_is_link(&metadata) {
                 bail!("symbolic links are not allowed in workspace paths");
             }
             current = normalize_existing_path(&current)?;
@@ -158,6 +163,18 @@ fn ensure_inside_existing_root(root: &Path, target: &Path) -> Result<()> {
         }
     }
     Ok(())
+}
+
+pub(crate) fn metadata_is_link(metadata: &std::fs::Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        metadata.file_attributes() & 0x400 != 0
+    }
+    #[cfg(not(windows))]
+    {
+        metadata.file_type().is_symlink()
+    }
 }
 
 fn normalize_existing_path(path: &Path) -> Result<PathBuf> {

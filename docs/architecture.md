@@ -48,7 +48,7 @@ state machine. Domain behavior is split into focused Vue composables:
   The custom search panel, editor themes, and line calculator live in focused
   `editor-*` modules; pure match-count and expression behavior has regression
   coverage independent of the desktop runtime. A loaded document starts with a
-  fresh CodeMirror state so undo/redo history cannot cross note, prompt, or
+  fresh CodeMirror state so undo/redo history cannot cross note or
   external-document boundaries; loading content is never an undoable edit.
 
 Keep dependencies explicit when adding a composable. Do not introduce a global
@@ -63,12 +63,12 @@ latter can be exercised in Vitest without WebView or DOM setup.
 Vue UI
   -> Tauri command
   -> neopad-core
-  -> ~/.neopad/notes/*.md
+  -> ~/.neopad/notes/*.md + projects/**/*.md
 
 Agent process
   -> neopad-cli
   -> neopad-core
-  -> ~/.neopad/notes/*.md
+  -> ~/.neopad/notes/*.md + projects/**/*.md
 ```
 
 ## Local Workspace
@@ -84,12 +84,11 @@ The default workspace is `~/.neopad/`.
   archive/
     category/
       page-*.md
-  prompts/
-    category/
-      prompt.md
+  projects/
+    project/
+      note.md
   meta/
     tabs.json
-    prompts.json
     reminders.json
   config.json
   trash/
@@ -102,26 +101,17 @@ the affected file and its metadata remain in NeoPad's Trash. Metadata
 reconciliation also recreates deleted-tab entries for NeoPad-formatted files
 that the operating system restores to `trash/`.
 
-The app presents notes as tabs. Active note content stays in the flat
-`notes/*.md` work area. Archived notes may be categorized under
-`archive/**/*.md`; `tabs.json` stores stable note identity and archive relative
-paths in addition to title, file name, timestamps, pinned state, active tab,
-and optional tab color. Archived notes can be opened for inspection or editing
-without moving them back to `notes/`; restoring remains an explicit operation.
-Reusable prompts may be categorized under
-`prompts/**/*.md`; `prompts.json` keeps prompt identity stable when files move.
-Moving or renaming an archive or prompt directory rewrites every managed
-descendant path while retaining those stable identities. Deleting a directory
-first moves all managed Markdown descendants into NeoPad Trash, then removes
-the empty directory tree; unmanaged files and symbolic links make the operation
-fail without changing the directory.
-`reminders.json` stores only notification delivery signatures so reminder text
-continues to live in ordinary Markdown note lines.
+The app presents capture and project notes as ordinary tabs. Capture stays in
+flat `notes/`; project Markdown is nested under `projects/`. `tabs.json` stores
+stable IDs, optional project/archive paths, and exact trash filenames. All note
+operations resolve the same paths in the shared core. Archive a project into
+`archive/projects/<name>/`; restoring a note recreates its original project path.
 
-Desktop preferences are persisted in `config.json`. Browser `localStorage`
-supports frontend startup, while native `config.json` is authoritative in the
-desktop runtime. Config loading uses defaults for older files so missing fields
-from previous versions do not block startup.
+Directory operations reject unsafe paths, links, conflicting destinations, and
+unmanaged non-Markdown files. Legacy `prompts/` and `trash/prompts/` migrate into
+ordinary notes under `projects/原提示词/` and unified Trash. Migration journals
+metadata before each file move, resumes after interruption, and selects a fresh
+project name when a destination exists. Existing legacy metadata is retained.
 
 ## Core Responsibilities
 
@@ -167,9 +157,8 @@ the configured workspace.
 - Compact AI chat composer opened by `Ctrl+K` and independent one-shot editing
   actions opened by CodeMirror `//` completion. Selecting a quick action
   authorizes one direct, undoable editor transaction.
-- Typed document tabs route note, external Markdown, and prompt Markdown loads
-  and saves to their own core-backed APIs. Prompt tabs are transient editor
-  views over `prompts/*.md`; they do not enter note metadata or note search.
+- Capture and project tabs use the ordinary note API; external Markdown uses
+  its approved external-document API. There is no prompt document kind.
 - Autosave and status reporting.
 - Compact reminder creation and list surfaces. New reminder lines use
   `- [ ] @remind YYYY-MM-DD HH:mm content`; checking the Markdown task
@@ -177,7 +166,7 @@ the configured workspace.
 - Local keyboard shortcuts:
   - `F1`: open shortcut help.
   - `F2` / `F3`: switch to the previous / next tab.
-  - `F4`: show or hide the note and prompt file browser.
+  - `F4`: show or hide the note and project file browser.
   - `F5`: cycle edit, split, and preview editor modes.
   - `F6`: toggle the reminder list.
   - `F7`: toggle window on top.
@@ -221,8 +210,8 @@ rejects duplicate window and clipboard shortcut combinations.
 ## AI Collaboration Responsibilities
 
 The Vue layer owns one volatile conversation per note, the compact composer,
-prompt selection, context scope, and result actions. CodeMirror owns `//`
-completion. Quick editing commands use no chat history, prompt attachment, or
+context scope, and result actions. CodeMirror owns `//`
+completion. Quick editing commands use no chat history or
 workspace context. A mapped inline widget shows progress at the captured cursor,
 then the result is applied directly as one undoable transaction. A replacement
 first checks that its mapped source text still matches the captured text. Note
@@ -239,10 +228,8 @@ The Rust shell validates the configured URL, refuses remote plain HTTP,
 disables redirects, bounds responses, and calls the configured
 `/chat/completions` endpoint. Non-secret provider settings are stored in
 `config.json`; the API key is stored through the platform credential manager.
-AI is off by default and conversations are not persisted. User prompt files are
-created, read, atomically written, renamed, trashed, and restored through
-`neopad-core`. The `F4` browser opens them as prompt-marked editor tabs, while
-the `Ctrl+K` picker includes only non-empty prompts. Whole-workspace scope
+AI is off by default and conversations are not persisted. There is no reusable
+prompt attachment picker. Whole-workspace scope
 uses core text relevance search and sends a bounded set of excerpts with source
 metadata; it does not concatenate the workspace or maintain a vector index.
 
@@ -266,7 +253,7 @@ Agent that already has direct filesystem access.
 
 The frontend checks for note changes every two seconds. It reloads a note only
 when no edits are pending, and rejects an asynchronous result if typing, saving,
-or switching tabs occurred. External Markdown and prompt tabs keep their own
+or switching tabs occurred. External Markdown tabs keep their own
 lifecycle.
 
 ## Packaging

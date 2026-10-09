@@ -10,10 +10,18 @@ All command results are JSON: {ok, version, data} or {ok, error}.
 
 Commands:
   doctor                           Inspect workspace and CLI without creating files
-  list [--scope active|archive|trash|all]
+  list [--scope active|projects|archive|trash|all]
+  projects                         List project directories
+  project-create DIRECTORY         Create a project directory
+  project-rename DIRECTORY --name NAME
+  project-move DIRECTORY --parent DIRECTORY
+  project-archive DIRECTORY         Archive a project tree
+  project-trash DIRECTORY           Trash every project note
+  move ID --project DIRECTORY       Move a note into a project
+  capture ID                       Move a note back to capture
   read ID                          Read a note and its updatedAt
   search QUERY [--limit 1..100]      Search active and archived notes
-  create [--title TITLE] [--content-file PATH | --stdin]
+  create [--project DIRECTORY] [--title TITLE] [--content-file PATH | --stdin]
   append ID --content-file PATH | --stdin
   append-inbox --content-file PATH | --stdin
   append-clipboard --content-file PATH | --stdin  (does not read system clipboard)
@@ -76,11 +84,16 @@ fn parse_args(arguments: Vec<String>) -> Result<Args> {
     }
     let (count, allowed): (usize, &[&str]) = match result.command.as_str() {
         "doctor" => (0, &[]),
-        "list" => (0, &["--scope"]),
+        "list" => (0, &["--scope", "--project"]),
+        "projects" => (0, &[]),
+        "project-create" | "project-archive" | "project-trash" | "capture" => (1, &[]),
+        "project-rename" => (1, &["--name"]),
+        "project-move" => (1, &["--parent"]),
+        "move" => (1, &["--project"]),
         "read" | "archive" | "unarchive" | "trash" | "restore" => (1, &[]),
         "search" => (1, &["--limit"]),
         "rename" => (1, &["--title"]),
-        "create" => (0, &["--title", "--content-file", "--stdin"]),
+        "create" => (0, &["--project", "--title", "--content-file", "--stdin"]),
         "append" => (1, &["--content-file", "--stdin"]),
         "append-inbox" | "append-clipboard" => (0, &["--content-file", "--stdin"]),
         "update" => (1, &["--content-file", "--stdin", "--expected-updated-at"]),
@@ -105,6 +118,15 @@ fn parse_args(arguments: Vec<String>) -> Result<Args> {
     {
         bail!("content requires --content-file PATH or --stdin");
     }
+    for (command, option) in [
+        ("move", "--project"),
+        ("project-rename", "--name"),
+        ("project-move", "--parent"),
+    ] {
+        if result.command == command {
+            result.required(option)?;
+        }
+    }
     if result.command == "rename" {
         result.required("--title")?;
     }
@@ -117,7 +139,7 @@ fn parse_args(arguments: Vec<String>) -> Result<Args> {
     if result.command == "list"
         && !matches!(
             result.option("--scope", "active"),
-            "active" | "archive" | "trash" | "all"
+            "active" | "projects" | "archive" | "trash" | "all"
         )
     {
         bail!("scope must be active, archive, trash, or all");
@@ -188,23 +210,57 @@ fn execute(args: Args) -> Result<Value> {
     let id = args.positional.first().map_or("", String::as_str);
     Ok(match args.command.as_str() {
         "list" => {
-            let pages = match args.option("--scope", "active") {
+            let mut pages = match args.option("--scope", "active") {
+                "projects" => list_project_notes(&workspace)?,
                 "archive" => list_archived_notes(&workspace)?,
                 "trash" => list_trashed_notes(&workspace)?,
                 "all" => list_searchable_notes(&workspace)?,
                 _ => list_notes(&workspace)?,
             };
+            if let Some(project) = args.options.get("--project") {
+                neopad_core::path::project_directory_path(&workspace, project)?;
+                pages.retain(|page| {
+                    page.project_relative_path
+                        .as_deref()
+                        .is_some_and(|path| path.starts_with(&format!("{project}/")))
+                });
+            }
             json!({ "pages": pages })
         }
         "read" => json!(read_note(&workspace, id)?),
         "search" => {
             json!({ "matches": search_notes(&workspace, id, args.option("--limit", "20").parse()?)? })
         }
-        "create" => json!(create_note_with_body(
+        "create" => json!(if let Some(project) = args.options.get("--project") {
+            create_project_note(
+                &workspace,
+                project,
+                args.options.get("--title").cloned(),
+                &content,
+            )?
+        } else {
+            create_note_with_body(&workspace, args.options.get("--title").cloned(), &content)?
+        }),
+        "projects" => json!({"directories": list_project_directories(&workspace)?}),
+        "project-create" => json!(create_project_directory(&workspace, id)?),
+        "project-rename" => json!(rename_project_directory(
             &workspace,
-            args.options.get("--title").cloned(),
-            &content
+            id,
+            args.required("--name")?
         )?),
+        "project-move" => json!(move_project_directory(
+            &workspace,
+            id,
+            args.required("--parent")?
+        )?),
+        "project-archive" => json!(archive_project_directory(&workspace, id)?),
+        "project-trash" => json!(delete_project_directory_to_trash(&workspace, id)?),
+        "move" => json!(move_note_to_project(
+            &workspace,
+            id,
+            args.required("--project")?
+        )?),
+        "capture" => json!(move_note_to_capture(&workspace, id)?),
         "append" => json!(append_to_note(&workspace, id, &content)?),
         "append-inbox" => json!(append_to_note(&workspace, "inbox", &content)?),
         "append-clipboard" => json!(append_to_clipboard_note(&workspace, &content)?),

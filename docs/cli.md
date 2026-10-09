@@ -127,3 +127,29 @@ NeoPad 0.7.0 移除了此前 0.x 版本提供的 MCP 服务。这是 Agent 接�
 不再需要 NeoPad HTTP 地址、Bearer token 或 `NEOPAD_MCP_TOKEN`。旧的
 `config.json` 中 `mcp` 字段会被忽略，并在下次保存配置时移除，无需手动
 编辑元数据。旧 MCP 配置文档仅供查看 0.7.0 之前的历史行为，不适用于 0.7.0。
+
+## 项目笔记（0.7.1 起）
+
+项目笔记是普通笔记，`read`、`append`、`update`、`rename`、`search`、`trash`、
+`restore` 共用原有接口。`list` 的 active 包含快速捕获与项目，all 包含存档且
+不包含回收站；使用 `--scope projects` 只列出活动项目笔记，`--project` 按项目
+目录筛选。项目 ID 随移动、目录重命名和归档保持不变。
+
+```powershell
+& $cli project-create 'NeoPad/设计'
+& $cli create --project 'NeoPad/设计' --title '讨论结论' --content-file 'C:\Temp\conclusion.md'
+& $cli projects
+& $cli list --scope projects --project 'NeoPad'
+& $cli move ID --project 'NeoPad/设计'
+& $cli capture ID
+& $cli project-rename 'NeoPad' --name 'NeoPad新版'
+& $cli project-move 'NeoPad新版/设计' --parent 'NeoPad新版/参考'
+& $cli project-archive 'NeoPad新版'
+& $cli unarchive ID
+& $cli project-trash 'NeoPad新版'
+& $cli restore ID
+```
+
+整体归档保存为 `archive/projects/<项目>/...`。恢复笔记时重建原项目目录。
+目录操作拒绝覆盖、路径逃逸、符号链接和未管理的非 Markdown 文件。
+旧提示词迁移与降级说明见 [项目指南](projects.md)。

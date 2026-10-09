@@ -14,6 +14,10 @@ pub struct NoteTab {
     pub archived: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub archive_relative_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_relative_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trash_file_name: Option<String>,
     #[serde(default = "default_open")]
     pub open: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -54,6 +58,8 @@ impl TabsState {
                     deleted: false,
                     archived: false,
                     archive_relative_path: None,
+                    project_relative_path: None,
+                    trash_file_name: None,
                     open: true,
                     last_opened_at: Some(now_ms),
                     system_title: false,
@@ -70,6 +76,8 @@ impl TabsState {
                     deleted: false,
                     archived: false,
                     archive_relative_path: None,
+                    project_relative_path: None,
+                    trash_file_name: None,
                     open: true,
                     last_opened_at: Some(now_ms),
                     system_title: false,

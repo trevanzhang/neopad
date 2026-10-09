@@ -54,10 +54,8 @@ This file tracks the implemented MVP relative to the original task plan.
 - Native picker, drag-and-drop, and operating-system file-association opening
   with in-place autosave for external Markdown files; content-revision
   conflicts, persistent recent-document list, and copy-to-archive behavior.
-- Compact `F4` file browser with flat active notes, categorized archive and
-  prompt folders, drag-and-drop movement for files and complete folder trees,
-  safe folder rename/delete actions, directly openable archived notes that
-  remain archived until explicitly restored, and marked prompt editor tabs.
+- Compact F4 browser for capture, project, archive, and trash notes, with folder
+  moves, rename, archive, and recoverable deletion. Projects use ordinary notes.
 - Modernized desktop chrome, unified dialogs, and a reorganized Settings center
   with configurable global shortcuts.
 - Manual clipboard capture to `clipboard.md`.
@@ -65,7 +63,7 @@ This file tracks the implemented MVP relative to the original task plan.
 - Agent tools settings page with status, repair, and a copyable CLI path.
 - Safe automatic refresh for saved notes changed by an external Agent.
 - Optional AI collaboration with secure provider settings, a compact `Ctrl+K`
-  note chat, in-memory per-note sessions, a Markdown prompt library, bounded
+  note chat, in-memory per-note sessions, bounded
   whole-workspace context search, explicit chat result actions, and independent
   auto-applying `//` commands for continue, polish, summarize, and translate
   with inline progress. Exact editor selections also expose direct AI actions

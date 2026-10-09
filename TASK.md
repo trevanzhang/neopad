@@ -33,11 +33,11 @@ Implemented MVP capabilities:
   set of options lives under Advanced settings, including whether NeoPad Ctrl
   shortcuts take priority over conflicting Vim mappings.
 - Plain Markdown persistence under the flat active work area
-  `~/.neopad/notes/*.md`, with categorized archived notes stored under
+  `~/.neopad/notes/*.md`, project notes under `~/.neopad/projects/**/*.md`, and categorized archived notes under
   `~/.neopad/archive/**/*.md`.
 - Multiple tabs backed by local metadata, including close-without-delete and
   recent-document workflows.
-- Tab and single-file browser context menus can reveal note, prompt, or
+- Tab and single-file browser context menus can reveal note or
   external Markdown files in the system file manager. Tab menus can also copy
   the current document's absolute file path, while the File menu opens the
   local archive directory directly.
@@ -99,19 +99,19 @@ Implemented MVP capabilities:
   Selecting a `//` command applies generated Markdown as one undoable edit;
   chat results remain explicit insert, replace, or copy actions. Right-clicking
   an editor selection exposes direct polish, summarize, and translate actions.
-  The Help menu documents setup, all three entry points, prompts, and privacy.
+  The Help menu documents setup, all three entry points, projects, and privacy.
   Ordinary note tabs also provide an explicit AI rename action that generates
   a single-line title and atomically synchronizes the tab title with the first
   Markdown level-one heading.
-- Prompt Markdown files are organized under `prompts/**/*.md` and managed from
-  the compact `F4` file browser with local folders. Files and complete folder
-  trees can be moved by drag and drop; folders can be renamed or deleted, with
-  their managed Markdown files retained in NeoPad Trash. Archived notes can
-  likewise be organized into folders and opened without restoring them to the
-  flat `notes/` work area; restoration is explicit. Prompts open in the main
-  editor as marked tabs. They use the normal save barrier and
-  content-revision conflict checks, but remain outside note search, archive,
-  reminders, recent notes, and CLI note operations.
+- Projects organize ordinary Markdown notes under `projects/<project>/`.
+  The tab context menu can move a note to an existing project or subdirectory
+  after saving edits, without closing the tab or opening the file browser.
+  The compact F4 browser supports folders, notes, drag-and-drop movement,
+  rename, whole-project archive, and recoverable deletion. Project notes share
+  ordinary note APIs, revision checks, search, reminders, export, and CLI.
+  Legacy prompt files and their trash records migrate to project notes with
+  original bodies and categories preserved. The reusable prompt picker and
+  prompt-only document/API types are removed.
 - Structured in-app Software Help that introduces NeoPad's product direction,
   core note workflows, editor and search tools, capture and export paths,
   reminders, AI and CLI boundaries, and local-first data guarantees.
@@ -123,15 +123,14 @@ Implemented MVP capabilities:
 
 ## Data Rules
 
-- Active user note bodies are stored only as Markdown files under the flat
-  `notes/` work area; archived note bodies may be categorized under `archive/`.
-- Metadata belongs in `config.json`, `meta/tabs.json`, `meta/prompts.json`, and
-  `meta/reminders.json`. Reminder content must remain in note Markdown; the
-  reminder metadata file stores notification delivery state only.
-- User-authored reusable AI prompts live in `prompts/**/*.md` and remain separate
-  from note content.
-- Delete operations move notes and prompts into `trash/`; prompt trash remains
-  distinguishable from note trash and must not be reconciled as note content.
+- Capture Markdown stays in flat `notes/`; active project Markdown lives in
+  `projects/`; archived notes may be categorized under `archive/`.
+- Metadata belongs in `config.json`, `meta/tabs.json`, and `meta/reminders.json`.
+  Reminder content remains in note Markdown; reminder metadata stores delivery
+  state only. `tabs.json` owns stable note IDs, project paths, and exact trash
+  filenames. Legacy `meta/prompts.json` remains only as migration history.
+- Delete operations move managed Markdown files into `trash/`, never unlink
+  user content. Restoring a project note recreates its original directory.
 - Emptying Trash moves its Markdown files into the operating system's Recycle
   Bin or Trash before removing deleted-tab metadata; it must not unlink note
   files. Files restored by the operating system must be rediscovered on the
@@ -156,7 +155,7 @@ Implemented MVP capabilities:
 - Full note replacement requires the `updatedAt` returned by a fresh read.
 - Preserve atomic writes and conflict detection. Move deleted notes to trash.
 - Use IDs from the CLI; do not accept arbitrary paths for note operations.
-- User prompt Markdown remains separate from note commands and search.
+- Project Markdown shares normal note commands, conflict checks, and search.
 - `append-clipboard` appends supplied text, without reading the system clipboard.
 - Refresh saved desktop notes after CLI changes without replacing unsaved edits.
 - Preserve existing user-authored `.agents/` files. User guides and skills can
@@ -181,10 +180,7 @@ Implemented MVP capabilities:
 - `Ctrl+K` conversations are kept in memory per note and never persisted.
 - Whole-workspace context uses local text relevance search and sends only a
   bounded set of excerpts rather than concatenating every note.
-- User-authored reusable prompts live in `~/.neopad/prompts/**/*.md`. The `F4`
-  file browser owns prompt creation, rename, duplicate, trash, restore, and
-  folder organization actions. Open prompt tabs use atomic writes with
-  content-revision conflicts.
+- AI has no reusable prompt library or attachment picker. Projects hold ordinary notes.
 - AI request bodies, credentials, and note text must not be written to logs.
 
 ## Packaging Rules

@@ -9,7 +9,6 @@ import { useNoteExport } from './useNoteExport'
 
 vi.mock('../lib/invoke', () => ({
   copyPngToClipboard: vi.fn(),
-  readAiPrompt: vi.fn(),
   readExternalMarkdown: vi.fn(),
   readNote: vi.fn(),
   saveNoteExport: vi.fn(),

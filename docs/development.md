@@ -96,7 +96,8 @@ The root `tauri:build` script intentionally performs three steps:
 Use the root command for distributable builds so the installed app can deploy
 the CLI and offer status and repair actions in Settings > Agent tools.
 
-Version 0.7.0 removes the former MCP sidecar. Existing Agent connections must
+Version 0.7.1 replaces the prompt library with ordinary project notes; see
+[Projects and migration](projects.md). Version 0.7.0 removes the former MCP sidecar. Existing Agent connections must
 follow [MCP-to-CLI migration](cli.md#migrate-from-mcp). Before preparing a build,
 keep the Cargo workspace, root and frontend packages, Tauri config, and Cargo
 lockfile in sync, and record the version in `CHANGELOG.md`.

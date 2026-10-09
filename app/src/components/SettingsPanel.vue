@@ -86,8 +86,6 @@ const emit = defineEmits<{
   'save-ai-api-key': [apiKey: string]
   'clear-ai-api-key': []
   'test-ai-connection': []
-  'manage-ai-prompts': []
-  'open-ai-prompts-folder': []
 }>()
 
 const activeTab = ref<SettingsTab>(props.initialTab ?? 'general')
@@ -555,8 +553,6 @@ function deleteCustomText(current: string[]) {
           @save-api-key="$emit('save-ai-api-key', $event)"
           @clear-api-key="$emit('clear-ai-api-key')"
           @test-connection="$emit('test-ai-connection')"
-          @manage-prompts="$emit('manage-ai-prompts')"
-          @open-prompts-folder="$emit('open-ai-prompts-folder')"
         />
       </template>
 

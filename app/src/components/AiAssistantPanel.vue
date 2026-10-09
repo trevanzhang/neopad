@@ -12,7 +12,6 @@ import type {
   AiConversationMessage,
   AiGenerateResponse,
   AiPanelSession,
-  AiPromptEntry,
 } from '../types/ai'
 
 type AssistantItem = AiChatMessage & {
@@ -23,13 +22,10 @@ type AssistantItem = AiChatMessage & {
 const props = defineProps<{
   session: AiPanelSession
   ready: boolean
-  prompts: AiPromptEntry[]
-  promptsLoading: boolean
   messages: AppMessages['ai']
   generate: (
     messages: AiConversationMessage[],
     scope: AiContextScope,
-    prompt?: string,
   ) => Promise<AiGenerateResponse>
   applyResult: (action: 'replace' | 'insert' | 'insertBelow', content: string, contextKind: AiContextKind) => boolean
 }>()
@@ -38,13 +34,10 @@ const emit = defineEmits<{
   close: []
   configure: []
   updateChat: [chat: AiChatState]
-  refreshPrompts: []
-  managePrompts: []
 }>()
 
 const panel = ref<HTMLElement | null>(null)
 const promptInput = ref<HTMLTextAreaElement | null>(null)
-const promptSearchInput = ref<HTMLInputElement | null>(null)
 const transcriptElement = ref<HTMLElement | null>(null)
 const prompt = ref('')
 const transcript = ref<AssistantItem[]>(props.session.chat.messages.map((message) => ({
@@ -52,24 +45,11 @@ const transcript = ref<AssistantItem[]>(props.session.chat.messages.map((message
   sources: message.sources?.map((source) => ({ ...source })),
 })))
 const scope = ref<AiContextScope>(props.session.chat.scope)
-const selectedPromptId = ref(props.session.chat.promptId)
-const promptPickerOpen = ref(false)
 const scopePickerOpen = ref(false)
-const promptQuery = ref('')
 const busy = ref(false)
 const error = ref<string | null>(null)
 
 const expanded = computed(() => transcript.value.length > 0 || busy.value)
-const selectedPrompt = computed(() => props.prompts.find((item) => item.id === selectedPromptId.value))
-const filteredPrompts = computed(() => {
-  const query = promptQuery.value.trim().toLowerCase()
-  if (!query) return props.prompts
-  return props.prompts.filter((item) => `${item.relativePath} ${item.content}`.toLowerCase().includes(query))
-})
-function promptCategory(prompt: AiPromptEntry) {
-  const index = prompt.relativePath.lastIndexOf('/')
-  return index < 0 ? '' : prompt.relativePath.slice(0, index)
-}
 const selectionContext = computed(() => props.session.snapshot.contexts.find((item) => item.kind === 'selection'))
 onMounted(() => {
   void nextTick(async () => {
@@ -94,7 +74,6 @@ function chatState(): AiChatState {
       sources: sources?.map((source) => ({ ...source })),
     })),
     scope: scope.value,
-    promptId: selectedPromptId.value,
   }
 }
 
@@ -111,7 +90,6 @@ async function submitPrompt() {
   prompt.value = ''
   busy.value = true
   error.value = null
-  promptPickerOpen.value = false
   scopePickerOpen.value = false
   resizeComposer()
   persistChat()
@@ -122,7 +100,7 @@ async function submitPrompt() {
       role,
       content: messageContent,
     }))
-    const result = await props.generate(conversation, scope.value, selectedPrompt.value?.content)
+    const result = await props.generate(conversation, scope.value)
     transcript.value.push({
       role: 'assistant',
       content: result.content,
@@ -174,7 +152,6 @@ async function copyResult(item: AssistantItem) {
 
 function toggleScopePicker() {
   scopePickerOpen.value = !scopePickerOpen.value
-  if (scopePickerOpen.value) promptPickerOpen.value = false
 }
 
 function selectScope(value: AiContextScope) {
@@ -190,28 +167,6 @@ function handleScopeFocusOut(event: FocusEvent) {
   scopePickerOpen.value = false
 }
 
-function togglePromptPicker() {
-  promptPickerOpen.value = !promptPickerOpen.value
-  if (promptPickerOpen.value) {
-    scopePickerOpen.value = false
-    promptQuery.value = ''
-    void nextTick(() => promptSearchInput.value?.focus())
-  }
-}
-
-function selectPrompt(item: AiPromptEntry) {
-  selectedPromptId.value = item.id
-  promptPickerOpen.value = false
-  persistChat()
-  promptInput.value?.focus()
-}
-
-function clearSelectedPrompt() {
-  selectedPromptId.value = undefined
-  persistChat()
-  promptInput.value?.focus()
-}
-
 function clearChat() {
   transcript.value = []
   error.value = null
@@ -220,9 +175,7 @@ function clearChat() {
 }
 
 function handlePanelEscape() {
-  if (promptPickerOpen.value) {
-    promptPickerOpen.value = false
-  } else if (scopePickerOpen.value) {
+  if (scopePickerOpen.value) {
     scopePickerOpen.value = false
   } else {
     emit('close')
@@ -316,28 +269,6 @@ function handleMarkdownClick(event: MouseEvent) {
 
           <div class="ai-composer-footer">
             <div class="ai-composer-tools">
-              <button
-                type="button"
-                class="ai-tool-button ai-prompt-trigger"
-                :class="{ active: promptPickerOpen }"
-                :aria-label="messages.promptLibrary"
-                :title="messages.promptLibrary"
-                :aria-expanded="promptPickerOpen"
-                @click="togglePromptPicker"
-              >
-                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg>
-              </button>
-
-              <button
-                v-if="selectedPrompt"
-                type="button"
-                class="ai-prompt-chip"
-                :title="selectedPrompt.content"
-                @click="clearSelectedPrompt"
-              >
-                {{ selectedPrompt.name }} <span aria-hidden="true">×</span>
-              </button>
-
               <div class="ai-scope-picker" @focusout="handleScopeFocusOut">
                 <button
                   type="button"
@@ -390,33 +321,6 @@ function handleMarkdownClick(event: MouseEvent) {
             </button>
           </div>
 
-          <div v-if="promptPickerOpen" class="ai-prompt-picker">
-            <div class="ai-prompt-picker-search">
-              <input ref="promptSearchInput" v-model="promptQuery" type="search" :placeholder="messages.searchPrompts" />
-              <button type="button" :title="messages.refreshPrompts" @click="emit('refreshPrompts')">↻</button>
-            </div>
-            <div class="ai-prompt-list">
-              <p v-if="promptsLoading">{{ messages.loadingPrompts }}</p>
-              <button
-                v-for="item in filteredPrompts"
-                v-else
-                :key="item.id"
-                type="button"
-              :class="{ selected: item.id === selectedPromptId }"
-              @click="selectPrompt(item)"
-            >
-                <span class="ai-prompt-item-heading">
-                  <strong class="ai-prompt-item-title">{{ item.name }}</strong>
-                  <small v-if="promptCategory(item)" class="ai-prompt-item-category">{{ promptCategory(item) }}</small>
-                </span>
-                <span class="ai-prompt-item-preview">{{ item.content }}</span>
-              </button>
-              <p v-if="!promptsLoading && filteredPrompts.length === 0">{{ messages.noPrompts }}</p>
-            </div>
-            <button type="button" class="ai-open-prompts" @click="emit('managePrompts')">
-              {{ messages.managePrompts }}
-            </button>
-          </div>
         </form>
       </template>
     </section>

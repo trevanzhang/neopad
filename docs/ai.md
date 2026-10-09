@@ -45,35 +45,12 @@ Replacement and insertion are applied as one CodeMirror transaction, so a
 single undo restores the previous text. Replacement is refused when its
 captured text has changed while the request was running.
 
-## Prompt library
+## Project notes
 
-Reusable user prompts live as UTF-8 Markdown files in:
-
-```text
-~/.neopad/prompts/**/*.md
-```
-
-The file name is the prompt name, folders provide local categories, and the
-Markdown body is the instruction. Use
-the `+` button in the `Ctrl+K` composer to search and attach one prompt. The
-picker shows the prompt title, its folder category, and a one-line content
-preview. The selected prompt remains visible as a removable chip and is sent
-only when the user sends a message.
-
-Press `F4` to manage prompts beside notes in the compact file browser. Create,
-rename (`F8` while its tab is active), duplicate, reveal, move to Trash, and
-restore actions operate on `prompts/**/*.md`. The F4 browser can create prompt
-folders, move prompts or complete folder trees by drag and drop, and rename or
-delete folders from their context menu. Deleting a folder moves its prompt
-files to NeoPad Trash. Selecting a prompt opens it in
-the main editor as a prompt-marked tab, with the same autosave barrier and
-external-change conflict protection used by other editable documents. Closing
-a prompt tab only closes the view; deleting it moves the file to NeoPad's Trash.
-
-Empty prompt files remain visible in `F4` so they can be completed, but are
-omitted from the `Ctrl+K` attachment picker until they contain an instruction.
-Prompt documents stay outside note search, archive, reminders, recent notes,
-and CLI note tools.
+Reusable prompt management and the Ctrl+K attachment picker have been removed.
+Projects contain ordinary Markdown notes under `~/.neopad/projects/`; they use
+normal editing, search, reminders, export, and native CLI operations. Existing
+prompt files migrate without changing their bodies. See [Projects](projects.md).
 
 ## Quick editing commands
 
@@ -98,11 +75,11 @@ saves the note, sends its current content to the configured provider, and
 requests one concise plain-text title. The response is reduced to one bounded
 line before NeoPad updates both the tab metadata and the first `# title`
 heading. If the note has no level-one heading, NeoPad prepends one without
-discarding the existing first line. Inbox, Clipboard, prompt tabs, and external
+discarding the existing first line. Inbox, Clipboard, and external
 Markdown tabs are excluded.
 
 These commands are separate from `Ctrl+K` chat: they do not use chat history,
-the prompt library, or all-note context. Polish and translate target the
+all-note context. Polish and translate target the
 selection or nearby paragraph. Summarize targets the selection or current
 note. Continue uses the nearby paragraph. Translation defaults to automatic
 Chinese-English switching.
@@ -131,7 +108,7 @@ cancels it, and stale source text is never overwritten.
   host.
 - **All notes** searches locally first and sends only relevant excerpts, with
   their source note titles shown below the response.
-- Conversations and selected prompts are kept in memory only and are discarded
+- Conversations are kept in memory only and are discarded
   when NeoPad exits.
 - NeoPad does not provide accounts, hosted inference, persistent AI chat
   history, RAG, vector search, or autonomous background agents.

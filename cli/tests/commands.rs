@@ -48,6 +48,94 @@ fn parse(output: &Output) -> Value {
 }
 
 #[test]
+fn project_commands_share_note_ids_search_conflicts_and_recovery() {
+    let temp = tempfile::tempdir().unwrap();
+    let workspace = temp.path().join("workspace");
+    run(&workspace, &["project-create", "项目/Research"], None);
+    let note = run(
+        &workspace,
+        &[
+            "create",
+            "--project",
+            "项目/Research",
+            "--title",
+            "设计",
+            "--stdin",
+        ],
+        Some("unique project keyword"),
+    );
+    let id = note["id"].as_str().unwrap();
+    assert_eq!(
+        run(
+            &workspace,
+            &["list", "--scope", "projects", "--project", "项目"],
+            None
+        )["pages"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        run(&workspace, &["search", "keyword"], None)["matches"][0]["noteId"],
+        id
+    );
+    run(
+        &workspace,
+        &["project-rename", "项目", "--name", "Renamed"],
+        None,
+    );
+    let current = run(&workspace, &["read", id], None);
+    let old_version = note["updatedAt"].to_string();
+    let failed = command(
+        &workspace,
+        &[
+            "update",
+            id,
+            "--expected-updated-at",
+            &old_version,
+            "--stdin",
+        ],
+        Some("stale"),
+    )
+    .wait_with_output()
+    .unwrap();
+    assert_eq!(failed.status.code(), Some(3));
+    assert_eq!(
+        run(&workspace, &["read", id], None)["content"],
+        current["content"]
+    );
+    run(
+        &workspace,
+        &["project-move", "Renamed/Research", "--parent", "Other"],
+        None,
+    );
+    run(&workspace, &["project-archive", "Other"], None);
+    assert_eq!(
+        run(&workspace, &["list", "--scope", "archive"], None)["pages"][0]["id"],
+        id
+    );
+    run(&workspace, &["unarchive", id], None);
+    run(&workspace, &["project-trash", "Other"], None);
+    assert_eq!(
+        run(&workspace, &["list", "--scope", "trash"], None)["pages"][0]["id"],
+        id
+    );
+    run(&workspace, &["restore", id], None);
+    run(&workspace, &["capture", id], None);
+    run(&workspace, &["move", id, "--project", "Final"], None);
+    assert_eq!(
+        run(&workspace, &["read", id], None)["content"],
+        current["content"]
+    );
+    assert!(run(&workspace, &["projects"], None)["directories"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item == "Final"));
+}
+
+#[test]
 fn doctor_and_invalid_arguments_do_not_create_workspace() {
     let temp = tempfile::tempdir().unwrap();
     let workspace = temp.path().join("absent");

@@ -25,13 +25,14 @@ docs/                 Human-facing project docs
 
 - Use `neopad-core` for all note, workspace, path, search, and write behavior.
 - Do not duplicate filesystem access logic in the Tauri shell or CLI.
-- Active note content must stay in the flat `~/.neopad/notes/*.md` work area.
+- Capture note content stays in flat `~/.neopad/notes/*.md`. Active project
+  notes live under `~/.neopad/projects/**/*.md` and use ordinary note APIs.
   Archived notes may be categorized under `~/.neopad/archive/**/*.md`.
-- Metadata belongs in `config.json`, `meta/tabs.json`, `meta/prompts.json`, and
+- Metadata belongs in `config.json`, `meta/tabs.json`, and
   `meta/reminders.json`. The reminder file stores delivery state only; reminder
   content remains in Markdown notes.
-- User-authored reusable AI prompts belong in `prompts/**/*.md`; they are not note
-  content and must not be mixed into `notes/`.
+- The reusable prompt library is retired. Preserve legacy prompt Markdown and
+  trash records when migrating them to project notes; keep migration resumable.
 - Never physically delete user notes. Move notes to `trash/`.
 - Keep path safety strict. Reject absolute paths, `..`, and file names that
   escape the workspace.

@@ -4,7 +4,7 @@ pub mod config;
 mod lock;
 pub mod note;
 pub mod path;
-pub mod prompt;
+pub mod project;
 pub mod reminder;
 pub mod search;
 pub mod tab;
@@ -28,13 +28,10 @@ pub use note::{
     unarchive_note, write_note_atomic, write_note_atomic_checked, NoteContent, NoteWriteConflict,
     RecoverableNoteWrite,
 };
-pub use prompt::{
-    create_prompt, create_prompt_directory, create_prompt_in_directory,
-    delete_prompt_directory_to_trash, list_prompt_directories, list_prompt_files, list_prompts,
-    list_trashed_prompts, move_prompt, move_prompt_directory, prompt_file_path, read_prompt,
-    reconcile_prompt_metadata, rename_prompt, rename_prompt_directory, restore_prompt_from_trash,
-    trash_prompt, write_prompt_atomic_checked, PromptEntry, PromptRecord, PromptState,
-    TrashedPromptEntry,
+pub use project::{
+    archive_project_directory, create_project_directory, create_project_note,
+    delete_project_directory_to_trash, list_project_directories, list_project_notes,
+    move_note_to_capture, move_note_to_project, move_project_directory, rename_project_directory,
 };
 pub use reminder::{
     claim_due_reminders, complete_due_reminders, complete_reminder, list_reminders,
