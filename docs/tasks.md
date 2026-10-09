@@ -15,7 +15,7 @@ This file tracks the implemented MVP relative to the original task plan.
 - Note CRUD, close-without-delete, archive, and trash move behavior.
 - Durable atomic writes, monotonic update timestamps, and content-revision
   checks for out-of-band edits.
-- Cross-process write locking for desktop and write-enabled MCP operations.
+- Cross-process write locking for desktop and CLI operations.
 - Tauri command bridge.
 - Vue app shell with tabs, editor, preview, search, settings, and status bar.
 - Edit, split, and preview modes with a compact View menu, status indicator,
@@ -61,9 +61,9 @@ This file tracks the implemented MVP relative to the original task plan.
 - Modernized desktop chrome, unified dialogs, and a reorganized Settings center
   with configurable global shortcuts.
 - Manual clipboard capture to `clipboard.md`.
-- Standalone Streamable HTTP `neopad-mcp` read and write tools.
-- Dedicated MCP settings page with service start/stop, status, token display,
-  token regeneration, and copyable client configuration.
+- Native `neopad-cli` read/write operations and `.agents/bin/` deployment.
+- Agent tools settings page with status, repair, and a copyable CLI path.
+- Safe automatic refresh for saved notes changed by an external Agent.
 - Optional AI collaboration with secure provider settings, a compact `Ctrl+K`
   note chat, in-memory per-note sessions, a Markdown prompt library, bounded
   whole-workspace context search, explicit chat result actions, and independent
@@ -74,14 +74,14 @@ This file tracks the implemented MVP relative to the original task plan.
   the model response to one title and synchronizes it with the note's H1.
 - Structured in-app Software, shortcut, Markdown, Vim, expression, and AI help
   references that reflect the current local-first workflows and boundaries.
-- MCP HTTP child-process integration tests.
+- CLI process, deployment, concurrency, and conflict integration tests.
 - Windows Tauri WebDriver smoke tests for the critical note workflow.
 - Windows icon, tray/taskbar icon, MSI branding, desktop shortcut icon, bundled
-  MCP sidecar, and hidden release console windows.
+  CLI sidecar, and hidden release console windows.
 - Synchronized application versions with a CI consistency check and
   release changelog.
 - Frontend composition split into focused document, note lifecycle,
-  preferences, native settings, search, reminder, archive, MCP, dialog, window,
+  preferences, native settings, search, reminder, archive, Agent tools, dialog, window,
   and editor-support modules with deterministic unit coverage.
 - Audited cross-platform CI and draft release workflows with pinned actions,
   production dependency gates, exact artifact validation, and SHA-256 manifests.
@@ -91,7 +91,7 @@ This file tracks the implemented MVP relative to the original task plan.
 - Windows x64 MSI.
 - macOS ARM64 DMG.
 - Linux x64 DEB and AppImage.
-- Bundled standalone `neopad-mcp` sidecar.
+- Bundled standalone `neopad-cli` sidecar.
 
 ## Recommended Next Tasks
 

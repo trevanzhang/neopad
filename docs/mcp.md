@@ -1,3 +1,6 @@
+> Historical documentation for NeoPad versions before 0.7.0. NeoPad 0.7.0 removes MCP and replaces it with the native CLI.
+> For current setup and migration, use [CLI and Agent guide](cli.md#migrate-from-mcp).
+
 # MCP
 
 `neopad-mcp` is a standalone Rust MCP server that exposes controlled local HTTP
@@ -5,6 +8,10 @@ access to the NeoPad workspace.
 
 The desktop app can start and stop the service from Settings. The server is not
 embedded in the desktop process.
+
+For a guide you can hand to a local agent to configure Codex, Claude Code,
+Cursor, or another client and verify the connection, see
+[Agent MCP setup guide (Chinese)](mcp-agent-setup.md).
 
 ## Desktop Usage
 

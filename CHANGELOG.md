@@ -1,10 +1,33 @@
 # Changelog
 
-NeoPad follows Semantic Versioning. While the project remains below `1.0.0`,
-minor versions may include user-visible behavior changes and new capabilities;
-patch versions are reserved for compatible fixes.
+NeoPad follows Semantic Versioning. During the initial 0.x development phase,
+minor versions may change public interfaces; incompatible changes are documented
+explicitly. Patch versions are reserved for compatible fixes. From 1.0.0 onward,
+incompatible public interface changes require a major version bump.
 
 ## Unreleased
+
+## 0.7.0 - 2026-10-09
+
+### Breaking Changes
+
+- Remove the standalone MCP server, HTTP endpoint, bearer-token configuration,
+  and MCP Settings page. Existing Agent MCP connections must migrate to the
+  native CLI; see [the CLI migration guide](docs/cli.md#migrate-from-mcp).
+- Ignore legacy MCP configuration on load and remove its fields when the
+  configuration is next saved. Existing notes, archives, prompts, and reminder
+  data retain their formats and locations.
+
+### Added
+
+- Add the bundled `neopad-cli` with JSON results for note creation, reading,
+  searching, appending, checked replacement, renaming, archiving, and trash
+  recovery. Commands share the desktop workspace lock and core path checks.
+- Deploy the CLI to `.agents/bin/` at desktop startup, with integrity checks,
+  repair, and a copyable path in Settings > Agent tools.
+- Refresh saved desktop notes after Agent changes while preserving unsaved
+  edits and the current tab order.
+- Add CLI process, concurrent-write, conflict, deployment, and desktop coverage.
 
 ### Changed
 

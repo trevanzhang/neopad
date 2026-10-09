@@ -6,16 +6,9 @@ import { getHelpContent } from '../lib/help-content'
 import type { EditorMode, PreviewContentWidth, PreviewFontFamily, PreviewLineHeight, PreviewTheme } from '../types/editor'
 import type { AiConfig } from '../types/ai'
 
-type SettingsTab = 'general' | 'preview' | 'shortcuts' | 'insertText' | 'advanced' | 'ai' | 'mcp' | 'about'
+type SettingsTab = 'general' | 'preview' | 'shortcuts' | 'insertText' | 'advanced' | 'ai' | 'agents' | 'about'
 type TitleDoubleClickAction = 'none' | 'delete' | 'rename'
-type McpStatus = {
-  enabled: boolean
-  running: boolean
-  status: string
-  url: string
-  token: string
-  lastError: string | null
-}
+import type { AgentToolsStatus } from '../lib/invoke'
 
 const props = defineProps<{
   alwaysOnTop: boolean
@@ -46,8 +39,9 @@ const props = defineProps<{
   previewFontSize: number
   previewLineHeight: PreviewLineHeight
   previewContentWidth: PreviewContentWidth
-  mcpStatus: McpStatus | null
-  mcpError: string | null
+  agentToolsStatus: AgentToolsStatus | null
+  agentToolsError: string | null
+  agentToolsBusy: boolean
   aiConfig: AiConfig
   aiError: string | null
   aiTesting: boolean
@@ -86,9 +80,8 @@ const emit = defineEmits<{
   'update:previewLineHeight': [value: PreviewLineHeight]
   'update:previewContentWidth': [value: PreviewContentWidth]
   editCustomText: [index: number]
-  'update-mcp-enabled': [enabled: boolean]
-  'copy-mcp-config': []
-  'regenerate-mcp-token': []
+  'repair-agent-cli': []
+  'copy-agent-cli-path': []
   'update-ai-config': [patch: Partial<Omit<AiConfig, 'apiKeyConfigured'>>]
   'save-ai-api-key': [apiKey: string]
   'clear-ai-api-key': []
@@ -113,7 +106,7 @@ const activeTabLabel = computed<keyof AppMessages['settings']>(() => {
     insertText: 'insertTextTab',
     advanced: 'advancedTab',
     ai: 'aiTab',
-    mcp: 'mcp',
+    agents: 'agentTools',
     about: 'about',
   }
   return labels[activeTab.value]
@@ -131,23 +124,6 @@ const shortcutReference = computed(() => getHelpContent('shortcuts', props.langu
     ? { keys: line, description: '' }
     : { keys: line.slice(0, dividerIndex), description: line.slice(dividerIndex + 3) }
 }))
-
-function mcpAgentConfig(status: McpStatus | null) {
-  return JSON.stringify(
-    {
-      mcpServers: {
-        neopad: {
-          url: status?.url || 'http://127.0.0.1:8765/mcp',
-          headers: {
-            Authorization: `Bearer ${status?.token || '<local-token>'}`,
-          },
-        },
-      },
-    },
-    null,
-    2,
-  )
-}
 
 function updateModifier(modifier: string, checked: boolean, current: string[]) {
   const next = checked ? Array.from(new Set([...current, modifier])) : current.filter((item) => item !== modifier)
@@ -222,9 +198,9 @@ function deleteCustomText(current: string[]) {
         <svg class="settings-tab-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.7v2.1M8 12.2v2.1M1.7 8h2.1M12.2 8h2.1M3.5 3.5L5 5M11 11l1.5 1.5M12.5 3.5L11 5M5 11l-1.5 1.5" /><circle cx="8" cy="8" r="2.55" /></svg>
         <span>{{ messages.aiTab }}</span>
       </button>
-      <button type="button" :aria-current="activeTab === 'mcp' ? 'page' : undefined" :class="{ active: activeTab === 'mcp' }" @click="activeTab = 'mcp'">
+      <button type="button" :aria-current="activeTab === 'agents' ? 'page' : undefined" :class="{ active: activeTab === 'agents' }" @click="activeTab = 'agents'">
         <svg class="settings-tab-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="4" r="1.8" /><circle cx="12" cy="4" r="1.8" /><circle cx="8" cy="12" r="1.8" /><path d="M5.5 5.1l1.4 5.1M10.5 5.1l-1.4 5.1M5.8 4h4.4" /></svg>
-        <span>{{ messages.mcp }}</span>
+        <span>{{ messages.agentTools }}</span>
       </button>
       <button type="button" class="settings-tab-about" :aria-current="activeTab === 'about' ? 'page' : undefined" :class="{ active: activeTab === 'about' }" @click="activeTab = 'about'">
         <svg class="settings-tab-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.9" /><path d="M8 7.05v3.75M8 4.8h.01" /></svg>
@@ -584,46 +560,24 @@ function deleteCustomText(current: string[]) {
         />
       </template>
 
-      <template v-else-if="activeTab === 'mcp'">
+      <template v-else-if="activeTab === 'agents'">
         <fieldset class="settings-fieldset">
-          <legend>{{ messages.mcpLocalService }}</legend>
-          <p class="settings-description">{{ messages.mcpDescription }}</p>
-          <p class="settings-description">{{ messages.mcpStartupDescription }}</p>
-          <div class="mcp-service-actions">
-            <button
-              type="button"
-              class="mcp-primary-button"
-              @click="$emit('update-mcp-enabled', !mcpStatus?.enabled)"
-            >
-              {{ mcpStatus?.enabled ? messages.stopMcpService : messages.startMcpService }}
+          <legend>{{ messages.agentTools }}</legend>
+          <p class="settings-description">{{ messages.agentCliDescription }}</p>
+          <div class="agent-tools-actions">
+            <button type="button" :disabled="agentToolsBusy" @click="$emit('repair-agent-cli')">
+              {{ messages.repairAgentCli }}
             </button>
-            <strong class="mcp-status" :data-running="mcpStatus?.running ? 'true' : 'false'">
-              {{ mcpStatus?.status || messages.stopped }}
-            </strong>
+            <strong>{{ agentToolsStatus?.matchesBundle ? messages.agentCliReady : messages.agentCliUnavailable }}</strong>
           </div>
-          <div class="settings-form-row">
-            <span>{{ messages.address }}:</span>
-            <code>{{ mcpStatus?.url || 'http://127.0.0.1:8765/mcp' }}</code>
-          </div>
-          <div class="settings-form-row">
-            <span>{{ messages.accessToken }}:</span>
-            <code class="settings-secret">{{ mcpStatus?.token || messages.tokenPending }}</code>
-          </div>
-          <p v-if="mcpError || mcpStatus?.lastError" class="settings-error">{{ mcpError || mcpStatus?.lastError }}</p>
+          <pre v-if="agentToolsStatus" class="settings-code-block">{{ agentToolsStatus.cliPath }}</pre>
+          <p v-if="agentToolsError" class="settings-error">{{ agentToolsError }}</p>
           <div class="settings-actions">
-            <button type="button" :disabled="!mcpStatus?.token" @click="$emit('copy-mcp-config')">
-              {{ messages.copyAgentConfig }}
-            </button>
-            <button type="button" @click="$emit('regenerate-mcp-token')">
-              {{ messages.regenerateToken }}
+            <button type="button" :disabled="!agentToolsStatus?.matchesBundle || agentToolsBusy" @click="$emit('copy-agent-cli-path')">
+              {{ messages.copyAgentCliPath }}
             </button>
           </div>
-        </fieldset>
-
-        <fieldset class="settings-fieldset">
-          <legend>{{ messages.installMethod }}</legend>
-          <p class="settings-description">{{ messages.installMethodDescription }}</p>
-          <pre class="settings-code-block">{{ mcpAgentConfig(mcpStatus) }}</pre>
+          <p class="settings-description">{{ messages.agentCliUsage }}</p>
         </fieldset>
       </template>
       <template v-else>

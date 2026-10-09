@@ -10,6 +10,11 @@ under the user's local NeoPad workspace.
 
 ## Current Status
 
+Version **0.7.0** replaces MCP access with the bundled native CLI. Existing
+Agent connections require migration; note storage formats are unchanged.
+See [MCP-to-CLI migration](docs/cli.md#migrate-from-mcp) and the
+[changelog](CHANGELOG.md).
+
 The repository currently contains a working Windows-focused MVP:
 
 - Tauri 2 desktop app with Vue 3, TypeScript, Vite, CodeMirror 6, and
@@ -66,7 +71,7 @@ The repository currently contains a working Windows-focused MVP:
   ordinary notes, it can ask the configured AI provider for a concise title
   and update both the tab title and the note's first-level heading.
 - The reorganized Settings center groups General, Editor, Preview, Vim,
-  Shortcuts, AI, and MCP controls in a focused dialog, including configurable
+  Shortcuts, AI, and Agent tools controls in a focused dialog, including configurable
   visibility and clipboard-capture shortcuts.
 - Optional AI collaboration provides a compact `Ctrl+K` note chat, reusable
   Markdown prompts, bounded all-note context search, and independent `//`
@@ -105,10 +110,9 @@ The repository currently contains a working Windows-focused MVP:
   the theme background through the full page. Exported PNG and PDF output ends
   with a `Powered by NeoPad` footer. PNG and PDF actions are available from
   both the File menu and the tab context menu.
-- Standalone local HTTP `neopad-mcp` service managed from Settings, with bearer
-  token access for local agents. The dedicated MCP settings page can start or
-  stop the service, show the local URL and token, regenerate the token, and copy
-  an agent configuration snippet.
+- Native `neopad-cli` for local agents, automatically deployed on desktop startup
+  to `~/.neopad/.agents/bin/`. Settings > Agent tools checks and repairs it.
+  Saved editor content refreshes after external changes; unsaved edits are preserved.
 - Save barriers prevent navigation and content-replacing actions from
   discarding pending edits. Note metadata is reconciled under a cross-process
   lock, and interrupted archive/trash state is recovered from Markdown files.
@@ -116,7 +120,7 @@ The repository currently contains a working Windows-focused MVP:
   start-menu shortcut icons, and `.md` / `.markdown` file-association support.
   An English installer page selects the app language for first launch; only
   the Chinese-default option itself is bilingual. The MSI includes
-  `neopad-mcp.exe` as a bundled sidecar binary.
+  `neopad-cli.exe` as a bundled sidecar binary.
 
 ## Workspace Layout
 
@@ -124,8 +128,8 @@ The repository currently contains a working Windows-focused MVP:
 app/                  Tauri desktop app and Vue frontend
 app/src-tauri/        Rust shell for Tauri commands, tray, hotkeys, packaging
 crates/neopad-core/   Shared Rust core library
-mcp-server/           Standalone neopad-mcp binary
-docs/                 Architecture, development, MCP, and task notes
+cli/                  Standalone neopad-cli binary
+docs/                 Architecture, development, CLI, and task notes
 ```
 
 ## User Data
@@ -210,7 +214,7 @@ Build the desktop app and platform bundle:
 pnpm tauri:build
 ```
 
-This command builds the release MCP server first, prepares the Tauri sidecar
+This command builds the release native CLI first, prepares the Tauri sidecar
 name, and then builds an explicit platform-native bundle set (`.msi` on
 Windows, `.dmg` on macOS, `.deb` plus `.AppImage` on Linux). It does not build
 NSIS.
@@ -227,42 +231,20 @@ Before a release is created or published, run the
 [release smoke checklist](docs/release-smoke-checklist.md) against the packaged
 Windows build.
 
-## MCP Server
+## Native CLI
 
-Build the MCP server:
-
-```powershell
-cargo build -p neopad-mcp --release
-```
-
-Run the HTTP server directly without exposing the token in the process command
-line:
+Start NeoPad once, then use Settings > Agent tools to copy the CLI path.
+The CLI runs independently of the desktop app and returns JSON.
 
 ```powershell
-$env:NEOPAD_MCP_TOKEN = '<local-token>'
-target\release\neopad-mcp.exe --workspace ~/.neopad serve --host 127.0.0.1 --port 8765
+$cli = "$env:USERPROFILE\.neopad\.agents\bin\neopad-cli.exe"
+& $cli doctor
+& $cli list
+& $cli create --title "Agent note" --content-file .\content.md
 ```
 
-NeoPad can also start and stop this process from Settings. The copied agent
-configuration uses the local URL and bearer token:
-
-```json
-{
-  "mcpServers": {
-    "neopad": {
-      "url": "http://127.0.0.1:8765/mcp",
-      "headers": {
-        "Authorization": "Bearer <local-token>"
-      }
-    }
-  }
-}
-```
-
-The service is off by default. When enabled, local agents with the token can
-read and write NeoPad notes. The HTTP server rejects non-loopback bind
-addresses. The desktop app also passes its managed token through the child
-environment rather than command-line arguments.
+Developers can build it with `cargo build -p neopad-cli --release`.
+See [CLI usage and Agent setup](docs/cli.md) for all commands and conflict handling.
 
 ## Keyboard Shortcuts
 
@@ -308,7 +290,7 @@ Ctrl+Shift+V    Append current clipboard text to clipboard.md
 - [Architecture](docs/architecture.md)
 - [Development](docs/development.md)
 - [Markdown preview and export](docs/export.md)
-- [MCP](docs/mcp.md)
+- [Native CLI and Agent setup](docs/cli.md)
 - [AI collaboration](docs/ai.md)
 - [Tasks](docs/tasks.md)
 - [Changelog](CHANGELOG.md)

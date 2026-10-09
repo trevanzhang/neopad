@@ -6,7 +6,7 @@ This guide is for coding agents working in this repository.
 
 NeoPad is a local-first desktop note pad built with Tauri 2, Vue 3,
 TypeScript, and Rust. It stores user notes as Markdown files and exposes the
-same local data through a standalone MCP server.
+same local data through a native CLI.
 
 Keep NeoPad small and fast. It is a capture tool, not a knowledge-base suite.
 
@@ -17,14 +17,14 @@ app/                  Vue frontend and Tauri desktop app
 app/src/              Vue components, styles, TypeScript helpers
 app/src-tauri/        Tauri Rust shell, commands, tray, hotkeys, packaging
 crates/neopad-core/   Shared Rust core for workspace and note operations
-mcp-server/           Standalone MCP local HTTP server
+cli/                  Standalone native CLI
 docs/                 Human-facing project docs
 ```
 
 ## Important Rules
 
 - Use `neopad-core` for all note, workspace, path, search, and write behavior.
-- Do not duplicate filesystem access logic in the Tauri shell or MCP server.
+- Do not duplicate filesystem access logic in the Tauri shell or CLI.
 - Active note content must stay in the flat `~/.neopad/notes/*.md` work area.
   Archived notes may be categorized under `~/.neopad/archive/**/*.md`.
 - Metadata belongs in `config.json`, `meta/tabs.json`, `meta/prompts.json`, and
@@ -35,12 +35,11 @@ docs/                 Human-facing project docs
 - Never physically delete user notes. Move notes to `trash/`.
 - Keep path safety strict. Reject absolute paths, `..`, and file names that
   escape the workspace.
-- MCP HTTP service must be off by default in the desktop app.
-- When MCP is enabled, local agents with the bearer token can read and write
-  notes.
-- MCP HTTP requests must require `Authorization: Bearer <token>`.
-- Browser-originated MCP requests must pass local Origin validation.
-- MCP diagnostics and startup errors must go to stderr, not protocol responses.
+- Deploy the bundled CLI to `.agents/bin/` through `neopad-core`.
+- Never discover or launch a replacement CLI from the system PATH.
+- Preserve user-authored files under `.agents/`; only manage the CLI binary.
+- CLI results must be JSON; full replacements require an expected timestamp.
+- CLI note operations must share the desktop workspace write lock.
 - Do not introduce cloud sync, accounts, RAG, vector search, backlinks,
   persistent AI chat history, or an AI chat sidebar unless the task explicitly
   changes scope. Keep inline AI user-initiated and reviewable.
@@ -55,10 +54,10 @@ pnpm build
 pnpm tauri:build
 ```
 
-For MCP changes:
+For CLI changes:
 
 ```powershell
-cargo build -p neopad-mcp --release
+cargo build -p neopad-cli --release
 ```
 
 For Rust formatting:
@@ -92,6 +91,9 @@ cargo fmt
   preparing a distinct distributable build or release.
 - Use a patch bump for compatible fixes, a minor bump for backward-compatible
   features, and a major bump for incompatible changes.
+- During initial 0.x development, incompatible Agent interface changes may use
+  the next minor version when directed by the user. Document these changes and
+  migration steps explicitly; do not advance to 1.0.0 solely for such a change.
 - Use prerelease labels such as `beta` only when the task explicitly establishes
   a prerelease channel. Do not add them to ordinary development builds.
 
@@ -105,8 +107,8 @@ Releases are built automatically by GitHub Actions when a `v*` tag is pushed.
 3. Tag the release on `main` and push:
 
    ```text
-   git tag v0.x.x
-   git push origin v0.x.x
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
    ```
 
 4. The `Release` workflow builds all three platforms in parallel and uploads
@@ -179,13 +181,12 @@ automatically; see `.github/workflows/release.yml`.
 
 Window opacity and autostart are no-ops on Linux (same as macOS).
 
-### MCP Sidecar
+### CLI Sidecar
 
-The MCP server is bundled as a Tauri `externalBin` sidecar.
-`scripts/prepare-mcp-sidecar.mjs` copies the release binary to the
-target-triple-suffixed name Tauri expects. The `tauri:build` script runs this
-automatically. Do not call the PowerShell `prepare-mcp-sidecar.ps1` directly;
-it is retained only for legacy Windows-local workflows.
+The native CLI is bundled as a Tauri `externalBin` sidecar.
+`scripts/prepare-cli-sidecar.mjs` prepares the target-triple-suffixed binary.
+`tauri:build` runs this automatically. The desktop deploys the trusted bundled
+binary to `~/.neopad/.agents/bin/` at startup and can repair it from Settings.
 
 ## Frontend Guidelines
 
@@ -203,7 +204,7 @@ it is retained only for legacy Windows-local workflows.
 
 - Prefer focused core functions with tests over UI-side workarounds.
 - Preserve atomic write behavior.
-- Preserve `expectedUpdatedAt` conflict checks for full-page MCP updates.
+- Preserve `expectedUpdatedAt` conflict checks for full-page CLI updates.
 - Pinned default pages such as Inbox and Clipboard must not be deletable.
 
 ## Documentation Guidelines

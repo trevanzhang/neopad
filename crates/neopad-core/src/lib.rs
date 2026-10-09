@@ -1,3 +1,4 @@
+pub mod agent_tools;
 pub mod atomic_write;
 pub mod config;
 mod lock;
@@ -9,9 +10,11 @@ pub mod search;
 pub mod tab;
 pub mod workspace;
 
-pub use config::{
-    load_config, save_config, AiConfig, AppConfig, McpConfig, PreviewMode, Theme, UiConfig,
+pub use agent_tools::{
+    agent_cli_path, agent_tools_status, inspect_agent_workspace, install_agent_cli,
+    AgentToolsStatus, AgentWorkspaceDiagnostics,
 };
+pub use config::{load_config, save_config, AiConfig, AppConfig, PreviewMode, Theme, UiConfig};
 pub use lock::{lock_workspace_for_write, WorkspaceWriteLock};
 pub use note::{
     append_to_clipboard_note, append_to_note, archive_note, archive_note_to_directory, clear_trash,
@@ -22,7 +25,7 @@ pub use note::{
     move_archive_directory, move_archived_note, note_file_path_for_id, open_note, read_note,
     reconcile_note_metadata, rename_archive_directory, rename_note, rename_note_with_heading,
     reorder_open_notes, restore_note_from_trash, restore_recoverable_note_write, set_note_color,
-    unarchive_note, write_note_atomic, write_note_atomic_checked, NoteContent,
+    unarchive_note, write_note_atomic, write_note_atomic_checked, NoteContent, NoteWriteConflict,
     RecoverableNoteWrite,
 };
 pub use prompt::{

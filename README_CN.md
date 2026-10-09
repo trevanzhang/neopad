@@ -1,12 +1,16 @@
 # NeoPad
 
 NeoPad 是一款轻量、本地优先的桌面便签工具，适合快速记录、快速查找，
-也方便本地 AI Agent 通过 MCP 访问同一批 Markdown 笔记。
+也方便本地 AI Agent 通过原生 CLI 访问同一批 Markdown 笔记。
 
 NeoPad 的定位是捕捉工具，不是知识库套件。笔记默认保存为本地
 Markdown 文件，用户数据不需要账号，也不依赖云服务。
 
 ## 当前状态
+
+**0.7.0** 将 MCP 接入替换为随安装包提供的原生 CLI。已有 Agent 配置需要
+迁移，笔记存储格式不变。参见 [MCP 到 CLI 的迁移说明](docs/cli.md#migrate-from-mcp)
+及 [更新日志](CHANGELOG.md)。
 
 当前版本是面向 Windows 的可用 MVP，主要能力包括：
 
@@ -33,7 +37,7 @@ Markdown 文件，用户数据不需要账号，也不依赖云服务。
 - 标签页右键菜单可以在资源管理器中定位 Markdown 文件，也可以复制当前页面的
   绝对文件地址，便于交给终端或本地 Agent。文件菜单中的“打开 NeoPad 数据文件夹”
   会直接打开完整的 `~/.neopad/` 工作区。
-- 重组后的设置中心将通用、编辑器、预览、Vim、快捷键、AI 和 MCP 设置集中在一个聚焦的
+- 重组后的设置中心将通用、编辑器、预览、Vim、快捷键、AI 和 Agent 工具设置集中在一个聚焦的
   对话框中；窗口显示与剪贴板捕获快捷键均可配置。
 - 系统托盘图标支持左键恢复并聚焦主窗口，右键打开显示、隐藏、新建笔记、
   保存剪贴板、设置和退出菜单。
@@ -45,10 +49,11 @@ Markdown 文件，用户数据不需要账号，也不依赖云服务。
   常用编辑操作与 NeoPad 标签切换的 Vim 简明指南。
 - Markdown 原生提醒，格式为
   `- [ ] @remind YYYY-MM-DD HH:mm 提醒内容`。
-- 本地 HTTP MCP 服务默认关闭，可在设置中启停；启用后通过 bearer token
-  授权本地 Agent 读写笔记。
+- 原生 `neopad-cli` 随安装包提供，桌面启动时自动部署到
+  `~/.neopad/.agents/bin/`；设置中的 Agent 工具页面可检查、修复及复制路径。
+  Agent 更新笔记后，编辑器仅在没有待保存内容时自动刷新。
 - Windows MSI 安装包提供中英双语的应用语言选择页（默认中文），所选语言会用于
-  NeoPad 首次启动；安装包同时内置 `neopad-mcp.exe` 作为 sidecar，并声明 `.md`
+  NeoPad 首次启动；安装包同时内置 `neopad-cli.exe` 作为 sidecar，并声明 `.md`
   和 `.markdown` 文件关联，供用户在系统中选择 NeoPad 作为默认打开方式。
 - `Ctrl+O`、将 `.md` 或 `.markdown` 文件拖入窗口、或从系统打开关联文件，都会
   就地打开外部 Markdown 文件，并使用 SHA-256 内容 revision 检测外部修改，避免
@@ -154,26 +159,20 @@ AppImage；Windows 不会额外生成 NSIS。
 target/release/bundle/msi/NeoPad_<version>_x64_en-US.msi
 ```
 
-## MCP 服务
+## 原生 CLI
 
-NeoPad 可以从设置中启动或停止本地 MCP 服务。复制给 Agent 的配置形如：
+启动 NeoPad 一次后，从“设置 > Agent 工具”复制 CLI 路径。
+CLI 可独立于桌面运行，命令结果以 JSON 返回，无需配置服务、端口或令牌。
 
-```json
-{
-  "mcpServers": {
-    "neopad": {
-      "url": "http://127.0.0.1:8765/mcp",
-      "headers": {
-        "Authorization": "Bearer <local-token>"
-      }
-    }
-  }
-}
+```powershell
+$cli = "$env:USERPROFILE\.neopad\.agents\bin\neopad-cli.exe"
+& $cli doctor
+& $cli list
+& $cli create --title "Agent 笔记" --content-file .\content.md
 ```
 
-服务默认关闭。启用后，持有 token 的本地 Agent 可以读取和写入 NeoPad 笔记。
-服务只允许绑定本机 loopback 地址，不接受局域网或公网监听地址。
-桌面端通过子进程环境变量传递 token，不把 token 放入进程命令行。
+开发构建：`cargo build -p neopad-cli --release`。
+完整命令及冲突处理见 [CLI 与 Agent 使用指南](docs/cli.md)。
 
 ## 更多文档
 
@@ -182,5 +181,5 @@ NeoPad 可以从设置中启动或停止本地 MCP 服务。复制给 Agent 的�
 - [Architecture](docs/architecture.md)
 - [Development](docs/development.md)
 - [Markdown 预览与导出](docs/export.md)
-- [MCP](docs/mcp.md)
+- [CLI 与 Agent 使用指南](docs/cli.md)
 - [AI 协作](docs/ai.md)

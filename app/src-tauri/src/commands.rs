@@ -19,7 +19,7 @@ use std::io::Write;
 use std::process::Command;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
+    Mutex,
 };
 use tauri::{AppHandle, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
@@ -30,8 +30,6 @@ pub struct AppState {
     pub workspace: Workspace,
     pub pending_external_markdown_paths: Mutex<Vec<String>>,
     pub shortcut_warnings: Mutex<Vec<String>>,
-    pub mcp_process: Mutex<Option<crate::mcp::OwnedMcpProcess>>,
-    pub mcp_error: Arc<Mutex<Option<String>>>,
     pub is_quitting: AtomicBool,
     pub always_on_top: AtomicBool,
     pub close_to_minimize: AtomicBool,
@@ -805,7 +803,6 @@ fn validate_external_url(url: &str) -> anyhow::Result<url::Url> {
 #[tauri::command]
 pub fn quit_app_command(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     set_quitting(&state);
-    crate::mcp::stop_owned_process(&state).map_err(display_error)?;
     app.exit(0);
     Ok(())
 }

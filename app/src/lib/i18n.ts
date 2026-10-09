@@ -264,25 +264,17 @@ export type AppMessages = {
     switchTabs: string
     shortcut: string
     disabled: string
-    mcp: string
+    agentTools: string
+    agentCliDescription: string
+    agentCliReady: string
+    agentCliUnavailable: string
+    repairAgentCli: string
+    copyAgentCliPath: string
+    agentCliUsage: string
     workspace: string
-    copyReadOnlyConfig: string
-    copyWriteConfig: string
-    mcpLocalService: string
-    mcpDescription: string
-    mcpStartupDescription: string
-    enableMcp: string
     address: string
     status: string
     stopped: string
-    startMcpService: string
-    stopMcpService: string
-    accessToken: string
-    tokenPending: string
-    copyAgentConfig: string
-    regenerateToken: string
-    installMethod: string
-    installMethodDescription: string
     aiInline: string
     aiDescription: string
     enableAi: string
@@ -483,8 +475,7 @@ export type AppMessages = {
     alwaysOnTop: string
     pinned: string
     unpinned: string
-    mcpConfigCopied: string
-    mcpUpdated: string
+    agentCliPathCopied: string
     aiRenamed: string
     chars: string
     switchToLight: string
@@ -773,25 +764,17 @@ export const messages: Record<AppLanguage, AppMessages> = {
       switchTabs: 'Switch tabs',
       shortcut: 'Shortcut',
       disabled: 'Disabled',
-      mcp: 'MCP',
+      agentTools: 'Agent tools',
+      agentCliDescription: 'Local agents can use the bundled CLI to read and write notes, even when NeoPad is closed.',
+      agentCliReady: 'Ready',
+      agentCliUnavailable: 'Needs repair',
+      repairAgentCli: 'Install / repair CLI',
+      copyAgentCliPath: 'Copy CLI path',
+      agentCliUsage: 'Give your agent this path. Ask it to run --help and doctor --json first.',
       workspace: 'Workspace',
-      copyReadOnlyConfig: 'Copy read-only config',
-      copyWriteConfig: 'Copy write config',
-      mcpLocalService: 'MCP Local HTTP Service',
-      mcpDescription: 'Off by default. When enabled, local agents with the access token can read and write NeoPad notes.',
-      mcpStartupDescription: 'To run MCP after sign-in, enable NeoPad startup and start hidden in General, then leave this service enabled.',
-      enableMcp: 'Enable MCP',
       address: 'Address',
       status: 'Status',
       stopped: 'Stopped',
-      startMcpService: 'Start MCP Service',
-      stopMcpService: 'Stop MCP Service',
-      accessToken: 'Token',
-      tokenPending: 'Generated after first use',
-      copyAgentConfig: 'Copy Agent Config',
-      regenerateToken: 'Regenerate Token',
-      installMethod: 'Agent setup',
-      installMethodDescription: 'Use this configuration in an MCP client that supports Streamable HTTP.',
       aiInline: 'AI collaboration',
       aiDescription: 'Use Ctrl+K for note chat or // for independent quick editing actions.',
       enableAi: 'Enable AI features',
@@ -992,8 +975,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       alwaysOnTop: 'Always on top',
       pinned: 'Pinned',
       unpinned: 'Unpinned',
-      mcpConfigCopied: 'MCP agent config copied',
-      mcpUpdated: 'MCP settings updated',
+      agentCliPathCopied: 'NeoPad CLI path copied',
       aiRenamed: 'Renamed to "{title}"',
       chars: 'chars',
       switchToLight: 'Switch to light theme',
@@ -1280,25 +1262,17 @@ export const messages: Record<AppLanguage, AppMessages> = {
       switchTabs: '\u5207\u6362\u6807\u7b7e\u9875',
       shortcut: '\u5feb\u6377\u952e',
       disabled: '\u7981\u7528',
-      mcp: 'MCP',
+      agentTools: 'Agent 工具',
+      agentCliDescription: '本地 Agent 可通过随附 CLI 读写笔记；NeoPad 退出后仍可使用。',
+      agentCliReady: '已就绪',
+      agentCliUnavailable: '需要修复',
+      repairAgentCli: '安装 / 修复 CLI',
+      copyAgentCliPath: '复制 CLI 路径',
+      agentCliUsage: '将此路径交给 Agent，先让它运行 --help 和 doctor --json。',
       workspace: '\u5de5\u4f5c\u533a',
-      copyReadOnlyConfig: '\u590d\u5236\u53ea\u8bfb\u914d\u7f6e',
-      copyWriteConfig: '\u590d\u5236\u5199\u5165\u914d\u7f6e',
-      mcpLocalService: 'MCP \u672c\u5730 HTTP \u670d\u52a1',
-      mcpDescription: '\u9ed8\u8ba4\u5173\u95ed\u3002\u542f\u7528\u540e\uff0c\u6301\u6709\u8bbf\u95ee token \u7684\u672c\u5730\u4ee3\u7406\u53ef\u4ee5\u8bfb\u5199 NeoPad \u7b14\u8bb0\u3002',
-      mcpStartupDescription: '\u5982\u9700\u5f00\u673a\u540e\u81ea\u52a8\u5728\u540e\u53f0\u8fd0\u884c MCP\uff0c\u8bf7\u5728\u201c\u5e38\u89c4\u201d\u4e2d\u542f\u7528 NeoPad \u5f00\u673a\u81ea\u542f\u548c\u542f\u52a8\u540e\u9690\u85cf\uff0c\u5e76\u4fdd\u6301\u672c\u670d\u52a1\u542f\u7528\u3002',
-      enableMcp: '\u542f\u7528 MCP',
       address: '\u5730\u5740',
       status: '\u72b6\u6001',
       stopped: '\u5df2\u505c\u6b62',
-      startMcpService: '\u542f\u52a8 MCP \u670d\u52a1',
-      stopMcpService: '\u505c\u6b62 MCP \u670d\u52a1',
-      accessToken: '\u5bc6\u94a5',
-      tokenPending: '\u9996\u6b21\u4f7f\u7528\u65f6\u751f\u6210',
-      copyAgentConfig: '\u590d\u5236\u4ee3\u7406\u914d\u7f6e',
-      regenerateToken: '\u91cd\u751f Token',
-      installMethod: '\u5b89\u88c5\u65b9\u6cd5',
-      installMethodDescription: '\u5c06\u4e0b\u65b9\u914d\u7f6e\u586b\u5165\u652f\u6301 Streamable HTTP \u7684 MCP \u5ba2\u6237\u7aef\u3002',
       aiInline: 'AI 协作',
       aiDescription: '使用 Ctrl+K 围绕笔记对话，或通过 // 执行独立的快速编辑。',
       enableAi: '启用 AI 功能',
@@ -1499,8 +1473,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       alwaysOnTop: '\u7a97\u53e3\u7f6e\u9876',
       pinned: '\u5df2\u7f6e\u9876',
       unpinned: '\u5df2\u53d6\u6d88\u7f6e\u9876',
-      mcpConfigCopied: '\u5df2\u590d\u5236 MCP \u4ee3\u7406\u914d\u7f6e',
-      mcpUpdated: 'MCP \u8bbe\u7f6e\u5df2\u66f4\u65b0',
+      agentCliPathCopied: '\u5df2\u590d\u5236 CLI \u8def\u5f84',
       aiRenamed: '\u5df2\u91cd\u547d\u540d\u4e3a\u201c{title}\u201d',
       chars: '\u5b57\u7b26',
       switchToLight: '\u5207\u6362\u81f3\u65e5\u95f4\u6a21\u5f0f',

@@ -277,11 +277,17 @@ pub fn write_note_atomic(
     Ok(note)
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum NoteWriteConflict {
+    #[error("note was modified outside NeoPad: {note_id}")]
+    External { note_id: String },
+    #[error("note was modified: expected updated_at {expected}, current updated_at {current}")]
+    Version { expected: i64, current: i64 },
+}
+
 /// Writes a note only if its current `updated_at` matches `expected_updated_at`.
-///
 /// Callers must hold `lock_workspace_for_write` for the full check-and-write
-/// operation; this function deliberately does not acquire the process lock
-/// itself so callers can compose multiple workspace writes under one lock.
+/// operation so multiple workspace writes can share one lock.
 pub fn write_note_atomic_checked(
     workspace: &Workspace,
     note_id: &str,
@@ -296,15 +302,16 @@ pub fn write_note_atomic_checked(
         .content_revision
         .is_some_and(|revision| revision != content_revision(&disk_content))
     {
-        bail!("note was modified outside NeoPad: {note_id}");
+        bail!(NoteWriteConflict::External {
+            note_id: note_id.to_owned()
+        });
     }
     let current = read_note(workspace, note_id)?;
     if current.updated_at != expected_updated_at {
-        bail!(
-            "note was modified: expected updated_at {}, current updated_at {}",
-            expected_updated_at,
-            current.updated_at
-        );
+        bail!(NoteWriteConflict::Version {
+            expected: expected_updated_at,
+            current: current.updated_at
+        });
     }
 
     write_note_atomic(workspace, note_id, content)

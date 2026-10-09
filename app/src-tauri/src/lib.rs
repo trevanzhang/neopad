@@ -1,8 +1,8 @@
+mod agent_tools;
 mod ai;
 mod commands;
 mod hotkey;
 mod installer;
-mod mcp;
 mod tray;
 mod window;
 
@@ -37,7 +37,7 @@ use commands::{
 use neopad_core::{default_workspace_dir, init_workspace, load_config, save_config};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::sync::{atomic::AtomicBool, Arc, Mutex};
+use std::sync::{atomic::AtomicBool, Mutex};
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut};
 use tauri_plugin_window_state::StateFlags;
@@ -67,8 +67,6 @@ fn build_state() -> anyhow::Result<AppState> {
             &startup_cwd,
         )),
         shortcut_warnings: Mutex::new(Vec::new()),
-        mcp_process: Mutex::new(None),
-        mcp_error: Arc::new(Mutex::new(None)),
         is_quitting: AtomicBool::new(false),
         always_on_top: AtomicBool::new(false),
         close_to_minimize: AtomicBool::new(true),
@@ -177,8 +175,8 @@ pub fn run() {
             window::install_close_to_hide_handler(app);
             tray::create_tray(app)?;
             hotkey::register_global_shortcuts(app);
-            if let Err(error) = mcp::start_if_enabled(app.state::<AppState>().inner()) {
-                eprintln!("failed to start MCP service: {error:#}");
+            if let Err(error) = agent_tools::deploy(app.state::<AppState>().inner()) {
+                eprintln!("failed to deploy NeoPad CLI: {error:#}");
             }
             Ok(())
         })
@@ -278,24 +276,14 @@ pub fn run() {
             toggle_always_on_top_command,
             save_clipboard_command,
             get_shortcut_warnings_command,
-            mcp::get_mcp_status_command,
-            mcp::set_mcp_enabled_command,
-            mcp::regenerate_mcp_token_command,
+            agent_tools::get_agent_tools_status_command,
+            agent_tools::install_agent_cli_command,
             tray::set_tray_language_command
         ])
         .build(tauri::generate_context!())
         .expect("failed to build NeoPad");
 
-    app.run(|app_handle, event| {
-        if matches!(
-            event,
-            tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }
-        ) {
-            if let Err(error) = mcp::stop_owned_process(app_handle.state::<AppState>().inner()) {
-                eprintln!("failed to stop MCP service during app exit: {error:#}");
-            }
-        }
-    });
+    app.run(|_, _| {});
 }
 
 #[cfg(test)]

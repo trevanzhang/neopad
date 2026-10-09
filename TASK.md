@@ -5,6 +5,9 @@ older corrupted-encoding draft.
 
 ## Product Direction
 
+Version 0.7.0 replaces the existing MCP integration with the native CLI.
+This is an incompatible Agent interface change; local note storage is preserved.
+
 NeoPad is a lightweight, local-first desktop note pad for fast temporary notes.
 It should feel like a quick capture utility rather than a full knowledge-base
 application.
@@ -12,8 +15,8 @@ application.
 The public product name is `NeoPad`. Engineering identifiers stay lowercase:
 
 - Repository: `neopad`
-- Package names: `neopad-app`, `neopad-core`, `neopad-mcp`
-- MCP server binary: `neopad-mcp`
+- Package names: `neopad-app`, `neopad-core`, `neopad-cli`
+- Native CLI binary: `neopad-cli`
 - Default workspace: `~/.neopad`
 - Bundle identifier: `com.neopad.desktop`
 
@@ -89,8 +92,8 @@ Implemented MVP capabilities:
 - Configurable global window and clipboard shortcuts, plus local `Alt+Enter`
   maximize/restore.
 - Close-to-hide behavior.
-- Standalone Streamable HTTP MCP server managed from a dedicated MCP settings
-  page.
+- Native CLI bundled with the app and deployed to `.agents/bin/`, with an
+  Agent tools settings page for status, repair, and copying its path.
 - Optional AI collaboration with a compact `Ctrl+K` note chat and independent
   `//` continue, polish, summarize, and Chinese-English translation commands.
   Selecting a `//` command applies generated Markdown as one undoable edit;
@@ -108,10 +111,10 @@ Implemented MVP capabilities:
   flat `notes/` work area; restoration is explicit. Prompts open in the main
   editor as marked tabs. They use the normal save barrier and
   content-revision conflict checks, but remain outside note search, archive,
-  reminders, recent notes, and MCP note operations.
+  reminders, recent notes, and CLI note operations.
 - Structured in-app Software Help that introduces NeoPad's product direction,
   core note workflows, editor and search tools, capture and export paths,
-  reminders, AI and MCP boundaries, and local-first data guarantees.
+  reminders, AI and CLI boundaries, and local-first data guarantees.
 - Grouped in-app Markdown, Vim, and expression references that document
   supported rendering syntax, Vim editing and NeoPad-specific tab mappings,
   NeoPad reminders, calculation operators, examples, and unsupported
@@ -142,21 +145,23 @@ Implemented MVP capabilities:
 - Full-page updates must keep `expectedUpdatedAt` conflict protection, and
   external file changes must also be detected through content revisions.
 
-## MCP Rules
+## CLI Rules
 
-- `neopad-mcp` communicates over local Streamable HTTP at `/mcp`.
-- The service is off by default and binds to `127.0.0.1` by default.
-- Bearer token authentication is required for HTTP requests.
-- Authentication must run before request-body parsing, and request bodies must
-  remain bounded.
-- Desktop-managed bearer tokens must be passed through the child environment,
-  not command-line arguments.
-- Browser-originated requests must pass local Origin validation.
-- stderr is used for diagnostics.
-- When enabled, local agents with the token can read and write notes.
-- The MCP server must not read the system clipboard.
-- The MCP server must not access files outside the workspace.
-- Installed builds must include `neopad-mcp.exe` as a sidecar.
+- `neopad-cli` directly uses `neopad-core`; no HTTP service is required.
+- Desktop startup deploys the bundled binary to `~/.neopad/.agents/bin/`.
+- Deployment verifies binary contents and refuses linked deployment paths.
+- Settings exposes status, repair, and the CLI path.
+- Commands return JSON and documented exit codes; help and version are text.
+- Reads, writes, and metadata reconciliation share the workspace process lock.
+- Full note replacement requires the `updatedAt` returned by a fresh read.
+- Preserve atomic writes and conflict detection. Move deleted notes to trash.
+- Use IDs from the CLI; do not accept arbitrary paths for note operations.
+- User prompt Markdown remains separate from note commands and search.
+- `append-clipboard` appends supplied text, without reading the system clipboard.
+- Refresh saved desktop notes after CLI changes without replacing unsaved edits.
+- Preserve existing user-authored `.agents/` files. User guides and skills can
+  be added in a later task.
+- Old MCP configuration is ignored; it is removed when config is next saved.
 
 ## AI Rules
 
@@ -218,10 +223,10 @@ pnpm build
 pnpm tauri:build
 ```
 
-For MCP-specific changes:
+For CLI-specific changes:
 
 ```powershell
-cargo build -p neopad-mcp --release
+cargo build -p neopad-cli --release
 ```
 
 ## Non-Goals for the MVP

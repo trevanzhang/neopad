@@ -1,6 +1,6 @@
 {
   "name": "neopad",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "pnpm": {
@@ -16,12 +16,12 @@
     "check:release-tag": "node scripts/check-release-tag.mjs",
     "test:frontend": "pnpm --filter neopad-app test",
     "test:all": "cargo test --workspace && pnpm test:frontend",
-    "test:e2e:build": "cargo build -p neopad-mcp --release && node scripts/prepare-mcp-sidecar.mjs && pnpm --filter neopad-app tauri build --no-bundle",
+    "test:e2e:build": "cargo build -p neopad-cli --release && node scripts/prepare-cli-sidecar.mjs && pnpm --filter neopad-app tauri build --no-bundle",
     "test:e2e:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/setup-e2e.ps1",
     "test:e2e": "pnpm test:e2e:setup && pnpm test:e2e:build && wdio run ./e2e/wdio.conf.ts",
     "tauri": "pnpm --filter neopad-app tauri",
     "tauri:dev": "pnpm --filter neopad-app tauri dev",
-    "tauri:build": "cargo build -p neopad-mcp --release && node scripts/prepare-mcp-sidecar.mjs && node scripts/build-tauri-bundle.mjs"
+    "tauri:build": "cargo build -p neopad-cli --release && node scripts/prepare-cli-sidecar.mjs && node scripts/build-tauri-bundle.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

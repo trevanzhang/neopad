@@ -73,7 +73,7 @@ a prompt tab only closes the view; deleting it moves the file to NeoPad's Trash.
 Empty prompt files remain visible in `F4` so they can be completed, but are
 omitted from the `Ctrl+K` attachment picker until they contain an instruction.
 Prompt documents stay outside note search, archive, reminders, recent notes,
-and MCP note tools.
+and CLI note tools.
 
 ## Quick editing commands
 
@@ -136,5 +136,5 @@ cancels it, and stale source text is never overwritten.
 - NeoPad does not provide accounts, hosted inference, persistent AI chat
   history, RAG, vector search, or autonomous background agents.
 
-The AI client is separate from `neopad-mcp`: the AI client calls a model service
-from NeoPad, while MCP lets external agents call NeoPad note tools.
+The AI client is separate from `neopad-cli`: the AI client calls a model service
+from NeoPad, while the native CLI lets external agents call NeoPad note tools.

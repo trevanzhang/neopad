@@ -72,10 +72,10 @@ Build all Rust crates:
 cargo build
 ```
 
-Build the MCP server release binary:
+Build the native CLI release binary:
 
 ```powershell
-cargo build -p neopad-mcp --release
+cargo build -p neopad-cli --release
 ```
 
 Build the desktop app and MSI:
@@ -86,15 +86,20 @@ pnpm tauri:build
 
 The root `tauri:build` script intentionally performs three steps:
 
-1. Build the `neopad-mcp` release binary.
-2. Run `scripts/prepare-mcp-sidecar.mjs` to copy it to the target-specific
-   sidecar name required by Tauri (`neopad-mcp-<triple>[.exe]`). The script
+1. Build the `neopad-cli` release binary.
+2. Run `scripts/prepare-cli-sidecar.mjs` to copy it to the target-specific
+   sidecar name required by Tauri (`neopad-cli-<triple>[.exe]`). The script
    reads the Rust target triple from `CARGO_BUILD_TARGET` (set by CI for
    cross-compilation) or falls back to the host triple.
 3. Build the Tauri app and platform bundle.
 
-Use the root command for distributable builds so the installed app can start
-the MCP service from Settings.
+Use the root command for distributable builds so the installed app can deploy
+the CLI and offer status and repair actions in Settings > Agent tools.
+
+Version 0.7.0 removes the former MCP sidecar. Existing Agent connections must
+follow [MCP-to-CLI migration](cli.md#migrate-from-mcp). Before preparing a build,
+keep the Cargo workspace, root and frontend packages, Tauri config, and Cargo
+lockfile in sync, and record the version in `CHANGELOG.md`.
 
 ## Desktop End-to-End Tests
 
@@ -119,7 +124,7 @@ Relevant files:
 app/src/composables/*.test.ts  Document, lifecycle, and preference state tests
 app/src/lib/*.test.ts          Autosave, shortcuts, search, editor, and text tests
 app/src/lib/note-export.test.ts PDF pagination boundary tests
-mcp-server/tests/http.rs       MCP HTTP child-process protocol tests
+cli/tests/commands.rs         CLI process, concurrency, conflict, and deployment tests
 e2e/wdio.conf.ts               Desktop WebDriver configuration
 e2e/specs/                     Desktop interaction specifications
 scripts/setup-e2e.ps1          Windows driver setup
@@ -142,10 +147,10 @@ Run `pnpm test:e2e` for desktop workflow changes and `pnpm tauri:build` when
 packaging or sidecar behavior changes. Production dependency changes must also
 pass `pnpm audit:prod` and `cargo audit`.
 
-For MCP-only changes, also run:
+For CLI-only changes, also run:
 
 ```powershell
-cargo build -p neopad-mcp --release
+cargo build -p neopad-cli --release
 ```
 
 ## Packaging Notes
@@ -166,9 +171,9 @@ Windows.
 The Windows release executable uses the Windows GUI subsystem so it does not
 open a console window on launch.
 
-The MCP service is packaged as a sidecar through Tauri `externalBin`. The MSI
-also installs `neopad-mcp.exe` through the custom WiX template so installed
-builds can resolve the service binary reliably.
+The native CLI is packaged through Tauri `externalBin`. The MSI also installs
+`neopad-cli.exe` through the custom WiX template. Desktop startup deploys it to
+`~/.neopad/.agents/bin/`; Settings > Agent tools checks or repairs it.
 
 The Windows MSI installer uses:
 
@@ -178,7 +183,7 @@ The Windows MSI installer uses:
 - `app/src-tauri/wix/main.wxs` as the custom WiX template.
 - `app/src-tauri/wix/locales/en-US.wxl` for English installer strings and a
   code page that can also store the bilingual Chinese-default option.
-- `target/release/neopad-mcp.exe` as the MCP sidecar source.
+- `target/release/neopad-cli.exe` as the native CLI sidecar source.
 
 The MSI pages use `en-US`. The custom language page is English except for its
 bilingual Chinese-default option, and lets the user select Chinese or English.

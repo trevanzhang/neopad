@@ -30,6 +30,8 @@ export function useDocumentSession(options: DocumentSessionOptions) {
   let suppressedLoadedContent: string | null = null
   let noteLoadGeneration = 0
   let loadingNoteGeneration: number | null = null
+  let refreshing = false
+  let disposed = false
 
   async function saveDocument(noteId: string, nextContent: string) {
     const tab = options.tabs.value.find((item) => item.id === noteId)
@@ -162,7 +164,32 @@ export function useDocumentSession(options: DocumentSessionOptions) {
     return autosave.flush()
   }
 
+  async function refreshActiveNote() {
+    const tab = options.activeTab.value
+    if (!tab || isPromptTab(tab) || isExternalTab(tab) || !isTauriRuntime()
+      || disposed || refreshing || isLoadingNote.value || saveState.value !== 'Saved') return false
+    const generation = noteLoadGeneration
+    const previousContent = content.value
+    const previousUpdatedAt = tab.updatedAt
+    refreshing = true
+    try {
+      const note = await readNote(tab.id)
+      // A keystroke, save, tab switch, or document load during the read invalidates it.
+      if (disposed || !isCurrentNoteLoad(generation) || options.activeTabId.value !== tab.id
+        || isLoadingNote.value || saveState.value !== 'Saved' || content.value !== previousContent
+        || tab.updatedAt !== previousUpdatedAt) return false
+      if (note.updatedAt !== previousUpdatedAt || note.content !== previousContent) {
+        tab.updatedAt = note.updatedAt
+        tab.title = note.title
+        setContentFromLoad(note.content)
+      }
+      return true
+    } catch { return false }
+    finally { refreshing = false }
+  }
+
   function disposeDocumentSession() {
+    disposed = true
     autosave.dispose()
   }
 
@@ -175,6 +202,7 @@ export function useDocumentSession(options: DocumentSessionOptions) {
     loadActiveNote,
     setContentFromLoad,
     forceSave,
+    refreshActiveNote,
     disposeDocumentSession,
   }
 }

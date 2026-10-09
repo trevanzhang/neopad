@@ -22,8 +22,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm audit:prod
       - run: pnpm check:versions
-      - run: cargo build -p neopad-mcp --release
-      - run: node scripts/prepare-mcp-sidecar.mjs
+      - run: cargo build -p neopad-cli --release
+      - run: node scripts/prepare-cli-sidecar.mjs
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: pnpm test:all
@@ -74,10 +74,10 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - run: pnpm install --frozen-lockfile
-      - name: Build MCP sidecar
-        run: cargo build -p neopad-mcp --release ${{ matrix.args }}
-      - name: Prepare MCP sidecar
-        run: node scripts/prepare-mcp-sidecar.mjs
+      - name: Build CLI sidecar
+        run: cargo build -p neopad-cli --release ${{ matrix.args }}
+      - name: Prepare CLI sidecar
+        run: node scripts/prepare-cli-sidecar.mjs
         env:
           CARGO_BUILD_TARGET: ${{ matrix.target }}
       - name: Check workspace

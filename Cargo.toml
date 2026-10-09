@@ -2,12 +2,12 @@
 members = [
   "app/src-tauri",
   "crates/neopad-core",
-  "mcp-server"
+  "cli"
 ]
 resolver = "2"
 
 [workspace.package]
-version = "0.6.2"
+version = "0.7.0"
 edition = "2021"
 authors = ["NeoPad contributors"]
 license = "MIT"

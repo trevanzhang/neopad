@@ -21,7 +21,6 @@ pub struct AppConfig {
     pub preview_mode: PreviewMode,
     pub clipboard_target: String,
     pub max_search_results: usize,
-    pub mcp: McpConfig,
     #[serde(default)]
     pub ai: AiConfig,
     #[serde(default)]
@@ -221,19 +220,6 @@ impl Default for UiConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct McpConfig {
-    #[serde(default)]
-    pub enabled: bool,
-    #[serde(default = "default_mcp_host")]
-    pub host: String,
-    #[serde(default = "default_mcp_port")]
-    pub port: u16,
-    #[serde(default)]
-    pub token: String,
-}
-
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiConfig {
@@ -243,14 +229,6 @@ pub struct AiConfig {
     pub base_url: String,
     #[serde(default)]
     pub model: String,
-}
-
-fn default_mcp_host() -> String {
-    "127.0.0.1".to_owned()
-}
-
-fn default_mcp_port() -> u16 {
-    8765
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -286,12 +264,6 @@ impl AppConfig {
             preview_mode: PreviewMode::Edit,
             clipboard_target: "clipboard".to_owned(),
             max_search_results: 100,
-            mcp: McpConfig {
-                enabled: false,
-                host: default_mcp_host(),
-                port: default_mcp_port(),
-                token: String::new(),
-            },
             ai: AiConfig::default(),
             approved_external_markdown_paths: Vec::new(),
             ui: UiConfig::default(),
@@ -349,10 +321,7 @@ mod tests {
         }"#;
         let config: AppConfig = serde_json::from_str(json).expect("legacy config");
         assert_eq!(config.version, 1);
-        assert!(config.mcp.enabled);
-        assert_eq!(config.mcp.host, "127.0.0.1");
-        assert_eq!(config.mcp.port, 8765);
-        assert_eq!(config.mcp.token, "");
+        assert!(serde_json::to_value(&config).unwrap().get("mcp").is_none());
         assert_eq!(config.ai, AiConfig::default());
         assert!(!config.ui.run_at_startup);
         assert!(!config.ui.start_hidden);

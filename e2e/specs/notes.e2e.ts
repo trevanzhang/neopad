@@ -1,4 +1,20 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { execFileSync } from 'node:child_process'
+
 describe('NeoPad desktop note workflow', () => {
+  afterEach(async function () {
+    if (this.currentTest?.state !== 'failed') return
+    const state = await browser.execute(() => ({
+      tabs: [...document.querySelectorAll('.tab-item')].map((tab) => ({
+        title: tab.textContent, active: tab.classList.contains('active'),
+      })),
+      status: document.querySelector('.status-bar')?.textContent,
+      editor: document.querySelector('.cm-content')?.textContent,
+    }))
+    console.error('Desktop failure state:', JSON.stringify(state))
+  })
+
   async function click(selector: string) {
     const element = await $(selector)
     await element.waitForExist()
@@ -44,6 +60,41 @@ describe('NeoPad desktop note workflow', () => {
     await expect($('.tab-item=Inbox')).toBeDisplayed()
     await expect($('.tab-item=Clipboard')).toBeDisplayed()
     await expect($('.code-editor')).toBeDisplayed()
+  })
+
+  it('deploys the bundled CLI and repairs a modified installation from Settings', async () => {
+    const workspace = process.env.NEOPAD_WORKSPACE!
+    const installed = path.join(workspace, '.agents', 'bin', 'neopad-cli.exe')
+    const bundled = path.resolve(import.meta.dirname, '../../target/release/neopad-cli.exe')
+    expect(fs.readFileSync(installed).equals(fs.readFileSync(bundled))).toBe(true)
+    fs.writeFileSync(installed, 'damaged CLI')
+    try {
+      await browser.keys(['Control', ','])
+      await click("//nav[contains(@class, 'settings-tabs')]//button[.//span[normalize-space()='Agent tools']]")
+      await expect($('.agent-tools-actions strong')).toHaveText(expect.stringContaining('Needs repair'))
+      await click("//div[contains(@class, 'agent-tools-actions')]//button[normalize-space()='Install / repair CLI']")
+      await expect($('.agent-tools-actions strong')).toHaveText(expect.stringContaining('Ready'))
+      expect(fs.readFileSync(installed).equals(fs.readFileSync(bundled))).toBe(true)
+    } finally {
+      fs.copyFileSync(bundled, installed)
+      if (await $('.settings-close').isDisplayed()) await click('.settings-close')
+    }
+  })
+
+  it('refreshes saved editor content after the deployed CLI appends a note', async () => {
+    const workspace = process.env.NEOPAD_WORKSPACE!
+    const cli = path.join(workspace, '.agents', 'bin', 'neopad-cli.exe')
+    const input = path.join(workspace, 'agent-content.txt')
+    fs.writeFileSync(input, 'Agent refresh: CLI 与桌面共享笔记', 'utf8')
+    await click('.tab-item=Inbox')
+    const result = JSON.parse(execFileSync(cli, ['append-inbox', '--content-file', input], {
+      encoding: 'utf8', windowsHide: true,
+    }))
+    expect(result.ok).toBe(true)
+    await browser.waitUntil(async () => (await $('.cm-content').getText()).includes('Agent refresh:'), {
+      timeoutMsg: 'saved editor did not refresh the CLI append',
+    })
+    await expect($('.status-bar')).toHaveText(expect.stringContaining('Saved'))
   })
 
   it('saves edits before switching tabs', async () => {
@@ -183,7 +234,9 @@ describe('NeoPad desktop note workflow', () => {
     await expect($("//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]"))
       .toBeDisplayed()
     await click("//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]")
-    await expect($('.tab-item.active')).toHaveText('E2E Renamed')
+    await browser.waitUntil(async () => (await $('.tab-item.active').getText()) === 'E2E Renamed', {
+      timeoutMsg: 'archived note did not become active',
+    })
     await expect($("//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]"))
       .toBeDisplayed()
 

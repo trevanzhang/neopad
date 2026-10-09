@@ -74,7 +74,7 @@ describe('help content', () => {
     expect(guide.title).toBe('Software Help')
     expect(text).toContain('local-first')
     expect(text).toContain('Ctrl+K')
-    expect(text).toContain('MCP')
+    expect(text).toContain('neopad-cli')
     expect(text).toContain('no cloud sync')
     expect(getHelpContent('software', 'zh', context).title).toBe('\u8f6f\u4ef6\u8bf4\u660e')
   })

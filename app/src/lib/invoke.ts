@@ -52,15 +52,11 @@ export interface UiConfig {
 
 export type AppTheme = 'light' | 'dark'
 
-export interface McpStatus {
-  enabled: boolean
-  running: boolean
-  status: string
-  url: string
-  host: string
-  port: number
-  token: string
-  lastError: string | null
+export interface AgentToolsStatus {
+  cliPath: string
+  version: string
+  installed: boolean
+  matchesBundle: boolean
 }
 
 export interface RecoverableNoteWrite {
@@ -496,14 +492,10 @@ export function setTrayLanguage(language: 'en' | 'zh'): Promise<void> {
   return invoke('set_tray_language_command', { language })
 }
 
-export function getMcpStatus(): Promise<McpStatus> {
-  return invoke('get_mcp_status_command')
+export function getAgentToolsStatus(): Promise<AgentToolsStatus> {
+  return invoke('get_agent_tools_status_command')
 }
 
-export function setMcpEnabled(enabled: boolean): Promise<McpStatus> {
-  return invoke('set_mcp_enabled_command', { enabled })
-}
-
-export function regenerateMcpToken(): Promise<McpStatus> {
-  return invoke('regenerate_mcp_token_command')
+export function installAgentCli(): Promise<AgentToolsStatus> {
+  return invoke('install_agent_cli_command')
 }

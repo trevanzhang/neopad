@@ -1,14 +1,13 @@
-// Cross-platform MCP sidecar preparation.
+// Cross-platform CLI sidecar preparation.
 //
-// Copies the release neopad-mcp binary to the target-triple-suffixed name
+// Copies the release neopad-cli binary to the target-triple-suffixed name
 // that Tauri's externalBin convention expects:
 //
-//   neopad-mcp-x86_64-pc-windows-msvc.exe   (Windows)
-//   neopad-mcp-aarch64-apple-darwin          (macOS ARM64)
-//   neopad-mcp-x86_64-unknown-linux-gnu      (Linux x64)
+//   neopad-cli-x86_64-pc-windows-msvc.exe   (Windows)
+//   neopad-cli-aarch64-apple-darwin          (macOS ARM64)
+//   neopad-cli-x86_64-unknown-linux-gnu      (Linux x64)
 //
-// Replaces the Windows-only prepare-mcp-sidecar.ps1 so the same
-// `pnpm tauri:build` command works on every platform.
+// Used by platform builds and the bundled native CLI.
 
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, existsSync } from 'node:fs'
@@ -17,9 +16,6 @@ import { fileURLToPath } from 'node:url'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const repoRoot = dirname(scriptDir)
-
-const isWindows = process.platform === 'win32'
-const exeSuffix = isWindows ? '.exe' : ''
 
 // Determine the Rust target triple. When cross-compiling (e.g. in CI with
 // --target), prefer the target triple over the host triple so the suffix
@@ -44,26 +40,27 @@ function getTargetTriple() {
 }
 
 const triple = getTargetTriple()
+const exeSuffix = triple.includes('windows') ? '.exe' : ''
+const explicitTarget = Boolean(process.env.CARGO_BUILD_TARGET?.trim() || process.env.RUSTC_TARGET?.trim())
 
-// The MCP binary may be in target/<triple>/release/ (cross-compiled) or
-// target/release/ (native build). Find it wherever it was produced.
+// The CLI binary may be in target/<triple>/release/ (cross-compiled) or
+// target/release/ (native build). Do not silently label a native binary as a
+// different architecture if an explicitly selected target build is missing.
 const crossDir = join(repoRoot, 'target', triple, 'release')
 const nativeDir = join(repoRoot, 'target', 'release')
-const source = existsSync(join(crossDir, `neopad-mcp${exeSuffix}`))
-  ? join(crossDir, `neopad-mcp${exeSuffix}`)
-  : join(nativeDir, `neopad-mcp${exeSuffix}`)
+const source = join(explicitTarget ? crossDir : nativeDir, `neopad-cli${exeSuffix}`)
 
 if (!existsSync(source)) {
   console.error(
-    `Missing MCP release binary: ${source}. Run \`cargo build -p neopad-mcp --release\` first.`
+    `Missing CLI release binary: ${source}. Run \`cargo build -p neopad-cli --release${explicitTarget ? ` --target ${triple}` : ''}\` first.`
   )
   process.exit(1)
 }
 
-// Tauri's externalBin path in tauri.conf.json is `../../target/release/neopad-mcp`,
+// Tauri's externalBin path in tauri.conf.json is `../../target/release/neopad-cli`,
 // so the suffixed sidecar must always be placed in target/release/ — even for
 // cross-compiled builds where the binary was produced under target/<triple>/release/.
-const dest = join(nativeDir, `neopad-mcp-${triple}${exeSuffix}`)
+const dest = join(nativeDir, `neopad-cli-${triple}${exeSuffix}`)
 
 copyFileSync(source, dest)
-console.log(`Prepared MCP sidecar: ${dest}`)
+console.log(`Prepared CLI sidecar: ${dest}`)

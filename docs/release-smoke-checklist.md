@@ -39,3 +39,8 @@ or publishing a release.
     verify the new note keeps the selection beneath `# Untitled` and leaves the
     clipboard unchanged. Then run AI Rename on that tab and verify the tab title
     and first `#` heading match.
+13. Open Settings > Agent tools and verify the deployed CLI is Ready. Copy its
+    path, run `doctor` and `append-inbox --content-file PATH` from a terminal,
+    and confirm saved editor content refreshes. Alter the deployed CLI in an
+    isolated test workspace, repair it from Settings, and verify it runs again.
+    Confirm a stale `update --expected-updated-at` fails without losing content.

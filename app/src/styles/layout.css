@@ -2463,7 +2463,7 @@ body {
   word-break: break-word;
 }
 
-.mcp-service-actions {
+.agent-tools-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
@@ -2471,19 +2471,19 @@ body {
   margin: 10px 0 14px;
 }
 
-.mcp-primary-button {
+.agent-tools-primary-button {
   min-width: 132px;
   height: 34px;
   padding: 0 14px;
   font-weight: 700;
 }
 
-.mcp-status {
+.agent-tools-status {
   color: var(--np-muted);
   font-size: 14px;
 }
 
-.mcp-status[data-running="true"] {
+.agent-tools-status[data-running="true"] {
   color: var(--np-success);
 }
 

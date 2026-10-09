@@ -13,11 +13,11 @@ neopad-app
 neopad-core
   crates/neopad-core/   Shared local data model and filesystem logic
 
-neopad-mcp
-  mcp-server/           Standalone MCP HTTP server
+neopad-cli
+  cli/                  Standalone native CLI
 ```
 
-Both the desktop app and MCP server use `neopad-core` for workspace access. Do
+Both the desktop app and CLI use `neopad-core` for workspace access. Do
 not duplicate note, search, path, or write logic outside the core crate.
 
 ## Frontend Composition
@@ -31,7 +31,7 @@ state machine. Domain behavior is split into focused Vue composables:
   clipboard capture, and the mandatory save barrier before navigation.
 - `usePreferenceState` and `useNativeSettings` separate browser persistence
   from Tauri-native settings synchronization.
-- `useSearchState`, `useReminderState`, `useArchiveState`, and `useMcpService`
+- `useSearchState`, `useReminderState`, `useArchiveState`, and `useAgentTools`
   own their respective async state and failure boundaries.
 - `useNoteExport` resolves the requested tab safely, enforces the active-note
   save barrier, and coordinates rendered PNG/PDF generation and native saving.
@@ -65,8 +65,8 @@ Vue UI
   -> neopad-core
   -> ~/.neopad/notes/*.md
 
-MCP client
-  -> neopad-mcp over local HTTP
+Agent process
+  -> neopad-cli
   -> neopad-core
   -> ~/.neopad/notes/*.md
 ```
@@ -162,7 +162,7 @@ the configured workspace.
 - Tab context actions for rename, trash, persistent color selection, file
   manager reveal, absolute-path copying, and PNG/PDF export.
 - Compact settings dialog with independently scrollable content. Optional Vim
-  controls live under Vim settings, while AI provider and MCP service controls
+  controls live under Vim settings, while AI provider and Agent tools controls
   have their own tabs.
 - Compact AI chat composer opened by `Ctrl+K` and independent one-shot editing
   actions opened by CodeMirror `//` completion. Selecting a quick action
@@ -246,21 +246,28 @@ the `Ctrl+K` picker includes only non-empty prompts. Whole-workspace scope
 uses core text relevance search and sends a bounded set of excerpts with source
 metadata; it does not concatenate the workspace or maintain a vector index.
 
-This client is independent of `neopad-mcp`. AI collaboration sends an explicit
-editor request to a model service, while MCP exposes workspace tools to
+This client is independent of `neopad-cli`. AI collaboration sends an explicit
+editor request to a model service, while the CLI exposes workspace tools to
 external agents.
 
-## MCP Responsibilities
+## CLI Responsibilities
 
-`neopad-mcp` owns the local HTTP MCP protocol surface. It validates bearer
-tokens before parsing request bodies, validates local browser origins, caps
-request bodies at 2 MiB, then delegates note operations to `neopad-core`.
+`neopad-cli` parses commands and UTF-8 input, calls the shared core, and emits
+JSON with exit codes for argument, operation, and conflict errors. Note commands
+hold the workspace write lock through reconciliation and the operation. Full
+replacement requires an expected timestamp. Input is bounded to 2 MiB.
 
-The service is off by default in the desktop app. When enabled, local agents
-with the token can read and write notes. The desktop process owns lifecycle:
-start on launch when enabled, stop when disabled, keep running while hidden to
-tray, and stop on full app exit. On Windows the sidecar is spawned without a
-console window.
+The desktop resolves the bundled binary beside its executable and asks the core
+to install it into `.agents/bin/`. SHA-256 comparison detects missing, outdated,
+or modified binaries. Deployment is atomic and rejects symlinks or Windows
+junctions in the managed path. Settings can check and repair this installation.
+This controls the CLI interface; it is not an operating-system sandbox for an
+Agent that already has direct filesystem access.
+
+The frontend checks for note changes every two seconds. It reloads a note only
+when no edits are pending, and rejects an asynchronous result if typing, saving,
+or switching tabs occurred. External Markdown and prompt tabs keep their own
+lifecycle.
 
 ## Packaging
 
@@ -282,7 +289,7 @@ This custom WiX template exists so the installer can control:
   option, persisted for the app's first launch.
 - English standard installer pages, with a locale code page that also preserves
   the Chinese option text.
-- Installation of `neopad-mcp.exe` as the desktop app's MCP sidecar.
+- Installation of `neopad-cli.exe` as the desktop app's native CLI sidecar.
 
 Installer bitmap assets live in:
 

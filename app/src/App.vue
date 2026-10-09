@@ -68,7 +68,7 @@ import { isTauriRuntime } from './lib/runtime'
 import { useDocumentSession } from './composables/useDocumentSession'
 import { useSearchState } from './composables/useSearchState'
 import { useReminderState } from './composables/useReminderState'
-import { useMcpService } from './composables/useMcpService'
+import { useAgentTools } from './composables/useAgentTools'
 import { useAiAssistant } from './composables/useAiAssistant'
 import { useDialogs } from './composables/useDialogs'
 import { useArchiveState } from './composables/useArchiveState'
@@ -230,6 +230,7 @@ const {
   setContentFromLoad,
   forceSave,
   disposeDocumentSession,
+  refreshActiveNote,
 } = useDocumentSession({
   tabs,
   activeTabId,
@@ -292,24 +293,9 @@ const {
   },
 })
 const {
-  mcpStatus,
-  mcpUiError,
-  loadMcpStatus,
-  updateMcpEnabled,
-  refreshMcpToken,
-  copyMcpConfig,
-} = useMcpService({
-  stoppedLabel: () => t.value.settings.stopped,
-  onUpdated: () => {
-    statusMessage.value = t.value.status.mcpUpdated
-  },
-  onCopied: () => {
-    statusMessage.value = t.value.status.mcpConfigCopied
-  },
-  onError: () => {
-    saveState.value = 'Failed'
-  },
-})
+  agentToolsStatus, agentToolsError, agentToolsBusy,
+  loadAgentToolsStatus, repairAgentCli, copyAgentCliPath,
+} = useAgentTools(() => { statusMessage.value = t.value.status.agentCliPathCopied })
 const {
   aiConfig,
   aiError,
@@ -538,6 +524,42 @@ watch(activeTabId, (next, previous) => {
   if (next !== previous && aiInlineSession.value) cancelAiInlineCommand(false)
 })
 
+let workspaceRefreshTimer: ReturnType<typeof setInterval> | null = null
+let workspaceRefreshing = false
+
+async function refreshWorkspaceNotes() {
+  if (workspaceRefreshing || isLoadingNote.value || saveState.value !== 'Saved' || aiInlineSession.value) return
+  workspaceRefreshing = true
+  try {
+    await refreshActiveNote()
+    if (isLoadingNote.value || saveState.value !== 'Saved') return
+    const id = activeTabId.value
+    const previousContent = content.value
+    const previousOrder = tabs.value.map((tab) => tab.id).join('\n')
+    const loaded = await listNotes()
+    if (activeTabId.value !== id || isLoadingNote.value || saveState.value !== 'Saved'
+      || content.value !== previousContent || tabs.value.map((tab) => tab.id).join('\n') !== previousOrder) return
+    const active = tabs.value.find((tab) => tab.id === id)
+    // Keep the revision belonging to the displayed content until the next read.
+    const notes = loaded.map((tab) => tab.id === id && active ? { ...tab, updatedAt: active.updatedAt } : tab)
+    const incoming = new Map(notes.map((tab) => [tab.id, tab]))
+    // Preserve interleaved prompt/external tabs and the user's current tab order.
+    const current = tabs.value.flatMap((tab) => {
+      if (!isNoteTab(tab)) return [tab]
+      const updated = incoming.get(tab.id)
+      return updated ? [updated] : []
+    })
+    const existing = new Set(current.map((tab) => tab.id))
+    tabs.value = [...current, ...notes.filter((tab) => !existing.has(tab.id))]
+    if (!tabs.value.some((tab) => tab.id === id) && tabs.value.length) {
+      activeTabId.value = tabs.value[0].id
+      await loadActiveNote()
+    }
+    if (noteLibraryOpen.value) await refreshNoteLibrary()
+  } catch { /* Retry on the next refresh without discarding editor content. */ }
+  finally { workspaceRefreshing = false }
+}
+
 onMounted(async () => {
   if (!isTauriRuntime()) {
     window.addEventListener('keydown', handleKeydown, { capture: true })
@@ -549,7 +571,7 @@ onMounted(async () => {
   await loadInitialNotes()
   await loadAppVersion()
   await loadWorkspacePath()
-  await loadMcpStatus()
+  await loadAgentToolsStatus()
   await loadAiConfig()
   await loadShortcutWarnings()
   await loadNativeUiConfig()
@@ -567,9 +589,12 @@ onMounted(async () => {
   await recoverPendingNoteWrites()
   scheduleNativeSettingsSync()
   await startReminderPolling()
+  workspaceRefreshTimer = setInterval(() => { void refreshWorkspaceNotes() }, 2000)
 })
 
 onBeforeUnmount(() => {
+  if (workspaceRefreshTimer) clearInterval(workspaceRefreshTimer)
+
   window.removeEventListener('keydown', handleKeydown, true)
   window.removeEventListener('beforeunload', forceSaveOnExit)
   document.removeEventListener('visibilitychange', forceSaveOnHide)
@@ -1542,7 +1567,7 @@ function openSettings(initialTab: 'general' | 'ai' = 'general') {
   settingsInitialTab.value = initialTab
   settingsOpen.value = true
   statusMessage.value = t.value.status.settings
-  void loadMcpStatus()
+  void loadAgentToolsStatus()
   void loadAiConfig()
 }
 
@@ -2288,8 +2313,9 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       :preview-font-size="previewFontSize"
       :preview-line-height="previewLineHeight"
       :preview-content-width="previewContentWidth"
-      :mcp-status="mcpStatus"
-      :mcp-error="mcpUiError"
+      :agent-tools-status="agentToolsStatus"
+      :agent-tools-error="agentToolsError"
+      :agent-tools-busy="agentToolsBusy"
       :ai-config="aiConfig"
       :ai-error="aiError"
       :ai-testing="aiTesting"
@@ -2325,9 +2351,8 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       @update:preview-line-height="previewLineHeight = $event"
       @update:preview-content-width="previewContentWidth = $event"
       @edit-custom-text="editCustomInsertText"
-      @update-mcp-enabled="updateMcpEnabled"
-      @copy-mcp-config="copyMcpConfig"
-      @regenerate-mcp-token="refreshMcpToken"
+      @repair-agent-cli="repairAgentCli"
+      @copy-agent-cli-path="copyAgentCliPath"
       @update-ai-config="updateAiConfig"
       @save-ai-api-key="storeApiKey"
       @clear-ai-api-key="removeApiKey"
