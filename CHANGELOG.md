@@ -19,10 +19,10 @@ incompatible public interface changes require a major version bump.
 
 ### Fixed
 
-- Prepare the desktop test's Explorer session before checking file selection.
-  Pass an explicit parent folder and child item list. Stabilize tests after
-  navigation
-  and inspect Mermaid SVG labels without relying on WebDriver text extraction.
+- Confirm Windows Explorer file selection in the matching Shell view and
+  explicitly select the target if the folder opened without selecting it.
+  Stabilize tests after navigation and inspect Mermaid SVG labels without
+  relying on WebDriver text extraction.
 - Fix Windows desktop test startup with WebView2 150+ on elevated CI runners.
   Pass the test debugging switch and isolated profile through native WebView2
   APIs, use the same profile in WebDriver, and pin the test driver version.

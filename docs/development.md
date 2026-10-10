@@ -130,11 +130,11 @@ waiting for `DevToolsActivePort` in a different profile. See
 Ordinary startup retains the automatic window and has no test debugging switch.
 
 The Explorer test checks both the opened directory and the selected file for
-Unicode and punctuated paths. The suite initializes an unrelated workspace-root
-Explorer view before launching the app and closes it in teardown. It never
-preopens the target project folder or selects a file for the reveal test.
-Native reveal calls pass an explicit parent PIDL
-and relative child PIDL to the Windows Shell. On failure the suite logs the
+Unicode and punctuated paths. Native reveal calls pass an explicit parent PIDL
+and relative child PIDL to the Windows Shell, then confirm selection in the
+matching `IFolderView2`. If opening the asynchronous view lost the selection,
+the app selects the target through `IShellView` and verifies the result within
+a bounded wait on its background worker. On failure the suite logs the
 Explorer session, folder contents, and selected items. Mermaid assertions check
 SVG label text and geometry because WebDriver text extraction varies by runtime.
 

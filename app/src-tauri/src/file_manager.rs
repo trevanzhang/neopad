@@ -1,14 +1,25 @@
 use anyhow::{ensure, Context, Result};
-use std::{os::windows::ffi::OsStrExt, path::Path};
+use std::{
+    os::windows::ffi::OsStrExt,
+    path::Path,
+    time::{Duration, Instant},
+};
 use windows::{
-    core::PCWSTR,
+    core::{Interface, PCWSTR},
     Win32::{
         Foundation::RPC_E_CHANGED_MODE,
-        System::Com::{
-            CoInitializeEx, CoTaskMemFree, CoUninitialize, IBindCtx, COINIT_APARTMENTTHREADED,
+        System::{
+            Com::{
+                CoCreateInstance, CoInitializeEx, CoTaskMemFree, CoUninitialize, IBindCtx,
+                IServiceProvider, CLSCTX_ALL, COINIT_APARTMENTTHREADED,
+            },
+            Variant::VARIANT,
         },
         UI::Shell::{
-            Common::ITEMIDLIST, ILFindLastID, SHOpenFolderAndSelectItems, SHParseDisplayName,
+            Common::ITEMIDLIST, IFolderView2, ILFindLastID, ILIsEqual, IPersistFolder2,
+            IShellBrowser, IShellView, IShellWindows, SHOpenFolderAndSelectItems,
+            SHParseDisplayName, SID_STopLevelBrowser, ShellWindows, SVSI_DESELECTOTHERS,
+            SVSI_ENSUREVISIBLE, SVSI_FOCUSED, SVSI_SELECT,
         },
     },
 };
@@ -82,7 +93,71 @@ pub(crate) fn reveal(path: &Path) -> Result<()> {
     // The borrowed child stays valid while `item` is alive.
     let children = [unsafe { ILFindLastID(item.0) }.cast_const()];
     unsafe { SHOpenFolderAndSelectItems(folder.0, Some(&children), 0) }
-        .with_context(|| format!("could not show {} in the file manager", path.display()))
+        .with_context(|| format!("could not show {} in the file manager", path.display()))?;
+    // Opening a folder can report success before its asynchronous view has
+    // applied the selection. Confirm it in the matching view and repair it there.
+    let windows: IShellWindows = unsafe { CoCreateInstance(&ShellWindows, None, CLSCTX_ALL) }?;
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let mut last_error = None;
+    loop {
+        match select_in_matching_view(&windows, folder.0, children[0]) {
+            Ok(true) => return Ok(()),
+            Ok(false) => {}
+            Err(error) => last_error = Some(error),
+        }
+        if Instant::now() >= deadline {
+            let message = format!(
+                "file manager did not confirm selection of {}",
+                path.display()
+            );
+            return Err(last_error.unwrap_or_else(|| anyhow::anyhow!(message.clone())))
+                .context(message);
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+}
+
+fn select_in_matching_view(
+    windows: &IShellWindows,
+    parent: *const ITEMIDLIST,
+    child: *const ITEMIDLIST,
+) -> Result<bool> {
+    for index in 0..unsafe { windows.Count() }? {
+        // A window can close or navigate during enumeration. Retry rather than
+        // touching another directory or failing because an unrelated view vanished.
+        let matching_view = (|| -> Result<Option<(IShellView, IFolderView2)>> {
+            let dispatch = unsafe { windows.Item(&VARIANT::from(index)) }?;
+            let provider = dispatch.cast::<IServiceProvider>()?;
+            let browser: IShellBrowser = unsafe { provider.QueryService(&SID_STopLevelBrowser) }?;
+            let view = unsafe { browser.QueryActiveShellView() }?;
+            let folder_view = view.cast::<IFolderView2>()?;
+            let folder: IPersistFolder2 = unsafe { folder_view.GetFolder() }?;
+            let current = ShellItem(unsafe { folder.GetCurFolder() }?);
+            if current.0.is_null() || !unsafe { ILIsEqual(current.0, parent) }.as_bool() {
+                return Ok(None);
+            }
+            Ok(Some((view, folder_view)))
+        })();
+        let Ok(Some((view, folder_view))) = matching_view else {
+            continue;
+        };
+        let selected_flag = SVSI_SELECT.0 as u32;
+        if unsafe { folder_view.GetSelectionState(child) }
+            .context("could not read the target selection")?
+            & selected_flag
+            == 0
+        {
+            let flags =
+                (SVSI_SELECT.0 | SVSI_DESELECTOTHERS.0 | SVSI_ENSUREVISIBLE.0 | SVSI_FOCUSED.0)
+                    as u32;
+            unsafe { view.SelectItem(child, flags) }.context("could not select the target file")?;
+        }
+        return Ok(unsafe { folder_view.GetSelectionState(child) }
+            .context("could not verify the target selection")?
+            & selected_flag
+            != 0);
+    }
+    Ok(false)
 }
 
 #[cfg(test)]
