@@ -175,6 +175,10 @@ open a console window on launch.
 The native CLI is packaged through Tauri `externalBin`. The MSI also installs
 `neopad-cli.exe` through the custom WiX template. Desktop startup deploys it to
 `~/.neopad/.agents/bin/`; Settings > Agent tools checks or repairs it.
+Workspace initialization also creates the root `AGENTS.md` only when absent.
+Edit the default template in `crates/neopad-core/resources/workspace-AGENTS.md`;
+existing user guides are never upgraded automatically. Settings opens the guide
+as an external Markdown document.
 
 The Windows MSI installer uses:
 

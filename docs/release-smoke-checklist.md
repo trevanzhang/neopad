@@ -48,3 +48,7 @@ or publishing a release.
     and confirm saved editor content refreshes. Alter the deployed CLI in an
     isolated test workspace, repair it from Settings, and verify it runs again.
     Confirm a stale `update --expected-updated-at` fails without losing content.
+14. In Settings > Agent tools, open the workspace Agent guide and edit it.
+    Verify it saves as an external Markdown document, is absent from the note
+    library, and survives CLI repair and restarting NeoPad. Repeat with an
+    existing empty guide; it must remain empty.

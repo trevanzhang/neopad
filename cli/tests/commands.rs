@@ -142,12 +142,43 @@ fn doctor_and_invalid_arguments_do_not_create_workspace() {
     let diagnostics = run(&workspace, &["doctor", "--json"], None);
     assert_eq!(diagnostics["workspaceExists"], false);
     assert_eq!(diagnostics["configValid"], false);
+    assert_eq!(diagnostics["guideAvailable"], false);
+    assert_eq!(
+        diagnostics["guidePath"],
+        workspace.join("AGENTS.md").to_string_lossy().as_ref()
+    );
+    for option in ["--help", "--version"] {
+        let output = Command::new(env!("CARGO_BIN_EXE_neopad-cli"))
+            .env("NEOPAD_WORKSPACE", &workspace)
+            .arg(option)
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+    }
     let output = command(&workspace, &["update", "inbox", "--stdin"], Some("text"))
         .wait_with_output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(parse(&output)["error"]["code"], "invalid_arguments");
     assert!(!workspace.exists());
+}
+
+#[test]
+fn cli_initializes_root_guide_and_preserves_user_customizations() {
+    let temp = tempfile::tempdir().unwrap();
+    let workspace = temp.path().join("workspace");
+    let listed = run(&workspace, &["list"], None);
+    assert_eq!(listed["pages"].as_array().unwrap().len(), 2);
+    let guide = workspace.join("AGENTS.md");
+    let default = std::fs::read_to_string(&guide).unwrap();
+    assert!(default.contains("NeoPad 工作指南"));
+    assert_eq!(run(&workspace, &["doctor"], None)["guideAvailable"], true);
+    std::fs::write(&guide, "# Custom instructions\n").unwrap();
+    run(&workspace, &["projects"], None);
+    assert_eq!(
+        std::fs::read_to_string(guide).unwrap(),
+        "# Custom instructions\n"
+    );
 }
 
 #[test]

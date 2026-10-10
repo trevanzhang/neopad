@@ -93,7 +93,8 @@ Implemented MVP capabilities:
   maximize/restore.
 - Close-to-hide behavior.
 - Native CLI bundled with the app and deployed to `.agents/bin/`, with an
-  Agent tools settings page for status, repair, and copying its path.
+  Agent tools settings page for status, repair, copying its path, and editing
+  the workspace Agent guide.
 - Optional AI collaboration with a compact `Ctrl+K` note chat and independent
   `//` continue, polish, summarize, and Chinese-English translation commands.
   Selecting a `//` command applies generated Markdown as one undoable edit;
@@ -150,7 +151,7 @@ Implemented MVP capabilities:
 - `neopad-cli` directly uses `neopad-core`; no HTTP service is required.
 - Desktop startup deploys the bundled binary to `~/.neopad/.agents/bin/`.
 - Deployment verifies binary contents and refuses linked deployment paths.
-- Settings exposes status, repair, and the CLI path.
+- Settings exposes status, repair, the CLI path, and a guide editor entry.
 - Commands return JSON and documented exit codes; help and version are text.
 - Reads, writes, and metadata reconciliation share the workspace process lock.
 - Full note replacement requires the `updatedAt` returned by a fresh read.
@@ -159,8 +160,11 @@ Implemented MVP capabilities:
 - Project Markdown shares normal note commands, conflict checks, and search.
 - `append-clipboard` appends supplied text, without reading the system clipboard.
 - Refresh saved desktop notes after CLI changes without replacing unsaved edits.
-- Preserve existing user-authored `.agents/` files. User guides and skills can
-  be added in a later task.
+- Preserve existing user-authored `.agents/` files. Create a short root
+  `AGENTS.md` only when absent; never overwrite an existing guide, including
+  empty files or linked entries. Keep it outside managed notes and projects.
+- Read-only diagnostics expose guide path and availability without initializing
+  the workspace. Skills are not automatically installed.
 - Old MCP configuration is ignored; it is removed when config is next saved.
 
 ## AI Rules

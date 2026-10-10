@@ -11,8 +11,8 @@ pub mod tab;
 pub mod workspace;
 
 pub use agent_tools::{
-    agent_cli_path, agent_tools_status, inspect_agent_workspace, install_agent_cli,
-    AgentToolsStatus, AgentWorkspaceDiagnostics,
+    agent_cli_path, agent_guide_path, agent_tools_status, inspect_agent_workspace,
+    install_agent_cli, prepare_agent_guide, AgentToolsStatus, AgentWorkspaceDiagnostics,
 };
 pub use config::{load_config, save_config, AiConfig, AppConfig, PreviewMode, Theme, UiConfig};
 pub use lock::{lock_workspace_for_write, WorkspaceWriteLock};

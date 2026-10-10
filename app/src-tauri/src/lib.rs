@@ -271,6 +271,7 @@ pub fn run() {
             get_shortcut_warnings_command,
             agent_tools::get_agent_tools_status_command,
             agent_tools::install_agent_cli_command,
+            agent_tools::get_agent_guide_path_command,
             tray::set_tray_language_command
         ])
         .build(tauri::generate_context!())

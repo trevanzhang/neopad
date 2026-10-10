@@ -10,7 +10,7 @@ All command results are JSON: {ok, version, data} or {ok, error}.
 
 Commands:
   doctor                           Inspect workspace and CLI without creating files
-  list [--scope active|projects|archive|trash|all]
+  list [--scope active|projects|archive|trash|all] [--project DIRECTORY]
   projects                         List project directories
   project-create DIRECTORY         Create a project directory
   project-rename DIRECTORY --name NAME
@@ -142,7 +142,7 @@ fn parse_args(arguments: Vec<String>) -> Result<Args> {
             "active" | "projects" | "archive" | "trash" | "all"
         )
     {
-        bail!("scope must be active, archive, trash, or all");
+        bail!("scope must be active, projects, archive, trash, or all");
     }
     if result.command == "search" {
         let limit = result

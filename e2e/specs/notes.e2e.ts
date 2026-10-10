@@ -81,6 +81,45 @@ describe('NeoPad desktop note workflow', () => {
     }
   })
 
+  it('opens and edits the root Agent guide without importing it or replacing custom instructions', async () => {
+    const workspace = process.env.NEOPAD_WORKSPACE!
+    const guide = path.join(workspace, 'AGENTS.md')
+    const cli = path.join(workspace, '.agents', 'bin', 'neopad-cli.exe')
+    expect(fs.readFileSync(guide, 'utf8')).toContain('NeoPad 工作指南')
+    await click('.tab-item=Inbox')
+    const editor = await $('.cm-content')
+    await browser.execute((element) => (element as HTMLElement).focus(), editor)
+    await browser.keys(['Control', 'End'])
+    await browser.keys('Pending edit before opening Agent guide')
+    await browser.keys(['Control', ','])
+    await click("//nav[contains(@class, 'settings-tabs')]//button[.//span[normalize-space()='Agent tools']]")
+    await click('.agent-guide-open')
+    await expect($('.settings-panel')).not.toBeDisplayed()
+    await expect($('.tab-item.active')).toHaveText('AGENTS')
+    expect(fs.readFileSync(path.join(workspace, 'notes', 'inbox.md'), 'utf8'))
+      .toContain('Pending edit before opening Agent guide')
+    await browser.execute((element) => (element as HTMLElement).focus(), editor)
+    await browser.keys(['Control', 'a'])
+    await browser.keys('# 用户定制 Agent 指南\n\n请保留这个约定。')
+    await browser.waitUntil(() => fs.readFileSync(guide, 'utf8').includes('请保留这个约定。'))
+    const customized = fs.readFileSync(guide, 'utf8')
+    const listed = JSON.parse(execFileSync(cli, ['--workspace', workspace, 'list'], {
+      encoding: 'utf8', windowsHide: true,
+    }))
+    expect(listed.ok).toBe(true)
+    expect(listed.data.pages.some((note: { fileName: string }) => note.fileName === 'AGENTS.md')).toBe(false)
+    await browser.keys(['Control', ','])
+    await click("//nav[contains(@class, 'settings-tabs')]//button[.//span[normalize-space()='Agent tools']]")
+    await click("//div[contains(@class, 'agent-tools-actions')]//button[normalize-space()='Install / repair CLI']")
+    await expect($('.agent-tools-actions strong')).toHaveText(expect.stringContaining('Ready'))
+    expect(fs.readFileSync(guide, 'utf8')).toBe(customized)
+    await click('.settings-close')
+    await contextClick('.tab-item=AGENTS')
+    await click("//div[contains(@class, 'tab-context-menu')]//button[.//span[normalize-space()='Close']]")
+    await expect($('.tab-item=AGENTS')).not.toExist()
+    await click('.tab-item=Inbox')
+  })
+
   it('refreshes saved editor content after the deployed CLI appends a note', async () => {
     const workspace = process.env.NEOPAD_WORKSPACE!
     const cli = path.join(workspace, '.agents', 'bin', 'neopad-cli.exe')

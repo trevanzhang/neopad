@@ -1,8 +1,8 @@
 import { ref } from 'vue'
-import { getAgentToolsStatus, installAgentCli, type AgentToolsStatus } from '../lib/invoke'
+import { getAgentGuidePath, getAgentToolsStatus, installAgentCli, type AgentToolsStatus } from '../lib/invoke'
 import { isTauriRuntime } from '../lib/runtime'
 
-export function useAgentTools(onCopied: () => void) {
+export function useAgentTools(onCopied: () => void, onOpenGuide: (path: string) => Promise<void>) {
   const agentToolsStatus = ref<AgentToolsStatus | null>(null)
   const agentToolsError = ref<string | null>(null)
   const agentToolsBusy = ref(false)
@@ -38,5 +38,15 @@ export function useAgentTools(onCopied: () => void) {
     } catch (error) { agentToolsError.value = String(error) }
   }
 
-  return { agentToolsStatus, agentToolsError, agentToolsBusy, loadAgentToolsStatus, repairAgentCli, copyAgentCliPath }
+  async function openAgentGuide() {
+    if (!isTauriRuntime() || agentToolsBusy.value) return
+    agentToolsBusy.value = true
+    try {
+      agentToolsError.value = null
+      await onOpenGuide(await getAgentGuidePath())
+    } catch (error) { agentToolsError.value = String(error) }
+    finally { agentToolsBusy.value = false }
+  }
+
+  return { agentToolsStatus, agentToolsError, agentToolsBusy, loadAgentToolsStatus, repairAgentCli, copyAgentCliPath, openAgentGuide }
 }

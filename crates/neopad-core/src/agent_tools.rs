@@ -14,6 +14,8 @@ pub struct AgentToolsStatus {
     pub version: String,
     pub installed: bool,
     pub matches_bundle: bool,
+    pub guide_path: PathBuf,
+    pub guide_available: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -24,6 +26,8 @@ pub struct AgentWorkspaceDiagnostics {
     pub config_valid: bool,
     pub cli_path: PathBuf,
     pub cli_installed: bool,
+    pub guide_path: PathBuf,
+    pub guide_available: bool,
 }
 
 /// Inspect an existing workspace without initializing it or writing files.
@@ -35,7 +39,50 @@ pub fn inspect_agent_workspace(workspace: &Workspace) -> AgentWorkspaceDiagnosti
         cli_path: agent_cli_path(workspace),
         cli_installed: check_deployment_path(workspace).is_ok()
             && agent_cli_path(workspace).is_file(),
+        guide_path: agent_guide_path(workspace),
+        guide_available: is_regular_guide(&agent_guide_path(workspace)),
     }
+}
+
+pub fn agent_guide_path(workspace: &Workspace) -> PathBuf {
+    workspace.root.join("AGENTS.md")
+}
+
+// Called under the workspace lock. Preserve every existing entry, including
+// empty files, directories and dangling links; never write through a user link.
+pub(crate) fn ensure_agent_guide_file(workspace: &Workspace) -> Result<()> {
+    let path = agent_guide_path(workspace);
+    match fs::symlink_metadata(&path) {
+        Ok(_) => return Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error).context("could not inspect the Agent guide"),
+    }
+    crate::workspace::write_file_if_missing(&path, include_str!("../resources/workspace-AGENTS.md"))
+}
+
+fn is_regular_guide(path: &Path) -> bool {
+    fs::symlink_metadata(path).is_ok_and(|metadata| {
+        #[cfg(windows)]
+        let linked = {
+            use std::os::windows::fs::MetadataExt;
+            metadata.file_attributes() & 0x400 != 0
+        };
+        #[cfg(not(windows))]
+        let linked = metadata.file_type().is_symlink();
+        metadata.is_file() && !linked
+    })
+}
+
+/// Create the default if absent and return a regular, local guide for editing.
+pub fn prepare_agent_guide(workspace: &Workspace) -> Result<PathBuf> {
+    let _lock = lock_workspace_for_write(workspace)?;
+    ensure_agent_guide_file(workspace)?;
+    let path = agent_guide_path(workspace);
+    if !is_regular_guide(&path) {
+        bail!("Agent guide must be a regular file, not a directory or link");
+    }
+    path.canonicalize()
+        .context("could not locate the Agent guide")
 }
 
 pub fn agent_cli_path(workspace: &Workspace) -> PathBuf {
@@ -107,6 +154,8 @@ pub fn agent_tools_status(workspace: &Workspace, source: &Path) -> Result<AgentT
         version: env!("CARGO_PKG_VERSION").to_owned(),
         installed,
         matches_bundle,
+        guide_path: agent_guide_path(workspace),
+        guide_available: is_regular_guide(&agent_guide_path(workspace)),
     })
 }
 
@@ -133,6 +182,82 @@ pub fn install_agent_cli(workspace: &Workspace, source: &Path) -> Result<AgentTo
 mod tests {
     use super::*;
     use crate::init_workspace;
+
+    #[test]
+    fn workspace_creates_guide_and_recreates_it_only_when_absent() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("中文 workspace");
+        let workspace = init_workspace(Some(root.clone())).unwrap();
+        let guide = prepare_agent_guide(&workspace).unwrap();
+        let contents = fs::read_to_string(&guide).unwrap();
+        assert!(contents.contains("NeoPad 工作指南"));
+        assert!(contents.contains("--workspace WORKSPACE"));
+        assert!(inspect_agent_workspace(&workspace).guide_available);
+        assert_eq!(crate::list_notes(&workspace).unwrap().len(), 2);
+        assert!(crate::search_notes(&workspace, "操作入口", 10)
+            .unwrap()
+            .is_empty());
+        fs::remove_file(&guide).unwrap();
+        assert!(!inspect_agent_workspace(&workspace).guide_available);
+        assert_eq!(prepare_agent_guide(&workspace).unwrap(), guide);
+        assert_eq!(fs::read_to_string(&guide).unwrap(), contents);
+    }
+
+    #[test]
+    fn initialization_and_cli_repair_preserve_custom_and_empty_root_guides() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("cli");
+        fs::write(&source, "bundled binary").unwrap();
+        for (index, contents) in ["\u{feff}# 我的工作约定\r\n保留原文。\r\n", ""]
+            .iter()
+            .enumerate()
+        {
+            let root = temp.path().join(format!("workspace-{index}"));
+            fs::create_dir_all(&root).unwrap();
+            let guide = root.join("AGENTS.md");
+            fs::write(&guide, contents.as_bytes()).unwrap();
+            let workspace = init_workspace(Some(root.clone())).unwrap();
+            install_agent_cli(&workspace, &source).unwrap();
+            fs::write(&source, "new bundled binary").unwrap();
+            install_agent_cli(&workspace, &source).unwrap();
+            init_workspace(Some(root)).unwrap();
+            prepare_agent_guide(&workspace).unwrap();
+            assert_eq!(fs::read(guide).unwrap(), contents.as_bytes());
+        }
+    }
+
+    #[test]
+    fn existing_guide_directory_is_preserved_and_cannot_be_opened_as_a_file() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("workspace");
+        fs::create_dir_all(root.join("AGENTS.md")).unwrap();
+        fs::write(root.join("AGENTS.md/keep"), "user data").unwrap();
+        let workspace = init_workspace(Some(root)).unwrap();
+        assert!(!inspect_agent_workspace(&workspace).guide_available);
+        assert!(prepare_agent_guide(&workspace).is_err());
+        assert_eq!(
+            fs::read_to_string(agent_guide_path(&workspace).join("keep")).unwrap(),
+            "user data"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn guide_links_are_preserved_without_reading_or_writing_their_targets() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("workspace");
+        fs::create_dir(&root).unwrap();
+        let outside = temp.path().join("outside.md");
+        std::os::unix::fs::symlink(&outside, root.join("AGENTS.md")).unwrap();
+        let workspace = init_workspace(Some(root.clone())).unwrap();
+        assert!(!outside.exists());
+        assert!(prepare_agent_guide(&workspace).is_err());
+        fs::write(&outside, "outside user guide").unwrap();
+        init_workspace(Some(root)).unwrap();
+        assert!(!inspect_agent_workspace(&workspace).guide_available);
+        assert!(prepare_agent_guide(&workspace).is_err());
+        assert_eq!(fs::read_to_string(outside).unwrap(), "outside user guide");
+    }
 
     #[test]
     fn deployment_repairs_binary_and_preserves_user_guides() {

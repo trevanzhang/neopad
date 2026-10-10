@@ -16,7 +16,9 @@ NeoPad 为本地 Agent 提供原生 `neopad-cli`。CLI 直接使用共享 Rust �
 
 “设置 > Agent 工具”可以查看状态、修复文件或复制完整路径。每次桌面启动会
 对比安装包中的二进制内容并更新部署；不会覆盖 `.agents/` 中的用户指南。
-本阶段不自动生成用户数据目录的 `AGENTS.md` 或安装 skills。
+工作区初始化时会在根目录生成默认 `AGENTS.md`，已有文件（包括空文件）不覆盖。
+“设置 > Agent 工具 > 打开 Agent 指南”可在 NeoPad 中编辑；不自动安装 skills。
+使用方式与定制说明见 [工作区 Agent 指南](agent-guide.md)。
 
 把本指南和 CLI 完整路径交给 Agent 即可。使用完整路径调用，无需修改 PATH。
 开发者可先执行 `cargo build -p neopad-cli --release`，然后使用
@@ -73,7 +75,7 @@ if ($LASTEXITCODE -eq 3) {
 | 命令 | 用法 |
 | --- | --- |
 | 检查 | `doctor` |
-| 列表 | `list [--scope active\|archive\|trash\|all]` |
+| 列表 | `list [--scope active\|projects\|archive\|trash\|all] [--project DIRECTORY]` |
 | 读取 | `read ID` |
 | 搜索 | `search QUERY [--limit 1..100]` |
 | 创建 | `create [--title TITLE] [--content-file PATH\|--stdin]` |
@@ -86,7 +88,7 @@ if ($LASTEXITCODE -eq 3) {
 | 回收与恢复 | `trash ID`、`restore ID` |
 
 ID 必须来自列表、搜索或创建结果，不要将文件路径当作 ID。
-`all` 包含活动笔记和归档笔记，排除回收站；搜索也排除回收站和用户提示词。
+`all` 包含捕获、项目和归档笔记，排除回收站；搜索也排除回收站。
 `append-clipboard` 只追加提供的文本，不读取系统剪贴板。
 
 ## 结果与安全边界
@@ -95,6 +97,8 @@ ID 必须来自列表、搜索或创建结果，不要将文件路径当作 ID�
 `{"ok":false,"error":{"code":"…","message":"…"}}`。
 `list` 的内容在 `data.pages`，`search` 在 `data.matches`；其他笔记命令
 返回相应的笔记或操作结果。`--help` 和 `--version` 返回纯文本。
+`doctor` 的 `guidePath` 和 `guideAvailable` 给出工作区指南位置与可用状态，
+检查本身不生成指南或初始化工作区。
 
 | 退出码 | 含义 |
 | --- | --- |

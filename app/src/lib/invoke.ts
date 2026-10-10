@@ -55,6 +55,8 @@ export interface AgentToolsStatus {
   version: string
   installed: boolean
   matchesBundle: boolean
+  guidePath: string
+  guideAvailable: boolean
 }
 
 export interface RecoverableNoteWrite {
@@ -419,6 +421,10 @@ export function getAgentToolsStatus(): Promise<AgentToolsStatus> {
 
 export function installAgentCli(): Promise<AgentToolsStatus> {
   return invoke('install_agent_cli_command')
+}
+
+export function getAgentGuidePath(): Promise<string> {
+  return invoke('get_agent_guide_path_command')
 }
 
 export function listProjectDirectories(): Promise<string[]> {

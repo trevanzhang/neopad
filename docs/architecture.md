@@ -248,6 +248,11 @@ The desktop resolves the bundled binary beside its executable and asks the core
 to install it into `.agents/bin/`. SHA-256 comparison detects missing, outdated,
 or modified binaries. Deployment is atomic and rejects symlinks or Windows
 junctions in the managed path. Settings can check and repair this installation.
+Core workspace initialization creates a root `AGENTS.md` from an embedded
+template only when absent, preserving existing entries without following links.
+Read-only diagnostics report its path and availability without creating files.
+Settings opens the regular guide through the existing external Markdown editor,
+with save barriers and revision checks, rather than importing it as a note.
 This controls the CLI interface; it is not an operating-system sandbox for an
 Agent that already has direct filesystem access.
 

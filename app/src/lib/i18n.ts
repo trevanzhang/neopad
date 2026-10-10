@@ -275,6 +275,8 @@ export type AppMessages = {
     repairAgentCli: string
     copyAgentCliPath: string
     agentCliUsage: string
+    agentGuideDescription: string
+    openAgentGuide: string
     workspace: string
     address: string
     status: string
@@ -768,7 +770,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       agentCliUnavailable: 'Needs repair',
       repairAgentCli: 'Install / repair CLI',
       copyAgentCliPath: 'Copy CLI path',
-      agentCliUsage: 'Give your agent this path. Ask it to run --help and doctor --json first.',
+      agentCliUsage: 'Start an agent in your NeoPad data folder, or ask it to read the Agent guide from another project.',
+      agentGuideDescription: 'AGENTS.md explains note workflows and safe CLI use. You can edit it; existing guides are kept during updates.',
+      openAgentGuide: 'Open Agent guide',
       workspace: 'Workspace',
       address: 'Address',
       status: 'Status',
@@ -1260,7 +1264,9 @@ export const messages: Record<AppLanguage, AppMessages> = {
       agentCliUnavailable: '需要修复',
       repairAgentCli: '安装 / 修复 CLI',
       copyAgentCliPath: '复制 CLI 路径',
-      agentCliUsage: '将此路径交给 Agent，先让它运行 --help 和 doctor --json。',
+      agentCliUsage: '在 NeoPad 数据目录中启动 Agent，或在其他项目中让它读取 Agent 指南。',
+      agentGuideDescription: 'AGENTS.md 提供笔记协作与 CLI 操作指引，可自行编辑；更新时保留已有指南。',
+      openAgentGuide: '打开 Agent 指南',
       workspace: '\u5de5\u4f5c\u533a',
       address: '\u5730\u5740',
       status: '\u72b6\u6001',

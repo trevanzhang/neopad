@@ -60,7 +60,8 @@ This file tracks the implemented MVP relative to the original task plan.
   with configurable global shortcuts.
 - Manual clipboard capture to `clipboard.md`.
 - Native `neopad-cli` read/write operations and `.agents/bin/` deployment.
-- Agent tools settings page with status, repair, and a copyable CLI path.
+- Agent tools settings page with status, repair, a copyable CLI path, and an
+  editable workspace Agent guide; default guides never replace user files.
 - Safe automatic refresh for saved notes changed by an external Agent.
 - Optional AI collaboration with secure provider settings, a compact `Ctrl+K`
   note chat, in-memory per-note sessions, bounded

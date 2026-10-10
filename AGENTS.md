@@ -39,6 +39,9 @@ docs/                 Human-facing project docs
 - Deploy the bundled CLI to `.agents/bin/` through `neopad-core`.
 - Never discover or launch a replacement CLI from the system PATH.
 - Preserve user-authored files under `.agents/`; only manage the CLI binary.
+- Create the default workspace-root `AGENTS.md` only when absent. Preserve
+  existing guides byte-for-byte, including empty files and linked entries.
+  The template lives in `crates/neopad-core/resources/workspace-AGENTS.md`.
 - CLI results must be JSON; full replacements require an expected timestamp.
 - CLI note operations must share the desktop workspace write lock.
 - Do not introduce cloud sync, accounts, RAG, vector search, backlinks,

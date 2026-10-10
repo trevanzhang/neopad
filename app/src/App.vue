@@ -274,8 +274,8 @@ const {
 })
 const {
   agentToolsStatus, agentToolsError, agentToolsBusy,
-  loadAgentToolsStatus, repairAgentCli, copyAgentCliPath,
-} = useAgentTools(() => { statusMessage.value = t.value.status.agentCliPathCopied })
+  loadAgentToolsStatus, repairAgentCli, copyAgentCliPath, openAgentGuide,
+} = useAgentTools(() => { statusMessage.value = t.value.status.agentCliPathCopied }, openAgentGuideDocument)
 const {
   aiConfig,
   aiError,
@@ -621,6 +621,13 @@ async function openExternalDocument() {
   } catch {
     saveState.value = 'Failed'
   }
+}
+
+async function openAgentGuideDocument(path: string) {
+  const [document] = await openExternalMarkdownPaths([path])
+  if (!document) throw new Error('NeoPad Agent guide could not be opened')
+  closeSettings(false)
+  await openExternalDocumentPath(document.path, document)
 }
 
 async function openPendingExternalDocuments() {
@@ -2025,6 +2032,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
       @edit-custom-text="editCustomInsertText"
       @repair-agent-cli="repairAgentCli"
       @copy-agent-cli-path="copyAgentCliPath"
+      @open-agent-guide="openAgentGuide"
       @update-ai-config="updateAiConfig"
       @save-ai-api-key="storeApiKey"
       @clear-ai-api-key="removeApiKey"

@@ -1,6 +1,6 @@
 use crate::commands::{display_error, AppState};
 use anyhow::{bail, Result};
-use neopad_core::{agent_tools_status, install_agent_cli, AgentToolsStatus};
+use neopad_core::{agent_tools_status, install_agent_cli, prepare_agent_guide, AgentToolsStatus};
 use std::path::PathBuf;
 use tauri::State;
 
@@ -50,4 +50,11 @@ pub fn get_agent_tools_status_command(
 #[tauri::command]
 pub fn install_agent_cli_command(state: State<'_, AppState>) -> Result<AgentToolsStatus, String> {
     deploy(&state).map_err(display_error)
+}
+
+#[tauri::command]
+pub fn get_agent_guide_path_command(state: State<'_, AppState>) -> Result<String, String> {
+    prepare_agent_guide(&state.workspace)
+        .map(|path| path.to_string_lossy().into_owned())
+        .map_err(display_error)
 }

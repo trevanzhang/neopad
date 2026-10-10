@@ -9,6 +9,14 @@ incompatible public interface changes require a major version bump.
 
 ## Unreleased
 
+### Added
+
+- Generate a short workspace-root `AGENTS.md` only when absent. Preserve
+  existing user guides, including empty files, through startup and CLI repair.
+  Open it from Settings > Agent tools as an editable external Markdown file;
+  read-only diagnostics report the guide path and availability. Include project
+  filtering in CLI help and document how to load the guide in Agent tools.
+
 ### Fixed
 
 - Fix **Show in Explorer** opening a default folder instead of selecting the

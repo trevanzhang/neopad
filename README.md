@@ -116,6 +116,9 @@ The repository currently contains a working Windows-focused MVP:
   both the File menu and the tab context menu.
 - Native `neopad-cli` for local agents, automatically deployed on desktop startup
   to `~/.neopad/.agents/bin/`. Settings > Agent tools checks and repairs it.
+  Workspace initialization creates a short `AGENTS.md` only if absent; existing
+  guides are preserved. Open and edit it from Settings > Agent tools. See the
+  [workspace Agent guide](docs/agent-guide.md) for getting started.
   Saved editor content refreshes after external changes; unsaved edits are preserved.
 - Save barriers prevent navigation and content-replacing actions from
   discarding pending edits. Note metadata is reconciled under a cross-process

@@ -82,6 +82,7 @@ const emit = defineEmits<{
   editCustomText: [index: number]
   'repair-agent-cli': []
   'copy-agent-cli-path': []
+  'open-agent-guide': []
   'update-ai-config': [patch: Partial<Omit<AiConfig, 'apiKeyConfigured'>>]
   'save-ai-api-key': [apiKey: string]
   'clear-ai-api-key': []
@@ -574,6 +575,13 @@ function deleteCustomText(current: string[]) {
             </button>
           </div>
           <p class="settings-description">{{ messages.agentCliUsage }}</p>
+          <p class="settings-description">{{ messages.agentGuideDescription }}</p>
+          <pre v-if="agentToolsStatus" class="settings-code-block">{{ agentToolsStatus.guidePath }}</pre>
+          <div class="settings-actions">
+            <button type="button" class="agent-guide-open" :disabled="agentToolsBusy" @click="$emit('open-agent-guide')">
+              {{ messages.openAgentGuide }}
+            </button>
+          </div>
         </fieldset>
       </template>
       <template v-else>

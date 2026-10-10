@@ -98,12 +98,13 @@ pub fn ensure_workspace_layout(workspace: &Workspace) -> Result<()> {
     write_file_if_missing(&workspace.reminders_path, default_reminders_json())?;
     write_file_if_missing(&workspace.inbox_path(), "# Inbox\n\n")?;
     write_file_if_missing(&workspace.clipboard_path(), "# Clipboard\n\n")?;
+    crate::agent_tools::ensure_agent_guide_file(workspace)?;
 
     ensure_writable(&workspace.root)?;
     Ok(())
 }
 
-fn write_file_if_missing(path: &Path, contents: &str) -> Result<()> {
+pub(crate) fn write_file_if_missing(path: &Path, contents: &str) -> Result<()> {
     let mut file = match fs::OpenOptions::new()
         .write(true)
         .create_new(true)
