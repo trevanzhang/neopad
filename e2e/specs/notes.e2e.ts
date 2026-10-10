@@ -56,6 +56,8 @@ describe('NeoPad desktop note workflow', () => {
 
   it('starts with the pinned default pages', async () => {
     await $('[data-ready="true"]').waitForExist()
+    const profile = path.join(process.env.NEOPAD_WORKSPACE!, 'webview2-profile')
+    expect(fs.existsSync(path.join(profile, 'EBWebView', 'DevToolsActivePort'))).toBe(true)
     await useEnglishLocale()
     await expect($('.tab-item=Inbox')).toBeDisplayed()
     await expect($('.tab-item=Clipboard')).toBeDisplayed()

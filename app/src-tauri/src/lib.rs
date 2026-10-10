@@ -6,6 +6,8 @@ mod file_manager;
 mod hotkey;
 mod installer;
 mod tray;
+#[cfg(target_os = "windows")]
+mod webdriver;
 mod window;
 
 use commands::{
@@ -130,6 +132,15 @@ pub fn run() {
         }
     };
 
+    let context = tauri::generate_context!();
+    #[cfg(target_os = "windows")]
+    let mut context = context;
+    #[cfg(target_os = "windows")]
+    let test_window = webdriver::prepare(
+        context.config_mut(),
+        std::env::var("NEOPAD_E2E").as_deref() == Ok("1"),
+        &state.workspace.root,
+    );
     let mut builder = tauri::Builder::default();
     if std::env::var_os("NEOPAD_E2E").is_none() {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
@@ -166,7 +177,11 @@ pub fn run() {
                 .with_handler(hotkey::handle_global_shortcut)
                 .build(),
         )
-        .setup(|app| {
+        .setup(move |app| {
+            #[cfg(target_os = "windows")]
+            if let Some(window) = test_window {
+                window.build(app)?;
+            }
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
@@ -274,7 +289,7 @@ pub fn run() {
             agent_tools::get_agent_guide_path_command,
             tray::set_tray_language_command
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("failed to build NeoPad");
 
     app.run(|_, _| {});

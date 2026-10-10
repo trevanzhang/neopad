@@ -114,10 +114,20 @@ Install or refresh the matching drivers and run the suite:
 pnpm test:e2e
 ```
 
-The setup script installs `tauri-driver` and `msedgedriver-tool` when missing.
+The setup script installs the pinned `tauri-driver` 2.1.0 and
+`msedgedriver-tool` when missing.
 The Microsoft Edge driver is downloaded to `target/tools/`, matching the local
 WebView2 runtime. The suite then builds `neopad-app.exe` without an installer
 bundle and exercises note creation, autosave across tab switches, and settings.
+
+On Windows, `NEOPAD_E2E=1` builds the test window with native WebView2 API
+options: remote debugging uses an ephemeral port, and both the app and
+WebDriver use `target/e2e-workspace/webview2-profile`. WebView2 150 and newer
+ignore environment overrides in elevated processes, including hosted Windows
+CI runners; using the native API avoids losing the debugging switch or
+waiting for `DevToolsActivePort` in a different profile. See
+[Microsoft's explanation](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5640#issuecomment-4923662109).
+Ordinary startup retains the automatic window and has no test debugging switch.
 
 Relevant files:
 

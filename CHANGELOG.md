@@ -19,6 +19,9 @@ incompatible public interface changes require a major version bump.
 
 ### Fixed
 
+- Fix Windows desktop test startup with WebView2 150+ on elevated CI runners.
+  Pass the test debugging switch and isolated profile through native WebView2
+  APIs, use the same profile in WebDriver, and pin the test driver version.
 - Update production rendering and TLS dependencies to patched versions. Apply
   the KaTeX override to both the Markdown plugin and Mermaid so formula
   rendering uses the same version as the bundled styles. Restore strict Clippy

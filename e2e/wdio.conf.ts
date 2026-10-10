@@ -43,6 +43,9 @@ export const config: WebdriverIO.Config = {
     {
       'tauri:options': {
         application,
+        webviewOptions: {
+          userDataFolder: path.join(workspace, 'webview2-profile'),
+        },
       },
     },
   ],
