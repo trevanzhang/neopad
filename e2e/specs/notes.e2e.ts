@@ -11,6 +11,9 @@ describe('NeoPad desktop note workflow', () => {
       })),
       status: document.querySelector('.status-bar')?.textContent,
       editor: document.querySelector('.cm-content')?.textContent,
+      focused: document.activeElement?.outerHTML,
+      libraryWidth: document.querySelector('.note-library')?.getBoundingClientRect().width,
+      mermaid: document.querySelector('.markdown-mermaid')?.outerHTML,
     }))
     console.error('Desktop failure state:', JSON.stringify(state))
   })
@@ -43,6 +46,12 @@ describe('NeoPad desktop note workflow', () => {
     const element = await $(selector)
     await element.waitForDisplayed()
     await element.click({ button: 'right' })
+  }
+
+  async function setLibraryOpen(open: boolean) {
+    if (await $('.note-library').isDisplayed() !== open) await click('.tab-menu')
+    if (open) await expect($('.note-library')).toBeDisplayed()
+    else await expect($('.note-library')).not.toBeDisplayed()
   }
 
   async function useEnglishLocale() {
@@ -259,74 +268,85 @@ describe('NeoPad desktop note workflow', () => {
   })
 
   it('orders projects before archive and remembers the draggable file browser width', async () => {
-    await browser.keys('F4')
-    await expect($('.note-library')).toBeDisplayed()
-    const groups = await browser.execute(() => [...document.querySelectorAll('.note-library-group')]
-      .map(group => group.querySelector('.note-library-root span:last-of-type')?.textContent))
-    expect(groups).toEqual(['Notes', 'Projects', 'Archive', 'Trash'])
-    expect(await browser.execute(() => {
-      const icon = document.querySelector('.note-library-create-project svg')!.getBoundingClientRect()
-      const button = document.querySelector('.note-library-create-project')!.getBoundingClientRect()
-      return icon.width <= button.width && icon.height <= button.height
-    })).toBe(true)
-    const width = () => browser.execute(() => document.querySelector('.note-library')!.getBoundingClientRect().width)
-    const originalWidth = await width()
-    const resizer = await $('.note-library-resizer')
-    const location = await resizer.getLocation()
-    const x = Math.round(location.x + 3)
-    const y = Math.round(location.y + 80)
-    await browser.performActions([{ type: 'pointer', id: 'library-resize', parameters: { pointerType: 'mouse' }, actions: [
-      { type: 'pointerMove', duration: 0, origin: 'viewport', x, y },
-      { type: 'pointerDown', button: 0 },
-      { type: 'pointerMove', duration: 300, origin: 'viewport', x: x + 100, y },
-      { type: 'pointerUp', button: 0 },
-    ] }])
-    await browser.releaseActions()
-    await browser.waitUntil(async () => (await width()) >= originalWidth + 80, {
-      timeoutMsg: 'dragging the divider did not widen the file browser',
-    })
-    const draggedWidth = await width()
-    expect(await browser.execute(() => Number(localStorage.getItem('neopad.libraryWidth')))).toBe(draggedWidth)
-    await expect($('.app-shell.library-resizing')).not.toExist()
+    await setLibraryOpen(true)
+    const initialWindowSize = await browser.getWindowSize()
+    try {
+      const groups = await browser.execute(() => [...document.querySelectorAll('.note-library-group')]
+        .map(group => group.querySelector('.note-library-root span:last-of-type')?.textContent))
+      expect(groups).toEqual(['Notes', 'Projects', 'Archive', 'Trash'])
+      expect(await browser.execute(() => {
+        const icon = document.querySelector('.note-library-create-project svg')!.getBoundingClientRect()
+        const button = document.querySelector('.note-library-create-project')!.getBoundingClientRect()
+        return icon.width <= button.width && icon.height <= button.height
+      })).toBe(true)
+      const width = () => browser.execute(() => document.querySelector('.note-library')!.getBoundingClientRect().width)
+      const originalWidth = await width()
+      const resizer = await $('.note-library-resizer')
+      const location = await resizer.getLocation()
+      const x = Math.round(location.x + 3)
+      const y = Math.round(location.y + 80)
+      await browser.performActions([{ type: 'pointer', id: 'library-resize', parameters: { pointerType: 'mouse' }, actions: [
+        { type: 'pointerMove', duration: 0, origin: 'viewport', x, y },
+        { type: 'pointerDown', button: 0 },
+        { type: 'pointerMove', duration: 300, origin: 'viewport', x: x + 100, y },
+        { type: 'pointerUp', button: 0 },
+      ] }])
+      await browser.releaseActions()
+      await browser.waitUntil(async () => (await width()) >= originalWidth + 80, {
+        timeoutMsg: 'dragging the divider did not widen the file browser',
+      })
+      const draggedWidth = await width()
+      expect(await browser.execute(() => Number(localStorage.getItem('neopad.libraryWidth')))).toBe(draggedWidth)
+      await expect($('.app-shell.library-resizing')).not.toExist()
 
-    await browser.keys('F4')
-    await expect($('.note-library-resizer')).not.toExist()
-    await browser.keys('F4')
-    expect(await width()).toBe(draggedWidth)
-    await browser.refresh()
-    await $('[data-ready="true"]').waitForExist()
-    await browser.keys('F4')
-    await expect($('.note-library')).toBeDisplayed()
-    expect(await width()).toBe(draggedWidth)
+      await browser.keys('F4')
+      await expect($('.note-library-resizer')).not.toExist()
+      await browser.keys('F4')
+      expect(await width()).toBe(draggedWidth)
+      await browser.refresh()
+      await $('[data-ready="true"]').waitForExist()
+      await browser.keys('F4')
+      await expect($('.note-library')).toBeDisplayed()
+      expect(await width()).toBe(draggedWidth)
 
-    await browser.execute(() => (document.querySelector('.note-library-resizer') as HTMLElement).focus())
-    await browser.keys('ArrowRight')
-    expect(await width()).toBe(draggedWidth + 16)
-    const widenedWidth = await width()
-    const windowSize = await browser.getWindowSize()
-    await browser.setWindowSize(420, 360)
-    await browser.waitUntil(async () => (await width()) < widenedWidth)
-    expect(await browser.execute(() => document.querySelector('.workspace-pane')!.getBoundingClientRect().width))
-      .toBeGreaterThanOrEqual(240)
-    await browser.setWindowSize(windowSize.width, windowSize.height)
-    await browser.waitUntil(async () => (await width()) === widenedWidth)
+      // A native click restores WebView keyboard focus after navigation as well
+      // as DOM focus. Wait for Vue to apply the keyboard-driven width change.
+      await (await $('.note-library-resizer')).click()
+      await expect($('.note-library-resizer')).toBeFocused()
+      await browser.keys('ArrowRight')
+      await browser.waitUntil(async () => (await width()) === draggedWidth + 16, {
+        timeoutMsg: 'Right arrow did not widen the focused file browser divider',
+      })
+      expect(await width()).toBe(draggedWidth + 16)
+      const widenedWidth = await width()
+      const windowSize = await browser.getWindowSize()
+      await browser.setWindowSize(420, 360)
+      await browser.waitUntil(async () => (await width()) < widenedWidth)
+      expect(await browser.execute(() => document.querySelector('.workspace-pane')!.getBoundingClientRect().width))
+        .toBeGreaterThanOrEqual(240)
+      await browser.setWindowSize(windowSize.width, windowSize.height)
+      await browser.waitUntil(async () => (await width()) === widenedWidth)
 
-    await browser.keys('F11')
-    await expect($('.note-library-resizer')).not.toExist()
-    expect(await browser.execute(() => document.querySelector('.workspace-pane')!.getBoundingClientRect().width
-      >= document.querySelector('.app-shell')!.clientWidth - 1)).toBe(true)
-    await browser.keys('F11')
-    await expect($('.note-library')).toBeDisplayed()
-    expect(await width()).toBe(widenedWidth)
-    await browser.saveScreenshot(path.resolve(import.meta.dirname, '../../target/library-resize.png'))
-    await (await $('.note-library-resizer')).doubleClick()
-    await browser.waitUntil(async () => (await width()) === 168)
-    await browser.keys('F4')
+      await browser.keys('F11')
+      await expect($('.note-library-resizer')).not.toExist()
+      expect(await browser.execute(() => document.querySelector('.workspace-pane')!.getBoundingClientRect().width
+        >= document.querySelector('.app-shell')!.clientWidth - 1)).toBe(true)
+      await browser.keys('F11')
+      await expect($('.note-library')).toBeDisplayed()
+      expect(await width()).toBe(widenedWidth)
+      await browser.saveScreenshot(path.resolve(import.meta.dirname, '../../target/library-resize.png'))
+      await (await $('.note-library-resizer')).doubleClick()
+      await browser.waitUntil(async () => (await width()) === 168)
+      await browser.keys('F4')
+    } finally {
+      await browser.setWindowSize(initialWindowSize.width, initialWindowSize.height)
+      if (await $('.app-shell.immersive').isExisting()) await browser.keys('F11')
+      await setLibraryOpen(false)
+    }
   })
 
   it('organizes archive notes and projects into folders from the library', async () => {
-    await browser.keys('F4')
-    await expect($('.note-library')).toBeDisplayed()
+    await setLibraryOpen(true)
 
     await click('.note-library-archive-root .note-library-create-folder')
     await (await $('.input-dialog input')).setValue('Projects')
@@ -504,9 +524,9 @@ describe('NeoPad desktop note workflow', () => {
       await click(folder)
       await contextClick("//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Quick move note']]")
       const expectedFile = path.join(workspace, 'projects', directory, note.fileName)
-      const selection = (close = false) => JSON.parse(execFileSync('powershell.exe', [
+      const selection = (mode: 'read' | 'close' | 'diagnose' = 'read') => JSON.parse(execFileSync('powershell.exe', [
         '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
-        '-Path', expectedFile, ...(close ? ['-Close'] : []),
+        '-Path', expectedFile, ...(mode === 'close' ? ['-Close'] : mode === 'diagnose' ? ['-Diagnose'] : []),
       ], { encoding: 'utf8', windowsHide: true }))
       try {
         await click("//div[contains(@class, 'note-library-context-menu')]//button[normalize-space()='Show in Explorer']")
@@ -516,8 +536,11 @@ describe('NeoPad desktop note workflow', () => {
         const opened = selection()
         expect(opened.folder.toLowerCase()).toBe(path.dirname(expectedFile).toLowerCase())
         expect(opened.selected.map((selected: string) => selected.toLowerCase())).toContain(expectedFile.toLowerCase())
+      } catch (error) {
+        console.error('Explorer failure state:', JSON.stringify(selection('diagnose')))
+        throw error
       } finally {
-        selection(true)
+        selection('close')
         if (await $('.note-library').isDisplayed()) await click('.tab-menu')
       }
     }
@@ -537,7 +560,14 @@ describe('NeoPad desktop note workflow', () => {
       await expect($('.markdown-preview .katex-display')).toBeDisplayed()
       await expect($('.markdown-preview .markdown-mermaid svg')).toBeDisplayed()
       await expect($('.markdown-preview .markdown-mermaid .katex')).toBeDisplayed()
-      await expect($('.markdown-preview .markdown-mermaid')).toHaveText(expect.stringContaining('Rendered'))
+      // WebDriver's rendered-text algorithm differs for SVG/foreignObject
+      // labels across Edge versions. Inspect the label DOM and its geometry.
+      await browser.waitUntil(() => browser.execute(() =>
+        [...document.querySelectorAll('.markdown-preview .markdown-mermaid .nodeLabel')]
+          .some((label) => label.textContent?.includes('Rendered')
+            && label.getBoundingClientRect().width > 0 && label.getBoundingClientRect().height > 0)), {
+        timeoutMsg: 'Mermaid did not render the expected text label',
+      })
       await expect($('.markdown-preview .katex-error')).not.toExist()
     } finally {
       for (let attempt = 0; attempt < 3; attempt += 1) {
