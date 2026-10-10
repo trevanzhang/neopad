@@ -19,6 +19,9 @@ incompatible public interface changes require a major version bump.
 
 ### Fixed
 
+- Select Windows Explorer files with an explicit parent folder and child item
+  list, including on Windows Server. Stabilize desktop tests after navigation
+  and inspect Mermaid SVG labels without relying on WebDriver text extraction.
 - Fix Windows desktop test startup with WebView2 150+ on elevated CI runners.
   Pass the test debugging switch and isolated profile through native WebView2
   APIs, use the same profile in WebDriver, and pin the test driver version.

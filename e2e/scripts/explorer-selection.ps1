@@ -20,11 +20,18 @@ foreach ($window in @($shell.Windows())) {
   try {
     $parentPath = $window.Document.Folder.Self.Path
     $selectedPaths = @($window.Document.SelectedItems() | ForEach-Object { $_.Path })
-    $observedWindows += @{ folder = $parentPath; selected = $selectedPaths }
+    $observed = @{ folder = $parentPath; selected = $selectedPaths }
+    if ($Diagnose) {
+      $observed.selectedCount = $window.Document.SelectedItems().Count
+      $observed.items = @($window.Document.Folder.Items() | ForEach-Object { $_.Path })
+    }
+    $observedWindows += $observed
     if ($parentPath -ne $targetParent) { continue }
+    # A failed selection must not leave its test Explorer window behind.
+    # The workspace guard above limits cleanup to the isolated test data.
+    if ($Close) { $window.Quit(); continue }
     if ($selectedPaths -contains $targetPath) {
       $result = @{ folder = $parentPath; selected = $selectedPaths }
-      if ($Close) { $window.Quit() }
       break
     }
   } catch { $observedWindows += @{ error = $_.Exception.Message } }

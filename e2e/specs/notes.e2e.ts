@@ -11,7 +11,7 @@ describe('NeoPad desktop note workflow', () => {
       })),
       status: document.querySelector('.status-bar')?.textContent,
       editor: document.querySelector('.cm-content')?.textContent,
-      focused: document.activeElement?.outerHTML,
+      focused: { tag: document.activeElement?.tagName, class: document.activeElement?.className },
       libraryWidth: document.querySelector('.note-library')?.getBoundingClientRect().width,
       mermaid: document.querySelector('.markdown-mermaid')?.outerHTML,
     }))
@@ -52,6 +52,16 @@ describe('NeoPad desktop note workflow', () => {
     if (await $('.note-library').isDisplayed() !== open) await click('.tab-menu')
     if (open) await expect($('.note-library')).toBeDisplayed()
     else await expect($('.note-library')).not.toBeDisplayed()
+  }
+
+  async function expandDirectory(selector: string) {
+    const folder = await $(selector)
+    await folder.waitForDisplayed()
+    const chevron = await folder.$('.note-library-chevron')
+    if ((await chevron.getAttribute('class')).includes('collapsed')) await click(selector)
+    await browser.waitUntil(async () => !(await chevron.getAttribute('class')).includes('collapsed'), {
+      timeoutMsg: `directory did not expand: ${selector}`,
+    })
   }
 
   async function useEnglishLocale() {
@@ -357,7 +367,7 @@ describe('NeoPad desktop note workflow', () => {
       "//section[1]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='E2E Renamed']]",
       '.note-library-directory=Projects',
     )
-    await click('.note-library-directory=Projects')
+    await expandDirectory('.note-library-directory=Projects')
     await expect($("//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]"))
       .toBeDisplayed()
     await click("//button[contains(@class, 'archived') and .//span[normalize-space()='E2E Renamed']]")
@@ -378,23 +388,28 @@ describe('NeoPad desktop note workflow', () => {
     await click("//div[contains(@class, 'note-library-context-menu')]//button[normalize-space()='New project note']")
     await (await $('.input-dialog input')).setValue('Review project')
     await browser.keys('Enter')
-    await click(writingFolder)
+    await expandDirectory(writingFolder)
     await expect($("//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Review project']]"))
       .toBeDisplayed()
 
     await click('.note-library-project-root .note-library-create-folder')
     await (await $('.input-dialog input')).setValue('Reference')
     await browser.keys('Enter')
-    await browser.pause(250)
+    const referenceFolder = "//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Reference']]"
+    await expect($(referenceFolder)).toBeDisplayed()
     await dragAndDrop(
       "//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]",
       "//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Reference']]",
     )
 
-    await click("//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Reference']]")
-    const movedDirectory = "//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='Writing']]"
+    // The old root Writing row remains visible until the async move refreshes
+    // the tree. Do not accidentally click that row before the nested row exists.
+    await expect($("//section[contains(@class, 'project-library-group')]//button[contains(@class, 'top-level') and .//span[normalize-space()='Writing']]"))
+      .not.toExist()
+    await expandDirectory(referenceFolder)
+    const movedDirectory = "//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and not(contains(@class, 'top-level')) and .//span[normalize-space()='Writing']]"
     await expect($(movedDirectory)).toBeDisplayed()
-    await click(movedDirectory)
+    await expandDirectory(movedDirectory)
     await expect($("//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Review project']]"))
       .toBeDisplayed()
 
@@ -521,7 +536,7 @@ describe('NeoPad desktop note workflow', () => {
       if (!(await $('.note-library').isDisplayed())) await click('.tab-menu')
       const folder = `//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='${directory}']]`
       await expect($(folder)).toBeDisplayed()
-      await click(folder)
+      await expandDirectory(folder)
       await contextClick("//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Quick move note']]")
       const expectedFile = path.join(workspace, 'projects', directory, note.fileName)
       const selection = (mode: 'read' | 'close' | 'diagnose' = 'read') => JSON.parse(execFileSync('powershell.exe', [

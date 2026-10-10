@@ -129,6 +129,12 @@ waiting for `DevToolsActivePort` in a different profile. See
 [Microsoft's explanation](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5640#issuecomment-4923662109).
 Ordinary startup retains the automatic window and has no test debugging switch.
 
+The Explorer test checks both the opened directory and the selected file for
+Unicode and punctuated paths. Native reveal calls pass an explicit parent PIDL
+and relative child PIDL to the Windows Shell. On failure the suite logs the
+Explorer session, folder contents, and selected items. Mermaid assertions check
+SVG label text and geometry because WebDriver text extraction varies by runtime.
+
 Relevant files:
 
 ```text
