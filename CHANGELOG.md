@@ -9,6 +9,13 @@ incompatible public interface changes require a major version bump.
 
 ## Unreleased
 
+### Changed
+
+- Place Projects before Archive in the file browser. Add a draggable divider
+  with a remembered width, keyboard resizing, and double-click reset; limit
+  the width on smaller windows to preserve space for editing.
+- Correct the project creation buttons to use the file browser's compact styles.
+
 ## 0.7.1 - 2026-10-09
 
 ### Breaking Changes

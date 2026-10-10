@@ -107,6 +107,7 @@ Implemented MVP capabilities:
   The tab context menu can move a note to an existing project or subdirectory
   after saving edits, without closing the tab or opening the file browser.
   The compact F4 browser supports folders, notes, drag-and-drop movement,
+  a saved draggable width, and Notes / Projects / Archive / Trash ordering,
   rename, whole-project archive, and recoverable deletion. Project notes share
   ordinary note APIs, revision checks, search, reminders, export, and CLI.
   Legacy prompt files and their trash records migrate to project notes with

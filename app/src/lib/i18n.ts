@@ -392,6 +392,8 @@ export type AppMessages = {
   }
   library: {
     title: string
+    resizePane: string
+    resizePaneHint: string
     notes: string
     projects: string
     archive: string
@@ -884,6 +886,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
     },
     library: {
       title: 'FILES',
+      resizePane: 'Resize file browser',
+      resizePaneHint: 'Drag or use Left/Right to resize; double-click to reset',
       notes: 'Notes',
       projects: 'Projects',
       archive: 'Archive',
@@ -1374,6 +1378,8 @@ export const messages: Record<AppLanguage, AppMessages> = {
     },
     library: {
       title: '\u6587\u4ef6',
+      resizePane: '调整文件区域宽度',
+      resizePaneHint: '拖动或按左右方向键调整宽度；双击恢复默认',
       notes: '\u7b14\u8bb0',
       projects: '项目',
       archive: '\u5b58\u6863',

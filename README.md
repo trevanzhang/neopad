@@ -58,6 +58,8 @@ The repository currently contains a working Windows-focused MVP:
   and "Clear Due" update reminder checkboxes directly without deleting note
   content.
 - `F4` opens a compact browser for capture notes, projects, archive, and Trash.
+  Drag its right edge to resize it; NeoPad remembers the width. Double-click
+  the divider to reset it, or use Left/Right when the divider has focus.
   Capture stays flat in `notes/`; project Markdown lives in `projects/<name>/`.
   Project notes use the same editor, search, reminders, export, and native CLI
   as capture notes. Drag notes into project folders, rename or move folders,

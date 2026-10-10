@@ -340,7 +340,7 @@ function runDirectoryContextAction(action: 'rename' | 'delete' | 'archive') {
 </script>
 
 <template>
-  <aside class="note-library" :aria-label="messages.title">
+  <aside id="note-library-pane" class="note-library" :aria-label="messages.title">
     <header class="note-library-header">
       <strong>{{ messages.title }}</strong>
       <div class="note-library-help">
@@ -396,76 +396,6 @@ function runDirectoryContextAction(action: 'rename' | 'delete' | 'archive') {
             <svg class="note-library-file" aria-hidden="true" viewBox="0 0 16 16"><path d="M4 1.75h5l3 3v9.5H4a1 1 0 0 1-1-1v-10.5a1 1 0 0 1 1-1ZM9 1.75v3h3M5.5 8h5M5.5 10.5h5" /></svg>
             <span>{{ note.title }}</span>
           </button>
-        </div>
-      </section>
-
-      <section class="note-library-group">
-        <div
-          class="note-library-root note-library-archive-root"
-          :class="{ 'drop-target': dragTarget === 'archive-root' }"
-          @dragover.prevent="dragTarget = 'archive-root'"
-          @dragleave="dragTarget = null"
-          @drop.prevent="dropOnArchive('')"
-        >
-          <button class="note-library-root-toggle" type="button" @click="archiveExpanded = !archiveExpanded">
-            <svg class="note-library-chevron" :class="{ collapsed: !archiveExpanded }" aria-hidden="true" viewBox="0 0 16 16"><path d="m4.5 6 3.5 4 3.5-4" /></svg>
-            <svg class="note-library-archive-box" aria-hidden="true" viewBox="0 0 16 16"><path d="M1.75 5.25h12.5v8.5H1.75zM1.25 2.5h13.5v2.75H1.25zM6.25 8.75h3.5" /></svg>
-            <span>{{ messages.archive }}</span>
-          </button>
-          <button class="note-library-create-folder" type="button" :title="messages.newFolder" :aria-label="messages.newFolder" @click="$emit('createDirectory', 'archive')">
-            <svg aria-hidden="true" viewBox="0 0 16 16"><path d="M2 4.25h4.2l1.3 1.5H14v6.5H2ZM8 7.25v3.5M6.25 9h3.5" /></svg>
-          </button>
-          <small>{{ archivedNotes.length }}</small>
-        </div>
-        <div v-if="archiveExpanded" class="note-library-entries">
-          <p
-            v-if="!loading && archivedNotes.length === 0 && archiveDirectories.length === 0"
-            class="note-library-empty"
-          >
-            {{ messages.emptyArchive }}
-          </p>
-          <template v-for="row in archiveRows" :key="row.kind === 'folder' ? `folder:${row.path}` : row.item.id">
-            <button
-              v-if="row.kind === 'folder'"
-              class="note-library-directory"
-              :class="{
-                'top-level': row.depth === 0,
-                'drop-target': dragTarget === `archive:${row.path}`,
-                dragging: dragPayload?.kind === 'archive-directory' && dragPayload.path === row.path,
-              }"
-              :style="{ '--tree-depth': row.depth }"
-              type="button"
-              draggable="true"
-              @click="toggleDirectory('archive', row.path)"
-              @dblclick.stop="$emit('createDirectory', 'archive', row.path)"
-              @contextmenu="openDirectoryContextMenu($event, 'archive', row.path)"
-              @dragstart="startDirectoryDrag($event, 'archive-directory', row.path)"
-              @dragover.prevent="dragTarget = `archive:${row.path}`"
-              @dragleave="dragTarget = null"
-              @drop.prevent.stop="dropOnArchive(row.path)"
-              @dragend="endDrag"
-            >
-              <svg class="note-library-chevron" :class="{ collapsed: !expandedArchiveDirectories.has(row.path) }" aria-hidden="true" viewBox="0 0 16 16"><path d="m4.5 6 3.5 4 3.5-4" /></svg>
-              <svg class="note-library-folder archive" aria-hidden="true" viewBox="0 0 16 16"><path d="M1.5 4.25h4.7l1.3 1.5h7v5.8a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1Z" /></svg>
-              <span>{{ row.name }}</span>
-            </button>
-            <button
-              v-else
-              class="note-library-entry archived tree-entry"
-              :class="{ selected: isSelected(row.item.id, 'archive') }"
-              :style="{ '--tree-depth': row.depth }"
-              type="button"
-              draggable="true"
-              :title="row.item.archiveRelativePath ?? row.item.fileName"
-              @click="selectNote($event, row.item, 'archive')"
-              @contextmenu="openNoteContextMenu($event, row.item, 'archive')"
-              @dragstart="startEntryDrag($event, 'archive', row.item.id, 'archive')"
-              @dragend="endDrag"
-            >
-              <svg class="note-library-file" aria-hidden="true" viewBox="0 0 16 16"><path d="M4 1.75h5l3 3v9.5H4a1 1 0 0 1-1-1v-10.5a1 1 0 0 1 1-1ZM9 1.75v3h3M5.5 8h5M5.5 10.5h5" /></svg>
-              <span>{{ row.item.title }}</span>
-            </button>
-          </template>
         </div>
       </section>
 
@@ -536,6 +466,76 @@ function runDirectoryContextAction(action: 'rename' | 'delete' | 'archive') {
               @dragend="endDrag"
             >
             <span class="note-library-project-file" aria-hidden="true">▱</span>
+              <span>{{ row.item.title }}</span>
+            </button>
+          </template>
+        </div>
+      </section>
+
+      <section class="note-library-group">
+        <div
+          class="note-library-root note-library-archive-root"
+          :class="{ 'drop-target': dragTarget === 'archive-root' }"
+          @dragover.prevent="dragTarget = 'archive-root'"
+          @dragleave="dragTarget = null"
+          @drop.prevent="dropOnArchive('')"
+        >
+          <button class="note-library-root-toggle" type="button" @click="archiveExpanded = !archiveExpanded">
+            <svg class="note-library-chevron" :class="{ collapsed: !archiveExpanded }" aria-hidden="true" viewBox="0 0 16 16"><path d="m4.5 6 3.5 4 3.5-4" /></svg>
+            <svg class="note-library-archive-box" aria-hidden="true" viewBox="0 0 16 16"><path d="M1.75 5.25h12.5v8.5H1.75zM1.25 2.5h13.5v2.75H1.25zM6.25 8.75h3.5" /></svg>
+            <span>{{ messages.archive }}</span>
+          </button>
+          <button class="note-library-create-folder" type="button" :title="messages.newFolder" :aria-label="messages.newFolder" @click="$emit('createDirectory', 'archive')">
+            <svg aria-hidden="true" viewBox="0 0 16 16"><path d="M2 4.25h4.2l1.3 1.5H14v6.5H2ZM8 7.25v3.5M6.25 9h3.5" /></svg>
+          </button>
+          <small>{{ archivedNotes.length }}</small>
+        </div>
+        <div v-if="archiveExpanded" class="note-library-entries">
+          <p
+            v-if="!loading && archivedNotes.length === 0 && archiveDirectories.length === 0"
+            class="note-library-empty"
+          >
+            {{ messages.emptyArchive }}
+          </p>
+          <template v-for="row in archiveRows" :key="row.kind === 'folder' ? `folder:${row.path}` : row.item.id">
+            <button
+              v-if="row.kind === 'folder'"
+              class="note-library-directory"
+              :class="{
+                'top-level': row.depth === 0,
+                'drop-target': dragTarget === `archive:${row.path}`,
+                dragging: dragPayload?.kind === 'archive-directory' && dragPayload.path === row.path,
+              }"
+              :style="{ '--tree-depth': row.depth }"
+              type="button"
+              draggable="true"
+              @click="toggleDirectory('archive', row.path)"
+              @dblclick.stop="$emit('createDirectory', 'archive', row.path)"
+              @contextmenu="openDirectoryContextMenu($event, 'archive', row.path)"
+              @dragstart="startDirectoryDrag($event, 'archive-directory', row.path)"
+              @dragover.prevent="dragTarget = `archive:${row.path}`"
+              @dragleave="dragTarget = null"
+              @drop.prevent.stop="dropOnArchive(row.path)"
+              @dragend="endDrag"
+            >
+              <svg class="note-library-chevron" :class="{ collapsed: !expandedArchiveDirectories.has(row.path) }" aria-hidden="true" viewBox="0 0 16 16"><path d="m4.5 6 3.5 4 3.5-4" /></svg>
+              <svg class="note-library-folder archive" aria-hidden="true" viewBox="0 0 16 16"><path d="M1.5 4.25h4.7l1.3 1.5h7v5.8a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1Z" /></svg>
+              <span>{{ row.name }}</span>
+            </button>
+            <button
+              v-else
+              class="note-library-entry archived tree-entry"
+              :class="{ selected: isSelected(row.item.id, 'archive') }"
+              :style="{ '--tree-depth': row.depth }"
+              type="button"
+              draggable="true"
+              :title="row.item.archiveRelativePath ?? row.item.fileName"
+              @click="selectNote($event, row.item, 'archive')"
+              @contextmenu="openNoteContextMenu($event, row.item, 'archive')"
+              @dragstart="startEntryDrag($event, 'archive', row.item.id, 'archive')"
+              @dragend="endDrag"
+            >
+              <svg class="note-library-file" aria-hidden="true" viewBox="0 0 16 16"><path d="M4 1.75h5l3 3v9.5H4a1 1 0 0 1-1-1v-10.5a1 1 0 0 1 1-1ZM9 1.75v3h3M5.5 8h5M5.5 10.5h5" /></svg>
               <span>{{ row.item.title }}</span>
             </button>
           </template>

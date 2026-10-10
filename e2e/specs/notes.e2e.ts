@@ -217,6 +217,72 @@ describe('NeoPad desktop note workflow', () => {
     }, { timeoutMsg: 'dragging a tab did not update its position' })
   })
 
+  it('orders projects before archive and remembers the draggable file browser width', async () => {
+    await browser.keys('F4')
+    await expect($('.note-library')).toBeDisplayed()
+    const groups = await browser.execute(() => [...document.querySelectorAll('.note-library-group')]
+      .map(group => group.querySelector('.note-library-root span:last-of-type')?.textContent))
+    expect(groups).toEqual(['Notes', 'Projects', 'Archive', 'Trash'])
+    expect(await browser.execute(() => {
+      const icon = document.querySelector('.note-library-create-project svg')!.getBoundingClientRect()
+      const button = document.querySelector('.note-library-create-project')!.getBoundingClientRect()
+      return icon.width <= button.width && icon.height <= button.height
+    })).toBe(true)
+    const width = () => browser.execute(() => document.querySelector('.note-library')!.getBoundingClientRect().width)
+    const originalWidth = await width()
+    const resizer = await $('.note-library-resizer')
+    const location = await resizer.getLocation()
+    const x = Math.round(location.x + 3)
+    const y = Math.round(location.y + 80)
+    await browser.performActions([{ type: 'pointer', id: 'library-resize', parameters: { pointerType: 'mouse' }, actions: [
+      { type: 'pointerMove', duration: 0, origin: 'viewport', x, y },
+      { type: 'pointerDown', button: 0 },
+      { type: 'pointerMove', duration: 300, origin: 'viewport', x: x + 100, y },
+      { type: 'pointerUp', button: 0 },
+    ] }])
+    await browser.releaseActions()
+    await browser.waitUntil(async () => (await width()) >= originalWidth + 80, {
+      timeoutMsg: 'dragging the divider did not widen the file browser',
+    })
+    const draggedWidth = await width()
+    expect(await browser.execute(() => Number(localStorage.getItem('neopad.libraryWidth')))).toBe(draggedWidth)
+    await expect($('.app-shell.library-resizing')).not.toExist()
+
+    await browser.keys('F4')
+    await expect($('.note-library-resizer')).not.toExist()
+    await browser.keys('F4')
+    expect(await width()).toBe(draggedWidth)
+    await browser.refresh()
+    await $('[data-ready="true"]').waitForExist()
+    await browser.keys('F4')
+    await expect($('.note-library')).toBeDisplayed()
+    expect(await width()).toBe(draggedWidth)
+
+    await browser.execute(() => (document.querySelector('.note-library-resizer') as HTMLElement).focus())
+    await browser.keys('ArrowRight')
+    expect(await width()).toBe(draggedWidth + 16)
+    const widenedWidth = await width()
+    const windowSize = await browser.getWindowSize()
+    await browser.setWindowSize(420, 360)
+    await browser.waitUntil(async () => (await width()) < widenedWidth)
+    expect(await browser.execute(() => document.querySelector('.workspace-pane')!.getBoundingClientRect().width))
+      .toBeGreaterThanOrEqual(240)
+    await browser.setWindowSize(windowSize.width, windowSize.height)
+    await browser.waitUntil(async () => (await width()) === widenedWidth)
+
+    await browser.keys('F11')
+    await expect($('.note-library-resizer')).not.toExist()
+    expect(await browser.execute(() => document.querySelector('.workspace-pane')!.getBoundingClientRect().width
+      >= document.querySelector('.app-shell')!.clientWidth - 1)).toBe(true)
+    await browser.keys('F11')
+    await expect($('.note-library')).toBeDisplayed()
+    expect(await width()).toBe(widenedWidth)
+    await browser.saveScreenshot(path.resolve(import.meta.dirname, '../../target/library-resize.png'))
+    await (await $('.note-library-resizer')).doubleClick()
+    await browser.waitUntil(async () => (await width()) === 168)
+    await browser.keys('F4')
+  })
+
   it('organizes archive notes and projects into folders from the library', async () => {
     await browser.keys('F4')
     await expect($('.note-library')).toBeDisplayed()

@@ -1734,6 +1734,8 @@ function createLocalTabFromContent(title: string, nextContent: string) {
     :data-ready="appReady ? 'true' : 'false'"
     :theme="theme"
     :immersive="immersiveMode"
+    :library-resize-label="t.library.resizePane"
+    :library-resize-hint="t.library.resizePaneHint"
   >
     <template #title>
       <MenuBar

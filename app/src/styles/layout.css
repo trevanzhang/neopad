@@ -34,8 +34,8 @@ body {
   grid-row: 1;
 }
 
-.app-shell.note-library-open {
-  grid-template-columns: 168px minmax(0, 1fr);
+.app-shell.note-library-open:not(.immersive) {
+  grid-template-columns: var(--library-width, 168px) minmax(0, 1fr);
 }
 
 .app-shell.note-library-open .window-chrome,
@@ -48,14 +48,40 @@ body {
   grid-row: 2;
 }
 
-.app-shell.note-library-open .note-library {
+.app-shell.note-library-open:not(.immersive) .note-library {
   grid-column: 1;
   grid-row: 3;
 }
 
-.app-shell.note-library-open .workspace-pane {
+.app-shell.note-library-open:not(.immersive) .workspace-pane {
   grid-column: 2;
   grid-row: 3;
+}
+
+.note-library-resizer {
+  grid-column: 1;
+  grid-row: 3;
+  justify-self: end;
+  z-index: 6;
+  width: 7px;
+  margin-right: -3px;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
+
+.note-library-resizer:hover,
+.note-library-resizer:focus-visible,
+.library-resizing .note-library-resizer {
+  background: var(--np-accent);
+  opacity: 0.65;
+}
+
+.app-shell.library-resizing,
+.app-shell.library-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
 }
 
 .window-chrome {
@@ -681,11 +707,11 @@ body {
   stroke-width: 1.5;
 }
 
-.note-library-actions .note-library-new-prompt {
+.note-library-actions .note-library-new-project {
   color: var(--np-accent);
 }
 
-.note-library-new-prompt span {
+.note-library-new-project span {
   font-size: 8px;
   font-weight: 800;
   letter-spacing: -0.04em;
@@ -771,7 +797,7 @@ body {
 }
 
 .note-library-clear-trash,
-.note-library-create-prompt,
+.note-library-create-project,
 .note-library-create-folder {
   display: grid;
   place-items: center;
@@ -791,8 +817,8 @@ body {
   outline: 0;
 }
 
-.note-library-create-prompt:hover,
-.note-library-create-prompt:focus-visible,
+.note-library-create-project:hover,
+.note-library-create-project:focus-visible,
 .note-library-create-folder:hover,
 .note-library-create-folder:focus-visible {
   color: var(--np-accent);
@@ -806,7 +832,7 @@ body {
 }
 
 .note-library-clear-trash svg,
-.note-library-create-prompt svg,
+.note-library-create-project svg,
 .note-library-create-folder svg {
   display: block;
   width: 13px;
