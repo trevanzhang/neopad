@@ -9,6 +9,8 @@ incompatible public interface changes require a major version bump.
 
 ## Unreleased
 
+## 0.7.2 - 2026-10-10
+
 ### Added
 
 - Generate a short workspace-root `AGENTS.md` only when absent. Preserve
@@ -37,6 +39,10 @@ incompatible public interface changes require a major version bump.
 
 ### Changed
 
+- Document local packaging, draft Release preparation, checksum verification,
+  signing requirements, and the upgrade path from MCP and legacy prompts.
+- Generate release checksums only for the current version's platform bundle
+  directory, so older local installers do not prevent artifact verification.
 - Place Projects before Archive in the file browser. Add a draggable divider
   with a remembered width, keyboard resizing, and double-click reset; limit
   the width on smaller windows to preserve space for editing.

@@ -87,6 +87,10 @@ This file tracks the implemented MVP relative to the original task plan.
 
 ## Current Build Targets
 
+The current release preparation target is 0.7.2. Source versions, successful
+CI runs, draft installers, and public Releases are distinct stages; see
+[Release preparation](release.md) and [0.7.2 notes](releases/v0.7.2.md).
+
 - Windows x64 MSI.
 - macOS ARM64 DMG.
 - Linux x64 DEB and AppImage.

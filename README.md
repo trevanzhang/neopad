@@ -10,7 +10,13 @@ under the user's local NeoPad workspace.
 
 ## Current Status
 
-Version **0.7.1** replaces the prompt library with ordinary project notes and
+Version **0.7.2** is being prepared for distribution, with Windows Explorer
+selection fixes, dependency updates, and an editable workspace Agent guide.
+See the [0.7.2 release notes](docs/releases/v0.7.2.md).
+The source version does not imply a published GitHub Release; installers become
+public only after the release checks below are complete.
+
+Version 0.7.1 replaces the prompt library with ordinary project notes and
 automatically migrates existing prompt files. Version 0.7.0 replaced MCP access
 with the bundled native CLI; existing Agent connections require migration.
 See [MCP-to-CLI migration](docs/cli.md#migrate-from-mcp) and the
@@ -235,6 +241,8 @@ Cross-platform release builds also run automatically in GitHub Actions when a
 Before a release is created or published, run the
 [release smoke checklist](docs/release-smoke-checklist.md) against the packaged
 Windows build.
+See [Release preparation](docs/release.md) for versioning, draft builds,
+SHA-256 verification, and signing requirements.
 
 ## Native CLI
 
@@ -294,6 +302,9 @@ Ctrl+Shift+V    Append current clipboard text to clipboard.md
 - [中文说明](README_CN.md)
 - [Architecture](docs/architecture.md)
 - [Development](docs/development.md)
+- [Release preparation](docs/release.md)
+- [Projects and migration](docs/projects.md)
+- [Workspace Agent guide](docs/agent-guide.md)
 - [Markdown preview and export](docs/export.md)
 - [Native CLI and Agent setup](docs/cli.md)
 - [AI collaboration](docs/ai.md)

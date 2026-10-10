@@ -5,6 +5,12 @@ older corrupted-encoding draft.
 
 ## Product Direction
 
+Version 0.7.2 is the current release preparation target. It includes the
+workspace Agent guide, Explorer selection fixes, and dependency updates.
+Local packaging and GitHub draft/public release steps are documented in
+[Release preparation](docs/release.md); a successful CI run alone does not
+publish installers.
+
 Version 0.7.0 replaces the existing MCP integration with the native CLI.
 This is an incompatible Agent interface change; local note storage is preserved.
 

@@ -228,6 +228,9 @@ is a full background for welcome and finish pages, not a standalone logo slot.
 
 ## Cross-Platform Builds
 
+For the version bump, local artifact checks, branch/tag sequence, draft notes,
+and publication gates, follow [Release preparation](release.md).
+
 Pull requests compile the complete Rust workspace on Linux x64 and macOS ARM64
 in addition to the Windows test and desktop E2E jobs. Cross-platform release
 builds run automatically in GitHub Actions when a `v*` tag is pushed (see

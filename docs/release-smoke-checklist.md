@@ -3,11 +3,15 @@
 Run this short manual check against the packaged Windows build before creating
 or publishing a release.
 
+Record the exact version, installer SHA-256, clean-install and upgrade results,
+and signature status. Follow [Release preparation](release.md); automated CI
+and desktop E2E do not establish installer or signing readiness.
+
 1. On a clean install, verify the language page defaults to Chinese, then test
    both Chinese and English selections against NeoPad's first launch. Install
    over the previous NeoPad version and verify the existing app language is not
    overwritten.
-2. Verify the version shown in Settings > About matches the installer version.
+2. Verify the version shown in Help > About NeoPad matches the installer version.
 3. Verify the global show/hide shortcut and clipboard-capture shortcut.
 4. Verify F2 through F10, plus F11 and F12, from an editor-focused note.
 5. Verify tray Show, Hide, New Note, Save Clipboard, Settings, and Quit.
