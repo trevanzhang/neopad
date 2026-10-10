@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import net from 'node:net'
 import path from 'node:path'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
 
 const root = path.resolve(import.meta.dirname, '..')
 const workspace = path.join(root, 'target', 'e2e-workspace')
@@ -10,6 +10,14 @@ const edgeDriver = path.join(root, 'target', 'tools', 'msedgedriver.exe')
 process.env.NEOPAD_WORKSPACE = workspace
 process.env.NEOPAD_E2E = '1'
 let tauriDriver: ChildProcess | null = null
+
+function explorerFixture(close = false) {
+  return execFileSync('powershell.exe', [
+    '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
+    path.join(root, 'e2e', 'scripts', 'prepare-explorer.ps1'),
+    '-Workspace', workspace, ...(close ? ['-Close'] : []),
+  ], { encoding: 'utf8', windowsHide: true, timeout: close ? 10_000 : 45_000 })
+}
 
 function waitForPort(port: number, timeoutMs: number) {
   const startedAt = Date.now()
@@ -65,6 +73,7 @@ export const config: WebdriverIO.Config = {
     if (!fs.existsSync(edgeDriver)) {
       throw new Error(`Missing Edge WebDriver: ${edgeDriver}. Run msedgedriver-tool first.`)
     }
+    console.log('Explorer fixture:', explorerFixture().trim())
     tauriDriver = spawn(
       path.join(process.env.USERPROFILE ?? '', '.cargo', 'bin', 'tauri-driver.exe'),
       ['--native-driver', edgeDriver],
@@ -77,5 +86,7 @@ export const config: WebdriverIO.Config = {
   onComplete() {
     tauriDriver?.kill()
     tauriDriver = null
+    try { explorerFixture(true) }
+    catch (error) { console.error('Explorer fixture cleanup failed:', error) }
   },
 }

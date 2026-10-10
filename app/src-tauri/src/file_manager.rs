@@ -79,8 +79,7 @@ pub(crate) fn reveal(path: &Path) -> Result<()> {
     let parent = path.parent().context("file manager path has no parent")?;
     let folder = parse_item(parent)?;
     // Pass the containing folder and an explicit relative child selection.
-    // The zero-child shortcut can open the folder without selecting the file
-    // on Windows Server. The borrowed child stays valid while `item` is alive.
+    // The borrowed child stays valid while `item` is alive.
     let children = [unsafe { ILFindLastID(item.0) }.cast_const()];
     unsafe { SHOpenFolderAndSelectItems(folder.0, Some(&children), 0) }
         .with_context(|| format!("could not show {} in the file manager", path.display()))
