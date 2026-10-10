@@ -9,6 +9,13 @@ incompatible public interface changes require a major version bump.
 
 ## Unreleased
 
+### Fixed
+
+- Fix **Show in Explorer** opening a default folder instead of selecting the
+  note. Use the native Windows Shell API for Unicode and punctuated paths,
+  including project, archived, trashed, and approved external files. Report
+  reveal failures without marking saved note content as unsaved.
+
 ### Changed
 
 - Place Projects before Archive in the file browser. Add a draggable divider

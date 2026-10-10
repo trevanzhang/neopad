@@ -755,23 +755,31 @@ pub fn open_workspace_in_file_manager_command(state: State<'_, AppState>) -> Res
 }
 
 #[tauri::command]
-pub fn reveal_note_in_file_manager_command(
+pub async fn reveal_note_in_file_manager_command(
     state: State<'_, AppState>,
     note_id: String,
 ) -> Result<(), String> {
-    let path =
-        neopad_core::note_file_path_for_id(&state.workspace, &note_id).map_err(display_error)?;
-    reveal_path(&path).map_err(|error| error.to_string())
+    let path = {
+        let _lock = lock_workspace_for_write(&state.workspace).map_err(display_error)?;
+        neopad_core::note_file_path_for_id(&state.workspace, &note_id).map_err(display_error)?
+    };
+    tauri::async_runtime::spawn_blocking(move || reveal_path(&path))
+        .await
+        .map_err(|error| error.to_string())?
+        .map_err(display_error)
 }
 
 #[tauri::command]
-pub fn reveal_external_markdown_in_file_manager_command(
+pub async fn reveal_external_markdown_in_file_manager_command(
     state: State<'_, AppState>,
     path: String,
 ) -> Result<(), String> {
     let path = approved_external_markdown_path(&state.workspace, std::path::Path::new(&path))
         .map_err(display_error)?;
-    reveal_path(&path).map_err(|error| error.to_string())
+    tauri::async_runtime::spawn_blocking(move || reveal_path(&path))
+        .await
+        .map_err(|error| error.to_string())?
+        .map_err(display_error)
 }
 
 #[tauri::command]
@@ -993,31 +1001,29 @@ pub(crate) fn open_path(path: &std::path::Path) -> anyhow::Result<()> {
 
 pub(crate) fn reveal_path(path: &std::path::Path) -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]
-    let mut command = {
-        let mut command = Command::new("explorer");
-        command.arg("/select,").arg(path);
-        command
-    };
+    return crate::file_manager::reveal(path);
+    #[cfg(not(target_os = "windows"))]
+    {
+        #[cfg(target_os = "macos")]
+        let mut command = {
+            let mut command = Command::new("open");
+            command.arg("-R").arg(path);
+            command
+        };
 
-    #[cfg(target_os = "macos")]
-    let mut command = {
-        let mut command = Command::new("open");
-        command.arg("-R").arg(path);
-        command
-    };
+        #[cfg(all(unix, not(target_os = "macos")))]
+        let mut command = {
+            let parent = path
+                .parent()
+                .ok_or_else(|| anyhow::anyhow!("note path has no parent directory"))?;
+            let mut command = Command::new("xdg-open");
+            command.arg(parent);
+            command
+        };
 
-    #[cfg(all(unix, not(target_os = "macos")))]
-    let mut command = {
-        let parent = path
-            .parent()
-            .ok_or_else(|| anyhow::anyhow!("note path has no parent directory"))?;
-        let mut command = Command::new("xdg-open");
-        command.arg(parent);
-        command
-    };
-
-    command.spawn()?;
-    Ok(())
+        command.spawn()?;
+        Ok(())
+    }
 }
 
 fn open_target(target: impl AsRef<std::ffi::OsStr>) -> anyhow::Result<()> {

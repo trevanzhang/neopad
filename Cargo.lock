@@ -2448,6 +2448,7 @@ name = "neopad-app"
 version = "0.7.1"
 dependencies = [
  "anyhow",
+ "dunce",
  "keyring",
  "neopad-core",
  "rand 0.8.6",

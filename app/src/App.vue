@@ -795,8 +795,8 @@ async function revealNoteInExplorer(noteId: string) {
     const tab = tabs.value.find((item) => item.id === noteId)
     if (tab?.externalPath) await revealExternalMarkdownInFileManager(tab.externalPath)
     else await revealNoteInFileManager(noteId)
-  } catch {
-    saveState.value = 'Failed'
+  } catch (error) {
+    statusMessage.value = displayAiRequestError(error)
   }
 }
 

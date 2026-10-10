@@ -442,6 +442,46 @@ describe('NeoPad desktop note workflow', () => {
     } finally { await browser.setWindowSize(windowSize.width, windowSize.height) }
   })
 
+  it('reveals the exact project file in Explorer for Chinese and punctuated folders', async () => {
+    const workspace = process.env.NEOPAD_WORKSPACE!
+    const cli = path.join(workspace, '.agents', 'bin', 'neopad-cli.exe')
+    const note = JSON.parse(fs.readFileSync(path.join(workspace, 'meta', 'tabs.json'), 'utf8'))
+      .tabs.find((tab: { title: string }) => tab.title === 'Quick move note')
+    const script = path.resolve(import.meta.dirname, '../scripts/explorer-selection.ps1')
+    // Library actions must also resolve notes that are no longer open as tabs.
+    await contextClick('.tab-item=Quick move note')
+    await click("//div[contains(@class, 'tab-context-menu')]//button[.//span[normalize-space()='Close']]")
+    await expect($('.tab-item=Quick move note')).not.toExist()
+    for (const directory of ['论文相关', '研究 文件, #']) {
+      const moved = JSON.parse(execFileSync(cli, ['move', note.id, '--project', directory], {
+        encoding: 'utf8', windowsHide: true,
+      }))
+      expect(moved.ok).toBe(true)
+      if (!(await $('.note-library').isDisplayed())) await click('.tab-menu')
+      const folder = `//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-directory') and .//span[normalize-space()='${directory}']]`
+      await expect($(folder)).toBeDisplayed()
+      await click(folder)
+      await contextClick("//section[contains(@class, 'project-library-group')]//button[contains(@class, 'note-library-entry') and .//span[normalize-space()='Quick move note']]")
+      const expectedFile = path.join(workspace, 'projects', directory, note.fileName)
+      const selection = (close = false) => JSON.parse(execFileSync('powershell.exe', [
+        '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
+        '-Path', expectedFile, ...(close ? ['-Close'] : []),
+      ], { encoding: 'utf8', windowsHide: true }))
+      try {
+        await click("//div[contains(@class, 'note-library-context-menu')]//button[normalize-space()='Show in Explorer']")
+        await browser.waitUntil(() => !!selection(), {
+          timeout: 20_000, timeoutMsg: `Explorer did not select ${expectedFile}`,
+        })
+        const opened = selection()
+        expect(opened.folder.toLowerCase()).toBe(path.dirname(expectedFile).toLowerCase())
+        expect(opened.selected.map((selected: string) => selected.toLowerCase())).toContain(expectedFile.toLowerCase())
+      } finally {
+        selection(true)
+        if (await $('.note-library').isDisplayed()) await click('.tab-menu')
+      }
+    }
+  })
+
   it('maximizes and restores with Alt+Enter while edge snapping is enabled', async () => {
     await browser.setWindowSize(720, 520)
     await browser.keys(['Control', ','])

@@ -1,6 +1,8 @@
 mod agent_tools;
 mod ai;
 mod commands;
+#[cfg(target_os = "windows")]
+mod file_manager;
 mod hotkey;
 mod installer;
 mod tray;

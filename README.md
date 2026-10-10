@@ -68,7 +68,9 @@ The repository currently contains a working Windows-focused MVP:
   Existing reusable prompts migrate automatically to `projects/原提示词/`;
   see [Projects and migration](docs/projects.md).
 - Right-click a tab or a single note in the file browser to reveal
-  its Markdown file in the system file manager. The tab menu can also copy the
+  its Markdown file in the system file manager. On Windows this opens the
+  containing folder and selects the exact note, including project files in
+  Chinese or punctuated directories. The tab menu can also copy the
   absolute Markdown file path for use with terminals and local agents, or move
   a note directly into a project folder with **Move to project**. For
   ordinary notes, it can ask the configured AI provider for a concise title
