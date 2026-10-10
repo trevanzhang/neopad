@@ -521,6 +521,30 @@ describe('NeoPad desktop note workflow', () => {
     }
   })
 
+  it('renders math and Mermaid math labels with the patched production dependencies', async () => {
+    await click('.tab-add')
+    await browser.waitUntil(async () => (await $('.tab-item.active').getText()) === 'Untitled', {
+      timeoutMsg: 'rendering test note did not become active',
+    })
+    const editor = await $('.cm-content')
+    await browser.execute((element) => (element as HTMLElement).focus(), editor)
+    await browser.keys(['Control', 'a'])
+    await browser.keys('Inline $E = mc^2$.\n\n$$\\int_0^1 x dx$$\n\n```mermaid\ngraph LR\n  A["$$x^2$$"] --> B["Rendered"]\n```')
+    try {
+      await click('.status-mode')
+      await expect($('.markdown-preview .katex-display')).toBeDisplayed()
+      await expect($('.markdown-preview .markdown-mermaid svg')).toBeDisplayed()
+      await expect($('.markdown-preview .markdown-mermaid .katex')).toBeDisplayed()
+      await expect($('.markdown-preview .markdown-mermaid')).toHaveText(expect.stringContaining('Rendered'))
+      await expect($('.markdown-preview .katex-error')).not.toExist()
+    } finally {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        if (await $('.workspace-pane.mode-edit').isExisting()) break
+        await click('.status-mode')
+      }
+    }
+  })
+
   it('maximizes and restores with Alt+Enter while edge snapping is enabled', async () => {
     await browser.setWindowSize(720, 520)
     await browser.keys(['Control', ','])

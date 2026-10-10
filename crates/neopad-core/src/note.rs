@@ -1589,6 +1589,17 @@ fn format_timestamp_separator(timestamp: &str) -> String {
     format!("{rule} {timestamp} {rule}")
 }
 
+pub(crate) fn unique_trash_file_name(workspace: &Workspace, file_name: &str) -> Result<String> {
+    let mut timestamp = now_ms()?;
+    loop {
+        let name = format!("deleted-{timestamp}-{file_name}");
+        if !trash_file_path(workspace, &name)?.exists() {
+            return Ok(name);
+        }
+        timestamp += 1;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2319,16 +2330,5 @@ mod tests {
                 .collect::<Vec<_>>(),
             ordered
         );
-    }
-}
-
-pub(crate) fn unique_trash_file_name(workspace: &Workspace, file_name: &str) -> Result<String> {
-    let mut timestamp = now_ms()?;
-    loop {
-        let name = format!("deleted-{timestamp}-{file_name}");
-        if !trash_file_path(workspace, &name)?.exists() {
-            return Ok(name);
-        }
-        timestamp += 1;
     }
 }

@@ -19,6 +19,10 @@ incompatible public interface changes require a major version bump.
 
 ### Fixed
 
+- Update production rendering and TLS dependencies to patched versions. Apply
+  the KaTeX override to both the Markdown plugin and Mermaid so formula
+  rendering uses the same version as the bundled styles. Restore strict Clippy
+  validation by placing the trash-name helper before the test module.
 - Fix **Show in Explorer** opening a default folder instead of selecting the
   note. Use the native Windows Shell API for Unicode and punctuated paths,
   including project, archived, trashed, and approved external files. Report

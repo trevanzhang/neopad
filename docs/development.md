@@ -148,6 +148,12 @@ Run `pnpm test:e2e` for desktop workflow changes and `pnpm tauri:build` when
 packaging or sidecar behavior changes. Production dependency changes must also
 pass `pnpm audit:prod` and `cargo audit`.
 
+The root pnpm KaTeX override keeps the Markdown plugin and Mermaid on the
+patched version used by the frontend's KaTeX styles. Keep it aligned with
+`app/package.json`; the desktop suite verifies ordinary formulas and Mermaid
+math labels after dependency changes. The production audit checks exact
+installed versions without advisory exclusions.
+
 For CLI-only changes, also run:
 
 ```powershell
