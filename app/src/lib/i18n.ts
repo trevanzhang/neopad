@@ -157,6 +157,7 @@ export type AppMessages = {
     sha1Hash: string
     sha256Hash: string
     reminderList: string
+    financeCalculator: string
     f5: string
     settingsWithKey: string
     f8: string
@@ -653,6 +654,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       sha1Hash: 'SHA1 Hash',
       sha256Hash: 'SHA256 Hash',
       reminderList: 'Reminder List(R)...',
+      financeCalculator: 'Financial Calculator(C)...',
       f5: 'F5',
       settingsWithKey: 'Settings(O)...',
       f8: 'F8',
@@ -1147,6 +1149,7 @@ export const messages: Record<AppLanguage, AppMessages> = {
       sha1Hash: 'SHA1 Hash',
       sha256Hash: 'SHA256 Hash',
       reminderList: '\u63d0\u9192\u5217\u8868(R)...',
+      financeCalculator: '金融计算器(C)...',
       f5: 'F5',
       settingsWithKey: '\u8bbe\u7f6e(O)...',
       f8: 'F8',

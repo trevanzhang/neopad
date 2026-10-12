@@ -60,6 +60,7 @@ const emit = defineEmits<{
   insertTextSettings: []
   windowOpacity: []
   reminderList: []
+  financialTools: []
   processText: [action: string]
   helpTopic: [topic: 'software' | 'ai' | 'markdown' | 'vim' | 'shortcuts' | 'expression' | 'about']
   cycleEditorMode: []
@@ -439,6 +440,10 @@ function handleMenuKeydown(event: KeyboardEvent) {
         <button type="button" class="menu-command" @click="$emit('reminderList')">
           <span>{{ messages.reminderList }}</span>
           <span class="menu-shortcut">{{ messages.f6 }}</span>
+        </button>
+        <button type="button" class="menu-command" @click="$emit('financialTools')">
+          <span>{{ messages.financeCalculator }}</span>
+          <span class="menu-shortcut">Shift+F1</span>
         </button>
         <div class="menu-separator" role="separator" />
         <button type="button" class="menu-command" @click="$emit('settings')">

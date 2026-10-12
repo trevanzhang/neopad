@@ -19,6 +19,8 @@ import {
 } from '@codemirror/view'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { evaluateExpressionLine, formatCalculationResult } from '../lib/editor-calculation'
+import { financialInsertTransaction } from '../lib/financial-insert'
+import type { FinancialInsertTarget } from '../types/finance'
 import { resetEditorDocument } from '../lib/editor-document-state'
 import { editorCodeLanguages } from '../lib/editor-code-languages'
 import { createNeopadSearchPanel, type EditorSearchLabels } from '../lib/editor-search-panel'
@@ -72,6 +74,7 @@ const aiSubmenuTrigger = ref<HTMLButtonElement | null>(null)
 const aiSubmenuOpen = ref(false)
 const contextMenu = ref<{ x: number; y: number; openSubmenuLeft: boolean } | null>(null)
 let editorView: EditorView | null = null
+let financeDocumentVersion = 0
 const editable = new Compartment()
 const wrap = new Compartment()
 const appearance = new Compartment()
@@ -115,6 +118,8 @@ function createEditorExtensions() {
       if (!update.docChanged) {
         return
       }
+
+      financeDocumentVersion += 1
 
       const nextValue = update.state.doc.toString()
       if (nextValue !== model.value) {
@@ -337,6 +342,7 @@ watch(model, (nextValue) => {
   }
 
   disconnectVimModeListener()
+  financeDocumentVersion += 1
   resetEditorDocument(editorView, nextValue, createEditorExtensions())
   connectVimModeListener()
 })
@@ -507,6 +513,20 @@ function insertLine(text: string) {
   return true
 }
 
+function captureFinancialTarget(noteId: string): FinancialInsertTarget | null {
+  if (!editorView) return null
+  return { noteId, documentText: editorView.state.doc.toString(), cursor: editorView.state.selection.main.head, documentVersion: financeDocumentVersion }
+}
+
+function insertFinancialRecord(target: FinancialInsertTarget, noteId: string, record: string) {
+  if (!editorView) return false
+  const transaction = financialInsertTransaction(editorView.state, target, noteId, financeDocumentVersion, record)
+  if (!transaction) return false
+  editorView.dispatch(transaction)
+  editorView.focus()
+  return true
+}
+
 function captureAiSnapshot() {
   if (!editorView) return null
   const selection = editorView.state.selection.main
@@ -662,6 +682,8 @@ defineExpose({
   findNextMatch,
   insertText,
   insertLine,
+  captureFinancialTarget,
+  insertFinancialRecord,
   captureAiSnapshot,
   replaceAiContext,
   insertAiAtCursor,

@@ -36,6 +36,51 @@ function keyEvent(key: string, modifiers: Partial<KeyboardEvent> = {}) {
 }
 
 describe('keyboard shortcut routing', () => {
+  it('keeps plain F1 help and retires the old calculator shortcut', () => {
+    const { spies, handler } = harness()
+    handler(keyEvent('F1'))
+    expect(spies.openShortcutHelp).toHaveBeenCalledOnce()
+    handler(keyEvent('F6', { shiftKey: true }))
+    handler(keyEvent('F1', { shiftKey: true, ctrlKey: true }))
+    expect(spies.openFinancialTools).toBeUndefined()
+  })
+  it('toggles financial tools with Shift+F1 and closes it without hiding the window', () => {
+    const { flags, spies, handler } = harness()
+    handler(keyEvent('F1', { shiftKey: true }))
+    expect(spies.openFinancialTools).toHaveBeenCalledOnce()
+    expect(spies.openReminderList).toBeUndefined()
+    flags.set('financialToolsOpen', true)
+    flags.set('nativeRuntime', true)
+    handler(keyEvent('F1', { shiftKey: true }))
+    handler(keyEvent('Escape'))
+    expect(spies.closeFinancialTools).toHaveBeenCalledTimes(2)
+    expect(spies.hideMainWindow).toBeUndefined()
+  })
+
+  it('blocks workspace actions but allows native form editing and theme changes in financial tools', () => {
+    const { flags, spies, handler } = harness()
+    flags.set('financialToolsOpen', true)
+    for (const event of [keyEvent('F2'), keyEvent('F6'), keyEvent('F12'), keyEvent('Tab', { ctrlKey: true }), keyEvent('n', { ctrlKey: true }), keyEvent('Enter', { ctrlKey: true }), keyEvent('Delete', { altKey: true }), keyEvent('t', { altKey: true })]) {
+      handler(event)
+      expect(event.preventDefault).toHaveBeenCalledOnce()
+    }
+    expect(spies.cycleTab).toBeUndefined()
+    expect(spies.createLocalTab).toBeUndefined()
+    expect(spies.calculateExpression).toBeUndefined()
+    handler(keyEvent('F9'))
+    expect(spies.toggleTheme).toHaveBeenCalledOnce()
+    const copy = keyEvent('c', { ctrlKey: true })
+    handler(copy)
+    expect(copy.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it('does not open financial tools over a modal or during IME composition', () => {
+    const { flags, spies, handler } = harness()
+    handler(keyEvent('F1', { shiftKey: true, isComposing: true }))
+    flags.set('modalOpen', true)
+    handler(keyEvent('F1', { shiftKey: true }))
+    expect(spies.openFinancialTools).toBeUndefined()
+  })
   it('ignores application shortcuts during IME composition', () => {
     const { spies, handler } = harness()
     const event = keyEvent('F2', { isComposing: true })

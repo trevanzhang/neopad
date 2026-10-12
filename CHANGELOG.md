@@ -7,7 +7,53 @@ documented exception for retiring the prompt library with automatic data
 migration. From 1.0.0 onward,
 incompatible public interface changes require a major version bump.
 
+At the user's direction, the financial calculator additions remain in the
+0.7.x local test series: 0.7.3 introduces the calculator and 0.7.4 adds loans
+and repos; 0.7.5 adds holding returns and XIRR. These builds preserve existing note storage and Agent interfaces.
+
 ## Unreleased
+
+## 0.7.5 - 2026-10-12
+
+### Added
+
+- Bond holding-period return with clean / full prices, accrued interest,
+  received coupons, actual fees and financing costs. Show net profit,
+  holding return and simple annualization with explicit amount units.
+- Effective annual return / cost (XIRR) from 2-200 actual dated cash flows,
+  including fee entries and borrowing / investing directions. Sort and net
+  same-day entries; reject multiple sign changes instead of choosing a root.
+  Include input and normalized cash flows in complete Markdown records.
+
+### Changed
+
+- Move the financial calculator shortcut from Shift+F6 to Shift+F1.
+  Keep plain F1 help and plain F6 reminders.
+
+## 0.7.4 - 2026-10-12
+
+### Added
+
+- Personal loan calculator with equal payments / equal principal, payment,
+  principal and nominal annual rate solving, plus complete repayment schedules.
+- Bond repo calculator with financing / lending directions, Shanghai and
+  Shenzhen product codes, actual funding days or settlement dates, one-off
+  fees, fee timing, signed cash flows and annualized income / cost on cash amount.
+  Export complete records through the existing protected note insertion flow.
+
+## 0.7.3 - 2026-10-12
+
+### Added
+
+- Offline financial calculator in Tools (`Shift+F6`) for interest, rate
+  conversion, PV/FV/PMT and general regular-coupon bond price/YTM, duration,
+  convexity and yield DV01, plus maturity-interest and discount bonds.
+  Support negative yields and three payments per year in the general model.
+  Use grouped forms, left navigation, automatic coupon schedules and fixed
+  actions; default to bond yield calculation. Include cash-flow details,
+  complete Markdown records and
+  protected cursor insertion with isolated undo. Domestic Wind / ChinaBond
+  conventions remain unavailable pending verification.
 
 ## 0.7.2 - 2026-10-10
 

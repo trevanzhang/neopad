@@ -1,4 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
+import type { FinanceRequest, FinanceResponse } from '../types/finance'
+import { isTauriRuntime } from './runtime'
 import { Image, transformImage } from '@tauri-apps/api/image'
 import type { ExternalDocument, NoteContent, NoteTab, Reminder, SearchResult, WorkspaceInfo } from '../types/note'
 import type {
@@ -14,6 +16,11 @@ import type {
   AiConversationMessage,
   AiGenerateResponse,
 } from '../types/ai'
+
+export function calculateFinance(request: FinanceRequest): Promise<FinanceResponse> {
+  if (!isTauriRuntime()) return Promise.reject({ code: 'unavailable', field: 'result' })
+  return invoke('calculate_finance_command', { request })
+}
 
 export interface UiConfig {
   language: string

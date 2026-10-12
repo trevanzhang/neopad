@@ -11,8 +11,11 @@ Prepare each distinct distributable build with a synchronized version in
 and the NeoPad packages in `Cargo.lock`. Use a patch for compatible fixes and
 record the changes under a dated version section in `CHANGELOG.md`.
 
-The current preparation target is **0.7.2**; see
-[release notes](releases/v0.7.2.md). Before upgrading from 0.6.x or earlier,
+The current local test target is **0.7.5**; see
+[release notes](releases/v0.7.5.md). At the user's direction, calculator
+additions use patch increments within the 0.7.x test series: 0.7.3 introduces
+the calculator, and 0.7.4 includes loans and repos; 0.7.5 adds holding returns and XIRR. Existing note storage and
+Agent interfaces are preserved. Before upgrading from 0.6.x or earlier,
 back up the entire workspace, including metadata, legacy prompts, and Trash.
 MCP connections must [migrate to the bundled CLI](cli.md#migrate-from-mcp), and
 legacy prompts [migrate automatically to project notes](projects.md).
@@ -27,7 +30,7 @@ files. The normal build does not install the app or run workspace migrations.
 ```powershell
 pnpm install --frozen-lockfile
 pnpm check:versions
-pnpm check:release-tag v0.7.2
+pnpm check:release-tag v0.7.5
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 pnpm test:all
@@ -41,7 +44,7 @@ The root build includes the release CLI, its target-specific sidecar, the
 frontend, and the desktop bundle. Windows output:
 
 ```text
-target/release/bundle/msi/NeoPad_0.7.2_x64_en-US.msi
+target/release/bundle/msi/NeoPad_0.7.5_x64_en-US.msi
 target/release/neopad-app.exe
 target/release/neopad-cli.exe
 target/SHA256SUMS-win32.txt
@@ -56,8 +59,8 @@ Compare the manifest with the installer hash and inspect its signature:
 
 ```powershell
 Get-Content target/SHA256SUMS-win32.txt
-Get-FileHash target/release/bundle/msi/NeoPad_0.7.2_x64_en-US.msi -Algorithm SHA256
-Get-AuthenticodeSignature target/release/bundle/msi/NeoPad_0.7.2_x64_en-US.msi
+Get-FileHash target/release/bundle/msi/NeoPad_0.7.5_x64_en-US.msi -Algorithm SHA256
+Get-AuthenticodeSignature target/release/bundle/msi/NeoPad_0.7.5_x64_en-US.msi
 ```
 
 Run the [packaged Windows smoke checklist](release-smoke-checklist.md) in a
@@ -74,8 +77,8 @@ checks, to pass. Then fast-forward `main` to the same commit and verify its CI.
 Use the release version's tag on `main`:
 
 ```text
-git tag v0.7.2
-git push origin v0.7.2
+git tag v0.7.5
+git push origin v0.7.5
 ```
 
 Do not reuse a published tag. The workflow checks versions, the tag, production
@@ -89,7 +92,7 @@ building the following matrix:
 | Linux x64 | `.deb`, `.AppImage` | `SHA256SUMS-linux.txt` |
 
 All four installers and three manifests must be present in the draft. Use
-`docs/releases/v0.7.2.md` as the release body after updating its status and
+`docs/releases/v0.7.5.md` as the release body after updating its status and
 validation results. A successful build must remain a draft until publication
 requirements have been satisfied.
 

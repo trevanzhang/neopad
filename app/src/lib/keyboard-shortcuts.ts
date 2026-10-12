@@ -1,5 +1,6 @@
 export interface KeyboardState {
   modalOpen: () => boolean
+  financialToolsOpen: () => boolean
   reminderDialogOpen: () => boolean
   reminderListOpen: () => boolean
   archiveListOpen: () => boolean
@@ -25,6 +26,8 @@ export interface KeyboardState {
 
 export interface KeyboardActions {
   openShortcutHelp: () => void
+  openFinancialTools: () => void
+  closeFinancialTools: () => void
   cycleTab: (offset: -1 | 1) => void
   toggleTheme: () => void
   togglePreviewTheme: () => void
@@ -107,7 +110,7 @@ function consume(event: KeyboardEvent, action?: () => void) {
 export function createKeyboardHandler({ state, actions }: KeyboardShortcutContext) {
   const overlaysClear = () =>
     !state.reminderListOpen() && !state.archiveListOpen() && !state.settingsOpen() &&
-    !state.helpOpen() && !state.searchOpen()
+    !state.helpOpen() && !state.searchOpen() && !state.financialToolsOpen()
   const workspaceClear = () => overlaysClear() && !state.menuOrContextOpen()
 
   return function handleKeydown(event: KeyboardEvent) {
@@ -121,7 +124,19 @@ export function createKeyboardHandler({ state, actions }: KeyboardShortcutContex
       const key = event.key.toLowerCase()
       const blockedCtrl = event.ctrlKey && !event.altKey && !event.metaKey && ['tab', 'n', 'w', 'o', ','].includes(key)
       const blockedFunction = plainKey(event, event.key) && ['F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12'].includes(event.key)
-      if (blockedCtrl || blockedFunction || matchesDeletePageShortcut(event) || matchesEditorModeShortcut(event)) consume(event)
+      if (blockedCtrl || blockedFunction || (event.key === 'F1' && event.shiftKey) || matchesDeletePageShortcut(event) || matchesEditorModeShortcut(event)) consume(event)
+      return
+    }
+
+    const financialShortcut = event.key === 'F1' && event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey
+    if (financialShortcut && !state.modalOpen()) {
+      consume(event, state.financialToolsOpen() ? actions.closeFinancialTools : actions.openFinancialTools); return
+    }
+    if (state.financialToolsOpen() && !state.modalOpen()) {
+      if (event.key === 'Escape') { consume(event, actions.closeFinancialTools); return }
+      if (plainKey(event, 'F9')) { consume(event, actions.toggleTheme); return }
+      // Keep form editing native, while preventing every workspace action below.
+      if ((/^F\d+$/.test(event.key)) || event.altKey || ((event.ctrlKey || event.metaKey) && !['a', 'c', 'v', 'x', 'z', 'y'].includes(event.key.toLowerCase()))) consume(event)
       return
     }
 

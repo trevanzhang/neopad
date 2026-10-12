@@ -55,6 +55,9 @@ import { useDocumentSession } from './composables/useDocumentSession'
 import { useSearchState } from './composables/useSearchState'
 import { useReminderState } from './composables/useReminderState'
 import { useAgentTools } from './composables/useAgentTools'
+import { useFinancialTools } from './composables/useFinancialTools'
+import { financeText } from './lib/finance-ui'
+import type { FinancialInsertTarget } from './types/finance'
 import { useAiAssistant } from './composables/useAiAssistant'
 import { useDialogs } from './composables/useDialogs'
 import { useArchiveState } from './composables/useArchiveState'
@@ -98,6 +101,7 @@ const InputDialog = defineAsyncComponent(() => import('./components/InputDialog.
 const PreviewPane = defineAsyncComponent(() => import('./components/PreviewPane.vue'))
 const ReminderDialog = defineAsyncComponent(() => import('./components/ReminderDialog.vue'))
 const ReminderList = defineAsyncComponent(() => import('./components/ReminderList.vue'))
+const FinancialToolsPanel = defineAsyncComponent(() => import('./components/FinancialToolsPanel.vue'))
 const SettingsPanel = defineAsyncComponent(() => import('./components/SettingsPanel.vue'))
 const AiAssistantPanel = defineAsyncComponent(() => import('./components/AiAssistantPanel.vue'))
 
@@ -192,6 +196,11 @@ const {
 const fileInput = ref<HTMLInputElement | null>(null)
 const backgroundColorInput = ref<HTMLInputElement | null>(null)
 const editorPane = ref<InstanceType<typeof EditorPane> | null>(null)
+const financialTools = useFinancialTools()
+const { category: financeCategory, draft: financeDraft, result: financeResult, error: financeError, busy: financeBusy, changed: financeChanged } = financialTools
+const financialToolsOpen = ref(false)
+const financialInsertTarget = ref<FinancialInsertTarget | null>(null)
+const financialNotice = ref('')
 const searchPanel = ref<InstanceType<typeof SearchPanel> | null>(null)
 const workspacePath = ref('~/.neopad')
 const noteLibraryOpen = ref(false)
@@ -363,6 +372,7 @@ const {
 })
 const handleKeydown = createKeyboardHandler({
   state: {
+    financialToolsOpen: () => financialToolsOpen.value,
     modalOpen: () => Boolean(reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value || aiPanelSession.value || aiInlineSession.value || helpTopic.value),
     reminderDialogOpen: () => reminderDialogOpen.value,
     reminderListOpen: () => reminderListOpen.value,
@@ -387,6 +397,8 @@ const handleKeydown = createKeyboardHandler({
     nativeRuntime: isTauriRuntime,
   },
   actions: {
+    openFinancialTools,
+    closeFinancialTools,
     openShortcutHelp: () => openHelpTopic('shortcuts'),
     cycleTab,
     toggleTheme,
@@ -496,7 +508,10 @@ const aiInlinePrompts = computed<Record<AiInlineCommandName, string>>(() => ({
 
 watch(activeTabId, (next, previous) => {
   if (next !== previous && aiInlineSession.value) cancelAiInlineCommand(false)
+  if (next !== previous) financialInsertTarget.value = null
 })
+
+watch([financeCategory, financeDraft], () => { financialNotice.value = '' }, { deep: true })
 
 let workspaceRefreshTimer: ReturnType<typeof setInterval> | null = null
 let workspaceRefreshing = false
@@ -1528,6 +1543,45 @@ async function openReminderList() {
   await refreshReminders()
 }
 
+function openFinancialTools() {
+  if (isLoadingNote.value || reminderDialogOpen.value || confirmationDialog.value || inputDialog.value || fontDialogOpen.value || aiPanelSession.value || aiInlineSession.value) return
+  closeSearch(false)
+  closeSettings(false)
+  closeHelp(false)
+  closeReminderList(false)
+  closeArchiveList(false)
+  editorPane.value?.closeEditorFind()
+  financialInsertTarget.value = previewMode.value === 'preview' ? null : editorPane.value?.captureFinancialTarget(activeTabId.value) ?? null
+  financialNotice.value = ''
+  financialToolsOpen.value = true
+}
+
+function closeFinancialTools() {
+  financialToolsOpen.value = false
+  financialInsertTarget.value = null
+  focusEditorAfterPageAction()
+}
+
+async function copyFinancialResult(record: boolean) {
+  const text = record ? financialTools.record(language.value) : financialTools.summary(language.value)
+  if (!text) return
+  try {
+    await navigator.clipboard.writeText(text)
+    financialNotice.value = financeText(language.value).copied
+  } catch { financialNotice.value = financeText(language.value).copyFailed }
+}
+
+function insertFinancialResult() {
+  const record = financialTools.record(language.value)
+  const target = financialInsertTarget.value
+  if (!record || !target) return
+  if (isLoadingNote.value || previewMode.value === 'preview' || content.value !== target.documentText || !editorPane.value?.insertFinancialRecord(target, activeTabId.value, record)) {
+    financialNotice.value = financeText(language.value).insertFailed
+    return
+  }
+  closeFinancialTools()
+}
+
 async function openArchiveList() {
   closeSearch(false)
   closeSettings(false)
@@ -1799,6 +1853,7 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         @insert-text-settings="openInsertTextSettings"
         @window-opacity="openSettings"
         @reminder-list="openReminderList"
+        @financial-tools="openFinancialTools"
         @process-text="processEditorText"
         @help-topic="openHelpTopic"
       />
@@ -1925,6 +1980,25 @@ function createLocalTabFromContent(title: string, nextContent: string) {
         :preview-content-width="previewContentWidth"
       />
     </div>
+
+    <FinancialToolsPanel
+      v-if="financialToolsOpen"
+      v-model:category="financeCategory"
+      :language="language"
+      :draft="financeDraft"
+      :result="financeResult"
+      :error="financeError"
+      :busy="financeBusy"
+      :changed="financeChanged"
+      :can-insert="Boolean(financialInsertTarget) && previewMode !== 'preview'"
+      :notice="financialNotice"
+      @update-field="(key, value) => financeDraft[key] = value"
+      @calculate="financialTools.compute"
+      @reset="financialTools.reset"
+      @copy="copyFinancialResult"
+      @insert="insertFinancialResult"
+      @close="closeFinancialTools"
+    />
 
     <SearchPanel
       v-if="searchOpen"

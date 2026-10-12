@@ -25,6 +25,13 @@ use tauri::{AppHandle, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::Shortcut;
 
+#[tauri::command]
+pub fn calculate_finance_command(
+    request: neopad_core::finance::FinanceRequest,
+) -> Result<neopad_core::finance::FinanceResponse, neopad_core::finance::FinanceError> {
+    neopad_core::finance::calculate(&request)
+}
+
 #[derive(Debug)]
 pub struct AppState {
     pub workspace: Workspace,

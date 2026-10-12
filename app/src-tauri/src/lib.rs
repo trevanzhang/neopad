@@ -198,6 +198,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::calculate_finance_command,
             ai::get_ai_config_command,
             ai::save_ai_config_command,
             ai::save_ai_api_key_command,

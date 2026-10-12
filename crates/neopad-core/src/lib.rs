@@ -1,6 +1,7 @@
 pub mod agent_tools;
 pub mod atomic_write;
 pub mod config;
+pub mod finance;
 mod lock;
 pub mod note;
 pub mod path;

@@ -10,9 +10,9 @@ under the user's local NeoPad workspace.
 
 ## Current Status
 
-Version **0.7.2** is being prepared for distribution, with Windows Explorer
-selection fixes, dependency updates, and an editable workspace Agent guide.
-See the [0.7.2 release notes](docs/releases/v0.7.2.md).
+Version **0.7.5** is being prepared for local testing, adding bond holding-period
+returns and dated cash-flow annual return / cost (XIRR). The calculator shortcut
+is now `Shift+F1`. See the [0.7.5 release notes](docs/releases/v0.7.5.md).
 The source version does not imply a published GitHub Release; installers become
 public only after the release checks below are complete.
 
@@ -48,6 +48,16 @@ The repository currently contains a working Windows-focused MVP:
   priority over conflicting Vim mappings.
 - Persistent light and dark themes available from the Format menu and status
   bar.
+- Offline financial calculator from Tools or `Shift+F1`: interest, rate
+  conversion, present/future value and annuities, plus general regular-coupon
+  bond price/YTM, duration, convexity and yield DV01, plus maturity-interest
+  and discount bonds, personal loans with repayment schedules, and financing /
+  lending bond repos using actual funding days and explicit fees, bond
+  holding-period returns, and actual dated cash-flow return / cost (XIRR).
+  Grouped forms derive regular coupon schedules automatically. Copy results or a complete Markdown
+  record, or insert at the captured cursor with one-step undo. Domestic bond
+  conventions remain gated pending verification against Wind / ChinaBond.
+  See [financial tools](docs/financial-tools.md) for supported conventions.
 - Markdown preview appearance settings with well-known theme presets, including
   One Dark, Nord, Solarized, Monokai, GitHub Light, and Dracula, plus preview
   typography controls.
@@ -270,6 +280,7 @@ F3              Switch to the next tab
 F4              Show or hide the note and project file browser
 F5              Cycle edit, split, and preview modes
 F6              Open or close the reminder list
+Shift+F1        Open or close the financial calculator
 F7              Toggle window on top
 F8              Rename current page and its untouched default heading
 F9              Toggle day/night mode

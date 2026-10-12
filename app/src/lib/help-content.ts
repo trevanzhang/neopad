@@ -86,6 +86,7 @@ export function getShortcutHelpGroups(language: AppLanguage, context: HelpContex
       rows: [
         { keys: 'F5', description: zh ? '\u5faa\u73af\u5207\u6362\u7f16\u8f91\u3001\u5206\u5c4f\u548c\u9884\u89c8\u6a21\u5f0f' : 'Cycle Edit, Split, and Preview' },
         { keys: 'F6', description: zh ? '\u6253\u5f00/\u5173\u95ed\u63d0\u9192\u5217\u8868' : 'Open or close the reminder list' },
+        { keys: 'Shift+F1', description: zh ? '打开/关闭金融计算器' : 'Open or close the financial calculator' },
         { keys: 'F7', description: zh ? '\u5207\u6362\u7a97\u53e3\u7f6e\u9876' : 'Toggle always on top' },
         { keys: 'F9', description: zh ? '\u5207\u6362\u65e5\u95f4/\u591c\u95f4\u6a21\u5f0f' : 'Toggle day or night mode' },
         { keys: 'F10', description: zh ? '\u5207\u6362\u9884\u89c8\u4e3b\u9898' : 'Cycle the preview theme' },
@@ -367,6 +368,7 @@ export function getHelpContent(topic: HelpTopic | null, language: AppLanguage, c
       '\u6309 F5 \u5728\u7f16\u8f91\u3001\u5206\u5c4f\u548c\u9884\u89c8\u6a21\u5f0f\u4e4b\u95f4\u5207\u6362\u3002NeoPad \u652f\u6301 Markdown \u6e90\u7801\u4e0e\u4ee3\u7801\u5757\u9ad8\u4eae\u3001KaTeX \u516c\u5f0f\u3001Mermaid \u56fe\u8868\u3001\u65e5\u95f4/\u591c\u95f4\u4e3b\u9898\u3001\u9884\u89c8\u6392\u7248\u4ee5\u53ca\u53ef\u9009\u7684 Vim \u952e\u4f4d\u3002',
       '## 4. \u67e5\u627e\u3001\u6574\u7406\u4e0e\u63d0\u9192',
       'Ctrl+F \u67e5\u627e\u5f53\u524d\u6587\u6863\uff0cCtrl+Shift+F \u641c\u7d22 NeoPad \u7b14\u8bb0\uff0cF4 \u6253\u5f00\u6587\u4ef6\u6d4f\u89c8\u5668\u7ba1\u7406\u7b14\u8bb0\u548c\u63d0\u793a\u8bcd\u3002Ctrl+E \u63d2\u5165\u63d0\u9192\uff0cF6 \u67e5\u770b\u63d0\u9192\u5217\u8868\uff1bNeoPad \u8fd0\u884c\u65f6\u53ef\u53d1\u9001\u7cfb\u7edf\u901a\u77e5\u3002',
+      'Shift+F1 打开离线金融计算器，可算利息、利率换算、现值与年金、通用债券收益、个人贷款、债券回购、债券持有期收益与真实年化收益／成本（XIRR）。持有期收益含票息、交易费用与融资成本；XIRR 按实际日期和现金流方向求有效年率，费用也作为现金流录入。贷款支持等额本息、等额本金和全期还款明细；回购区分正回购融资成本与逆回购净收益，需填写实际占款天数。复制完整记录可保留输入、口径和公式；插入当前笔记保留原文，支持一次撤销。债券尚未开放国内市场估值口径。',
       '## 5. \u5feb\u901f\u91c7\u96c6\u4e0e\u6587\u4ef6\u4ea4\u6362',
       '\u53ef\u5728\u8bbe\u7f6e\u4e2d\u914d\u7f6e\u5168\u5c40\u663e\u793a/\u9690\u85cf\u548c\u526a\u8d34\u677f\u91c7\u96c6\u5feb\u6377\u952e\uff0c\u4e5f\u53ef\u914d\u5408\u7cfb\u7edf\u6258\u76d8\u4f7f\u7528\u3002NeoPad \u53ef\u6253\u5f00\u6216\u62d6\u5165\u5916\u90e8 Markdown \u6587\u4ef6\uff0c\u5e76\u53ef\u5bfc\u51fa\u5f53\u524d\u7b14\u8bb0\u4e3a Markdown\u3001PNG \u6216 PDF\uff0c\u4e5f\u53ef\u5c06\u6240\u6709\u7b14\u8bb0\u5bfc\u51fa\u4e3a ZIP\u3002',
       '## 6. AI \u534f\u4f5c\u4e0e\u672c\u5730 Agent',
@@ -383,6 +385,7 @@ export function getHelpContent(topic: HelpTopic | null, language: AppLanguage, c
       'Press F5 to cycle through Edit, Split, and Preview. NeoPad supports Markdown and fenced-code highlighting, KaTeX formulas, Mermaid diagrams, day and night themes, preview typography, and optional Vim keys.',
       '## 4. Find, organize, and remember',
       'Use Ctrl+F in the current document, Ctrl+Shift+F across NeoPad notes, and F4 to manage notes and projects. Ctrl+E inserts a reminder and F6 opens the reminder list; NeoPad can notify you while it is running.',
+      'Shift+F1 opens the offline financial calculator for interest, rates, time value, general bonds, personal loans, bond repos, bond holding returns and effective annual return / cost (XIRR). Holding returns include coupons, fees and financing costs; XIRR uses actual dates and signed cash flows, including fees. Loans support equal payments / equal principal and complete schedules. Repos separate financing cost from lending income and require actual funding days. Copy a full record to retain inputs, conventions and formulas, or insert it into the note with one-step undo. Domestic bond valuation conventions are not yet available.',
       '## 5. Quick capture and file exchange',
       'Configure global show/hide and clipboard-capture shortcuts, or keep NeoPad close through the system tray. Open or drop external Markdown files, export the current note as Markdown, PNG, or PDF, and export all notes as a ZIP archive.',
       '## 6. AI collaboration and local agents',

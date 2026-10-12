@@ -5,8 +5,9 @@ older corrupted-encoding draft.
 
 ## Product Direction
 
-Version 0.7.2 is the current release preparation target. It includes the
-workspace Agent guide, Explorer selection fixes, and dependency updates.
+Version 0.7.5 is the current local test distribution target. It adds bond
+holding-period returns and dated cash-flow annual return / cost (XIRR), and
+changes the calculator shortcut to Shift+F1. F1 help and F6 reminders remain.
 Local packaging and GitHub draft/public release steps are documented in
 [Release preparation](docs/release.md); a successful CI run alone does not
 publish installers.
@@ -75,6 +76,23 @@ Implemented MVP capabilities:
   Markdown lines.
 - Native Save As for exporting the active note to Markdown or all notes to a
   ZIP archive with one Markdown file per tab.
+- A lazily loaded offline financial calculator (`Shift+F1`) with interest,
+  rates, time value and general bond price/YTM/duration/convexity/DV01,
+  personal loans, financing / lending bond repos, bond holding-period returns
+  and effective annual return / cost (XIRR). Holding returns separate price
+  gains, received coupons and actual fees / financing costs. XIRR supports
+  2-200 dated receipts / payments, sorting and same-day netting; the initial
+  scope requires one sign change and a 365-day year. Loans solve payment,
+  principal or nominal annual rate and include all repayments. Repos use
+  actual funding days or settlement dates, explicit fees and signed cash flows.
+  Left navigation and grouped forms default to bond yield. Regular schedules
+  are automatic; maturity-interest and discount bonds use explicit simple
+  annual investment yields. Negative yields and three annual payments are supported.
+  The shared Rust core owns calculation rules; the UI handles explicit units
+  and cash-flow signs. Inputs stay in session memory. Full records can be
+  copied or safely inserted without replacing selected note text. Domestic
+  Wind / ChinaBond conventions await verified specifications and reference
+  cases; the general mode must never be labelled as domestic valuation.
 - PNG and multi-page PDF export for the current tab, including
   rendered code highlighting, KaTeX formulas, and Mermaid diagrams. PNG output
   can be saved to a file or copied directly to the system clipboard, including
