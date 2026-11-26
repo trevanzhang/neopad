@@ -256,10 +256,18 @@ with save barriers and revision checks, rather than importing it as a note.
 This controls the CLI interface; it is not an operating-system sandbox for an
 Agent that already has direct filesystem access.
 
-The frontend checks for note changes every two seconds. It reloads a note only
-when no edits are pending, and rejects an asynchronous result if typing, saving,
-or switching tabs occurred. External Markdown tabs keep their own
-lifecycle.
+The frontend checks for note changes every two seconds while the window is
+visible, pauses polling when hidden to tray, and triggers an immediate sync
+when the window becomes visible or regains focus. It reloads a note only when
+no edits are pending, and rejects an asynchronous result if typing, saving, or
+switching tabs occurred. External Markdown tabs keep their own lifecycle.
+
+During metadata reconciliation, `neopad-core` caches each note's file size and
+nanosecond modification timestamp in `tabs.json` so unchanged files older than
+the 2-second racy-clean window skip full-file reads and SHA-256 hashing. Batch
+scans (search, reminders, ZIP export) reuse loaded `NoteTab` metadata via
+`read_note_for_tab`, and the F4 file browser refreshes through a single locked
+`get_library_snapshot_command` call.
 
 ## Packaging
 

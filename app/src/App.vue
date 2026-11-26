@@ -19,11 +19,9 @@ import {
   copyNotePathToClipboard,
   exportAllNotesZip,
   getAppVersion,
+  getLibrarySnapshot,
   getShortcutWarnings,
   getWorkspace,
-  listLibraryNotes,
-  listArchiveDirectories,
-  listTrashedNotes,
   listNotes,
   listRecentNotes,
   listRecoverableNoteWrites,
@@ -516,6 +514,25 @@ watch([financeCategory, financeDraft], () => { financialNotice.value = '' }, { d
 let workspaceRefreshTimer: ReturnType<typeof setInterval> | null = null
 let workspaceRefreshing = false
 
+function startWorkspaceRefreshPolling() {
+  if (workspaceRefreshTimer || document.visibilityState === 'hidden') return
+  workspaceRefreshTimer = setInterval(() => {
+    if (document.visibilityState !== 'hidden') void refreshWorkspaceNotes()
+  }, 2000)
+}
+
+function stopWorkspaceRefreshPolling() {
+  if (!workspaceRefreshTimer) return
+  clearInterval(workspaceRefreshTimer)
+  workspaceRefreshTimer = null
+}
+
+function handleWindowFocus() {
+  if (document.visibilityState !== 'hidden') {
+    void refreshWorkspaceNotes()
+  }
+}
+
 async function refreshWorkspaceNotes() {
   if (workspaceRefreshing || isLoadingNote.value || saveState.value !== 'Saved' || aiInlineSession.value) return
   workspaceRefreshing = true
@@ -567,7 +584,8 @@ onMounted(async () => {
   await Promise.allSettled([syncWindowOpacity(), syncToggleShortcut(), syncClipboardShortcut()])
   window.addEventListener('keydown', handleKeydown, { capture: true })
   window.addEventListener('beforeunload', forceSaveOnExit)
-  document.addEventListener('visibilitychange', forceSaveOnHide)
+  window.addEventListener('focus', handleWindowFocus)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
   await registerNativeEventListeners()
   await openPendingExternalDocuments()
   appReady.value = true
@@ -578,15 +596,16 @@ onMounted(async () => {
   await recoverPendingNoteWrites()
   scheduleNativeSettingsSync()
   await startReminderPolling()
-  workspaceRefreshTimer = setInterval(() => { void refreshWorkspaceNotes() }, 2000)
+  startWorkspaceRefreshPolling()
 })
 
 onBeforeUnmount(() => {
-  if (workspaceRefreshTimer) clearInterval(workspaceRefreshTimer)
+  stopWorkspaceRefreshPolling()
 
   window.removeEventListener('keydown', handleKeydown, true)
   window.removeEventListener('beforeunload', forceSaveOnExit)
-  document.removeEventListener('visibilitychange', forceSaveOnHide)
+  window.removeEventListener('focus', handleWindowFocus)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
   disposeReminderState()
   disposeNativeSettings()
   disposeSearchState()
@@ -885,15 +904,20 @@ function toggleNoteLibrary() {
 async function refreshNoteLibrary() {
   libraryLoading.value = true
   try {
-    const [notes, trashed, archiveFolders, projectFolders] = isTauriRuntime()
-      ? await Promise.all([listLibraryNotes(), listTrashedNotes(), listArchiveDirectories(), listProjectDirectories()])
-      : [tabs.value.filter(tab => isNoteTab(tab) && !tab.archived && !tab.deleted), tabs.value.filter(tab => tab.deleted), archiveDirectories.value, projectDirectories.value]
-    libraryNotes.value = notes.filter(note => !note.projectRelativePath)
-    projectNotes.value = notes.filter(note => !!note.projectRelativePath)
-    trashedNotes.value = trashed
-    archiveDirectories.value = archiveFolders
-    projectDirectories.value = projectFolders
-    await refreshArchivedNotes()
+    if (isTauriRuntime()) {
+      const snapshot = await getLibrarySnapshot()
+      libraryNotes.value = snapshot.activeNotes.filter(note => !note.projectRelativePath)
+      projectNotes.value = snapshot.activeNotes.filter(note => !!note.projectRelativePath)
+      archivedNotes.value = snapshot.archivedNotes
+      trashedNotes.value = snapshot.trashedNotes
+      archiveDirectories.value = snapshot.archiveDirectories
+      projectDirectories.value = snapshot.projectDirectories
+    } else {
+      const notes = tabs.value.filter(tab => isNoteTab(tab) && !tab.archived && !tab.deleted)
+      libraryNotes.value = notes.filter(note => !note.projectRelativePath)
+      projectNotes.value = notes.filter(note => !!note.projectRelativePath)
+      trashedNotes.value = tabs.value.filter(tab => tab.deleted)
+    }
   } catch (error) { saveState.value = 'Failed'; statusMessage.value = displayAiRequestError(error) }
   finally { libraryLoading.value = false }
 }
@@ -1719,10 +1743,14 @@ function forceSaveOnExit() {
   void forceSave()
 }
 
-function forceSaveOnHide() {
+function handleVisibilityChange() {
   if (document.visibilityState === 'hidden') {
+    stopWorkspaceRefreshPolling()
     void forceSave()
+    return
   }
+  startWorkspaceRefreshPolling()
+  void refreshWorkspaceNotes()
 }
 
 function setEditorMode(mode: EditorMode) {

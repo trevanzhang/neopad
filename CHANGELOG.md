@@ -13,6 +13,22 @@ and repos; 0.7.5 adds holding returns and XIRR. These builds preserve existing n
 
 ## Unreleased
 
+## 0.7.6 - 2026-11-26
+
+### Changed
+
+- Add a `mtime` + file-size fast path with a 2-second racy-clean guard to
+  `reconcile_note_metadata`, skipping redundant disk reads and SHA-256 hashing
+  for unchanged notes and lazily scanning `projects/` only when a tracked
+  project file is missing.
+- Reuse loaded `NoteTab` entries via `read_note_for_tab` during search,
+  reminder checks, and ZIP exports to eliminate repeated `tabs.json` parsing.
+- Consolidate sidebar refreshes into a single `get_library_snapshot_command`
+  call, skip redundant workspace reconciliation before checked autosaves, pause
+  the 2-second workspace polling loop while hidden to tray (syncing immediately
+  on restore/focus), and avoid double reminder scans once notification
+  permission is granted.
+
 ## 0.7.5 - 2026-10-12
 
 ### Added

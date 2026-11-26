@@ -1,5 +1,8 @@
 use crate::{
-    atomic_write::write_atomic, list_notes, note::read_note, write_note_atomic, Workspace,
+    atomic_write::write_atomic,
+    list_notes,
+    note::{read_note, read_note_for_tab},
+    write_note_atomic, Workspace,
 };
 use anyhow::{bail, Context, Result};
 use chrono::{Local, NaiveDateTime, TimeZone, Utc};
@@ -98,7 +101,7 @@ pub fn list_reminders(workspace: &Workspace) -> Result<Vec<Reminder>> {
     let mut reminders = Vec::new();
 
     for tab in list_notes(workspace)? {
-        let note = read_note(workspace, &tab.id)?;
+        let note = read_note_for_tab(workspace, &tab)?;
         for (index, line) in note.content.lines().enumerate() {
             let Some(parsed) = parse_reminder_line(line) else {
                 continue;
@@ -234,7 +237,7 @@ pub fn complete_due_reminders(workspace: &Workspace) -> Result<usize> {
     let mut completed = 0;
 
     for tab in list_notes(workspace)? {
-        let note = read_note(workspace, &tab.id)?;
+        let note = read_note_for_tab(workspace, &tab)?;
         let mut changed = false;
         let mut next_content = String::with_capacity(note.content.len());
         for line in note.content.split_inclusive('\n') {

@@ -87,9 +87,9 @@ This file tracks the implemented MVP relative to the original task plan.
 
 ## Current Build Targets
 
-The current local test target is 0.7.5. Source versions, successful
+The current local test target is 0.7.6. Source versions, successful
 CI runs, draft installers, and public Releases are distinct stages; see
-[Release preparation](release.md) and [0.7.5 notes](releases/v0.7.5.md).
+[Release preparation](release.md) and [0.7.6 notes](releases/v0.7.6.md).
 
 - Windows x64 MSI.
 - macOS ARM64 DMG.

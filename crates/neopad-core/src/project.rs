@@ -1,9 +1,9 @@
 use crate::{
     note::{
-        content_revision, ensure_regular_directory, load_tabs, markdown_files_recursive,
+        content_revision, ensure_regular_directory, file_stat, load_tabs, markdown_files_recursive,
         next_updated_at, normalized_directory, normalized_directory_name, note_path, now_ms,
         path_is_inside_directory, regular_files_recursive_strict, relative_path_string,
-        replaced_directory_prefix, save_tabs,
+        replaced_directory_prefix, save_tabs, FileStat,
     },
     path::{project_directory_path, project_file_path},
     NoteContent, NoteTab, TabsState, Workspace,
@@ -241,7 +241,7 @@ pub(crate) fn reconcile_project_locations(
     workspace: &Workspace,
     tabs: &mut TabsState,
 ) -> Result<bool> {
-    let files = markdown_files_recursive(&workspace.projects_dir)?;
+    let mut files: Option<Vec<std::path::PathBuf>> = None;
     let mut owned = tabs
         .tabs
         .iter()
@@ -279,7 +279,14 @@ pub(crate) fn reconcile_project_locations(
             changed = true;
             continue;
         }
-        let candidates = files
+        let project_files = match files.as_deref() {
+            Some(existing) => existing,
+            None => {
+                files = Some(markdown_files_recursive(&workspace.projects_dir)?);
+                files.as_deref().unwrap_or(&[])
+            }
+        };
+        let candidates = project_files
             .iter()
             .filter(|file| {
                 file.file_name().and_then(|name| name.to_str()) == Some(&tab.file_name)
@@ -335,8 +342,15 @@ pub(crate) fn reconcile_project_notes(workspace: &Workspace, tabs: &mut TabsStat
         while tabs.tabs.iter().any(|tab| tab.id == id) {
             id.push('-');
         }
-        tabs.tabs
-            .push(project_tab(id, file_name, relative, &content, None)?);
+        let stat = file_stat(&path).ok();
+        tabs.tabs.push(project_tab(
+            id,
+            file_name,
+            relative,
+            &content,
+            None,
+            stat.as_ref(),
+        )?);
         changed = true;
     }
     Ok(changed)
@@ -348,6 +362,7 @@ fn project_tab(
     relative: String,
     content: &str,
     trash: Option<String>,
+    stat: Option<&FileStat>,
 ) -> Result<NoteTab> {
     let now = now_ms()?;
     let title = content
@@ -373,6 +388,8 @@ fn project_tab(
         system_title: false,
         color: None,
         content_revision: Some(content_revision(content)),
+        content_file_size: stat.map(|value| value.size),
+        content_file_mtime_ns: stat.map(|value| value.mtime_ns.clone()),
     })
 }
 
@@ -494,7 +511,7 @@ fn import_legacy_file(
         } else {
             None
         };
-        let tab = project_tab(id.to_owned(), file_name, migrated, &content, trash)?;
+        let tab = project_tab(id.to_owned(), file_name, migrated, &content, trash, None)?;
         let target = if let Some(name) = &tab.trash_file_name {
             crate::path::trash_file_path(workspace, name)?
         } else {
@@ -679,6 +696,7 @@ mod tests {
                 "Resume.md".into(),
                 relative.into(),
                 "body",
+                None,
                 None,
             )
             .unwrap(),

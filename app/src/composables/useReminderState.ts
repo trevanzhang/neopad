@@ -23,7 +23,7 @@ export function useReminderState(options: ReminderStateOptions) {
   const reminderListOpen = ref(false)
   const reminders = ref<Reminder[]>([])
   const remindersLoading = ref(false)
-  let reminderPollTimer: number | null = null
+  let reminderPollTimer: ReturnType<typeof setInterval> | null = null
   let notificationPermissionDenied = false
 
   async function refreshReminders() {
@@ -77,13 +77,15 @@ export function useReminderState(options: ReminderStateOptions) {
   async function checkDueReminders() {
     if (!isTauriRuntime() || notificationPermissionDenied) return
     try {
-      const current = await listReminders()
-      if (!current.some((reminder) => reminder.status === 'due')) return
       let granted = await isPermissionGranted()
-      if (!granted) granted = (await requestPermission()) === 'granted'
       if (!granted) {
-        notificationPermissionDenied = true
-        return
+        const current = await listReminders()
+        if (!current.some((reminder) => reminder.status === 'due')) return
+        granted = (await requestPermission()) === 'granted'
+        if (!granted) {
+          notificationPermissionDenied = true
+          return
+        }
       }
 
       const due = await claimDueReminders()
@@ -98,11 +100,11 @@ export function useReminderState(options: ReminderStateOptions) {
 
   async function startReminderPolling() {
     await checkDueReminders()
-    reminderPollTimer = window.setInterval(() => void checkDueReminders(), 30_000)
+    reminderPollTimer = setInterval(() => void checkDueReminders(), 30_000)
   }
 
   function disposeReminderState() {
-    if (reminderPollTimer) window.clearInterval(reminderPollTimer)
+    if (reminderPollTimer) clearInterval(reminderPollTimer)
     reminderPollTimer = null
   }
 

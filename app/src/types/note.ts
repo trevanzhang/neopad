@@ -73,3 +73,11 @@ export type Reminder = {
   completed: boolean
   status: ReminderStatus
 }
+
+export type LibrarySnapshot = {
+  activeNotes: NoteTab[]
+  archivedNotes: NoteTab[]
+  trashedNotes: NoteTab[]
+  archiveDirectories: string[]
+  projectDirectories: string[]
+}

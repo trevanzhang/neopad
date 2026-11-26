@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import type { FinanceRequest, FinanceResponse } from '../types/finance'
 import { isTauriRuntime } from './runtime'
 import { Image, transformImage } from '@tauri-apps/api/image'
-import type { ExternalDocument, NoteContent, NoteTab, Reminder, SearchResult, WorkspaceInfo } from '../types/note'
+import type { ExternalDocument, LibrarySnapshot, NoteContent, NoteTab, Reminder, SearchResult, WorkspaceInfo } from '../types/note'
 import type {
   EditorMode,
   EditorModeShortcut,
@@ -129,6 +129,10 @@ export function listNotes(): Promise<NoteTab[]> {
 
 export function listLibraryNotes(): Promise<NoteTab[]> {
   return invoke('list_library_notes_command')
+}
+
+export function getLibrarySnapshot(): Promise<LibrarySnapshot> {
+  return invoke('get_library_snapshot_command')
 }
 
 export function listArchivedNotes(): Promise<NoteTab[]> {

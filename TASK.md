@@ -5,9 +5,11 @@ older corrupted-encoding draft.
 
 ## Product Direction
 
-Version 0.7.5 is the current local test distribution target. It adds bond
-holding-period returns and dated cash-flow annual return / cost (XIRR), and
-changes the calculator shortcut to Shift+F1. F1 help and F6 reminders remain.
+Version 0.7.6 is the current local test distribution target. Building on the
+0.7.5 offline financial tools (`Shift+F1`), it optimizes workspace metadata
+reconciliation (`mtime` + file-size fast path with a 2-second racy-clean guard),
+batch note reads, single-call library snapshots, and visibility-aware polling.
+F1 help and F6 reminders remain unchanged.
 Local packaging and GitHub draft/public release steps are documented in
 [Release preparation](docs/release.md); a successful CI run alone does not
 publish installers.

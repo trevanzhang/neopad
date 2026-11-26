@@ -30,6 +30,7 @@ fn coupon_date(
     NaiveDate::from_ymd_opt(year, month, day).ok_or(error("date", "maturity"))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn schedule(
     settlement: NaiveDate,
     maturity: NaiveDate,

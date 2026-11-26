@@ -1,4 +1,4 @@
-use crate::{list_searchable_notes, note::read_note, Workspace};
+use crate::{list_searchable_notes, note::read_note_for_tab, Workspace};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -36,7 +36,7 @@ pub fn search_notes(workspace: &Workspace, query: &str, limit: usize) -> Result<
     let mut results = Vec::new();
 
     for tab in list_searchable_notes(workspace)? {
-        let note = read_note(workspace, &tab.id)?;
+        let note = read_note_for_tab(workspace, &tab)?;
         let lines = note
             .content
             .lines()
@@ -89,7 +89,7 @@ pub fn find_relevant_note_excerpts(
         if exclude_note_id.is_some_and(|note_id| note_id == tab.id) {
             continue;
         }
-        let note = read_note(workspace, &tab.id)?;
+        let note = read_note_for_tab(workspace, &tab)?;
         let lines = note.content.lines().collect::<Vec<_>>();
         let title_lower = tab.title.to_lowercase();
         let title_score = terms

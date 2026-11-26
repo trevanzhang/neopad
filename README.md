@@ -10,9 +10,11 @@ under the user's local NeoPad workspace.
 
 ## Current Status
 
-Version **0.7.5** is being prepared for local testing, adding bond holding-period
-returns and dated cash-flow annual return / cost (XIRR). The calculator shortcut
-is now `Shift+F1`. See the [0.7.5 release notes](docs/releases/v0.7.5.md).
+Version **0.7.6** is being prepared for local testing, optimizing workspace
+reconciliation (`mtime` + size fast path with racy-clean guard), batch note
+reads, single-call library snapshots, and visibility-aware background polling
+on top of the 0.7.5 financial tools. See the
+[0.7.6 release notes](docs/releases/v0.7.6.md).
 The source version does not imply a published GitHub Release; installers become
 public only after the release checks below are complete.
 

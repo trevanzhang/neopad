@@ -8,7 +8,19 @@ use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+const RECONCILE_RACY_WINDOW: Duration = Duration::from_secs(2);
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct LibrarySnapshot {
+    pub active_notes: Vec<NoteTab>,
+    pub archived_notes: Vec<NoteTab>,
+    pub trashed_notes: Vec<NoteTab>,
+    pub archive_directories: Vec<String>,
+    pub project_directories: Vec<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -47,6 +59,37 @@ pub fn list_trashed_notes(workspace: &Workspace) -> Result<Vec<NoteTab>> {
         .into_iter()
         .filter(|tab| tab.deleted)
         .collect())
+}
+
+pub fn get_library_snapshot(workspace: &Workspace) -> Result<LibrarySnapshot> {
+    let tabs = load_tabs(workspace)?.tabs;
+    let mut non_deleted = Vec::new();
+    let mut trashed_notes = Vec::new();
+    for tab in tabs {
+        if tab.deleted {
+            trashed_notes.push(tab);
+        } else {
+            non_deleted.push(tab);
+        }
+    }
+
+    let mut active_notes = Vec::new();
+    let mut archived_notes = Vec::new();
+    for tab in existing_tabs(workspace, non_deleted)? {
+        if tab.archived {
+            archived_notes.push(tab);
+        } else {
+            active_notes.push(tab);
+        }
+    }
+
+    Ok(LibrarySnapshot {
+        active_notes,
+        archived_notes,
+        trashed_notes,
+        archive_directories: list_archive_directories(workspace)?,
+        project_directories: crate::project::list_project_directories(workspace)?,
+    })
 }
 
 pub fn list_recoverable_note_writes(workspace: &Workspace) -> Result<Vec<RecoverableNoteWrite>> {
@@ -199,19 +242,23 @@ pub fn list_recent_notes(workspace: &Workspace, limit: usize) -> Result<Vec<Note
     Ok(notes)
 }
 
-pub fn read_note(workspace: &Workspace, note_id: &str) -> Result<NoteContent> {
-    let tab = find_note_tab(workspace, note_id)?;
-    let path = note_path(workspace, &tab)?;
+pub fn read_note_for_tab(workspace: &Workspace, tab: &NoteTab) -> Result<NoteContent> {
+    let path = note_path(workspace, tab)?;
     let content = fs::read_to_string(&path)
         .with_context(|| format!("failed to read note file {}", path.display()))?;
 
     Ok(NoteContent {
-        id: tab.id,
-        title: tab.title,
-        file_name: tab.file_name,
+        id: tab.id.clone(),
+        title: tab.title.clone(),
+        file_name: tab.file_name.clone(),
         content,
         updated_at: tab.updated_at,
     })
+}
+
+pub fn read_note(workspace: &Workspace, note_id: &str) -> Result<NoteContent> {
+    let tab = find_note_tab(workspace, note_id)?;
+    read_note_for_tab(workspace, &tab)
 }
 
 pub fn create_note(workspace: &Workspace, title: Option<String>) -> Result<NoteContent> {
@@ -234,6 +281,7 @@ pub fn create_note_with_body(
     let path = note_file_path(workspace, &file_name)?;
 
     write_atomic(&path, &content)?;
+    let stat = file_stat(&path).ok();
 
     tabs.tabs.push(NoteTab {
         id: id.clone(),
@@ -252,6 +300,8 @@ pub fn create_note_with_body(
         system_title,
         color: None,
         content_revision: Some(content_revision(&content)),
+        content_file_size: stat.as_ref().map(|value| value.size),
+        content_file_mtime_ns: stat.map(|value| value.mtime_ns),
     });
     tabs.active_tab_id = id.clone();
     if let Err(error) = save_tabs(workspace, &tabs) {
@@ -276,32 +326,7 @@ pub fn write_note_atomic(
     note_id: &str,
     content: &str,
 ) -> Result<NoteContent> {
-    let mut tabs = load_tabs(workspace)?;
-    let tab = find_note_tab_mut(&mut tabs, note_id)?;
-    let path = note_path(workspace, tab)?;
-    let now = next_updated_at(tab.updated_at)?;
-    let previous_content = fs::read_to_string(&path)
-        .with_context(|| format!("failed to read note file {}", path.display()))?;
-
-    write_atomic(&path, content)?;
-    tab.updated_at = now;
-    tab.content_revision = Some(content_revision(content));
-
-    let note = NoteContent {
-        id: tab.id.clone(),
-        title: tab.title.clone(),
-        file_name: tab.file_name.clone(),
-        content: content.to_owned(),
-        updated_at: now,
-    };
-    if let Err(error) = save_tabs(workspace, &tabs) {
-        write_atomic(&path, &previous_content).with_context(|| {
-            format!("failed to roll back note content after metadata error: {error:#}")
-        })?;
-        return Err(error);
-    }
-
-    Ok(note)
+    write_note_internal(workspace, note_id, content, None)
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -321,27 +346,60 @@ pub fn write_note_atomic_checked(
     content: &str,
     expected_updated_at: i64,
 ) -> Result<NoteContent> {
-    let tab = find_note_tab(workspace, note_id)?;
-    let path = note_path(workspace, &tab)?;
-    let disk_content = fs::read_to_string(&path)
+    write_note_internal(workspace, note_id, content, Some(expected_updated_at))
+}
+
+fn write_note_internal(
+    workspace: &Workspace,
+    note_id: &str,
+    content: &str,
+    expected_updated_at: Option<i64>,
+) -> Result<NoteContent> {
+    let mut tabs = load_tabs(workspace)?;
+    let tab = find_note_tab_mut(&mut tabs, note_id)?;
+    let path = note_path(workspace, tab)?;
+    let previous_content = fs::read_to_string(&path)
         .with_context(|| format!("failed to read note file {}", path.display()))?;
-    if tab
-        .content_revision
-        .is_some_and(|revision| revision != content_revision(&disk_content))
-    {
-        bail!(NoteWriteConflict::External {
-            note_id: note_id.to_owned()
-        });
-    }
-    let current = read_note(workspace, note_id)?;
-    if current.updated_at != expected_updated_at {
-        bail!(NoteWriteConflict::Version {
-            expected: expected_updated_at,
-            current: current.updated_at
-        });
+
+    if let Some(expected) = expected_updated_at {
+        if tab
+            .content_revision
+            .as_deref()
+            .is_some_and(|revision| revision != content_revision(&previous_content))
+        {
+            bail!(NoteWriteConflict::External {
+                note_id: note_id.to_owned()
+            });
+        }
+        if tab.updated_at != expected {
+            bail!(NoteWriteConflict::Version {
+                expected,
+                current: tab.updated_at
+            });
+        }
     }
 
-    write_note_atomic(workspace, note_id, content)
+    let now = next_updated_at(tab.updated_at)?;
+    write_atomic(&path, content)?;
+    tab.updated_at = now;
+    tab.content_revision = Some(content_revision(content));
+    apply_file_stat(tab, file_stat(&path).ok().as_ref());
+
+    let note = NoteContent {
+        id: tab.id.clone(),
+        title: tab.title.clone(),
+        file_name: tab.file_name.clone(),
+        content: content.to_owned(),
+        updated_at: now,
+    };
+    if let Err(error) = save_tabs(workspace, &tabs) {
+        write_atomic(&path, &previous_content).with_context(|| {
+            format!("failed to roll back note content after metadata error: {error:#}")
+        })?;
+        return Err(error);
+    }
+
+    Ok(note)
 }
 
 pub fn append_to_note(workspace: &Workspace, note_id: &str, content: &str) -> Result<NoteContent> {
@@ -391,6 +449,8 @@ pub fn rename_note(workspace: &Workspace, note_id: &str, title: String) -> Resul
         {
             previous_content = Some((path.clone(), content));
             write_atomic(&path, &updated_content)?;
+            tab.content_revision = Some(content_revision(&updated_content));
+            apply_file_stat(tab, file_stat(&path).ok().as_ref());
         }
     }
 
@@ -433,6 +493,7 @@ pub fn rename_note_with_heading(
     tab.system_title = false;
     tab.updated_at = now;
     tab.content_revision = Some(content_revision(&next_content));
+    apply_file_stat(tab, file_stat(&path).ok().as_ref());
     let renamed = tab.clone();
 
     if let Err(error) = save_tabs(workspace, &tabs) {
@@ -870,15 +931,23 @@ pub(crate) fn save_tabs(workspace: &Workspace, tabs: &TabsState) -> Result<()> {
 /// Callers must hold `lock_workspace_for_write` because this operation may
 /// rewrite the complete tabs metadata file.
 pub fn reconcile_note_metadata(workspace: &Workspace) -> Result<bool> {
+    reconcile_note_metadata_at(workspace, SystemTime::now())
+}
+
+fn reconcile_note_metadata_at(workspace: &Workspace, now: SystemTime) -> Result<bool> {
     let mut tabs = load_tabs(workspace)?;
-    let changed = reconcile_trashed_tabs(workspace, &mut tabs)?;
+    let changed = reconcile_trashed_tabs_at(workspace, &mut tabs, now)?;
     if changed {
         save_tabs(workspace, &tabs)?;
     }
     Ok(changed)
 }
 
-fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result<bool> {
+fn reconcile_trashed_tabs_at(
+    workspace: &Workspace,
+    tabs: &mut TabsState,
+    now: SystemTime,
+) -> Result<bool> {
     let mut changed = crate::project::reconcile_project_locations(workspace, tabs)?;
 
     let mut stale_deleted_ids = HashSet::new();
@@ -949,13 +1018,29 @@ fn reconcile_trashed_tabs(workspace: &Workspace, tabs: &mut TabsState) -> Result
             continue;
         }
 
+        let stat = file_stat(&current_path).ok();
+        if stat
+            .as_ref()
+            .is_some_and(|value| file_stat_is_unchanged(tab, value, now))
+        {
+            continue;
+        }
+
         let content = fs::read_to_string(&current_path)
             .with_context(|| format!("failed to read note file {}", current_path.display()))?;
         let revision = content_revision(&content);
         if tab.content_revision.as_deref() != Some(revision.as_str()) {
             tab.content_revision = Some(revision);
             tab.updated_at = next_updated_at(tab.updated_at)?;
+            apply_file_stat(tab, stat.as_ref());
             changed = true;
+        } else if let Some(stat) = stat.as_ref() {
+            if tab.content_file_size != Some(stat.size)
+                || tab.content_file_mtime_ns.as_deref() != Some(stat.mtime_ns.as_str())
+            {
+                apply_file_stat(tab, Some(stat));
+                changed = true;
+            }
         }
     }
 
@@ -1068,6 +1153,8 @@ fn reconcile_orphaned_trashed_notes(workspace: &Workspace, tabs: &mut TabsState)
             system_title: false,
             color: None,
             content_revision: Some(content_revision(&content)),
+            content_file_size: None,
+            content_file_mtime_ns: None,
         });
         changed = true;
     }
@@ -1160,10 +1247,10 @@ fn reconcile_orphaned_notes(
             .unwrap_or(&base_id)
             .trim()
             .to_owned();
-        let now = fs::metadata(&path)
-            .and_then(|metadata| metadata.modified())
-            .ok()
-            .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+        let stat = file_stat(&path).ok();
+        let now = stat
+            .as_ref()
+            .and_then(|value| value.modified.duration_since(UNIX_EPOCH).ok())
             .map_or(now_ms()?, |duration| duration.as_millis() as i64);
         tabs.tabs.push(NoteTab {
             id,
@@ -1182,6 +1269,8 @@ fn reconcile_orphaned_notes(
             system_title: false,
             color: None,
             content_revision: Some(content_revision(&content)),
+            content_file_size: stat.as_ref().map(|value| value.size),
+            content_file_mtime_ns: stat.map(|value| value.mtime_ns),
         });
     }
 
@@ -1574,6 +1663,51 @@ pub(crate) fn now_ms() -> Result<i64> {
 
 pub(crate) fn next_updated_at(previous: i64) -> Result<i64> {
     Ok(now_ms()?.max(previous.saturating_add(1)))
+}
+
+pub(crate) struct FileStat {
+    pub size: u64,
+    pub mtime_ns: String,
+    pub modified: SystemTime,
+}
+
+pub(crate) fn file_stat(path: &Path) -> Result<FileStat> {
+    let metadata = fs::metadata(path)
+        .with_context(|| format!("failed to inspect note file {}", path.display()))?;
+    let modified = metadata
+        .modified()
+        .with_context(|| format!("failed to read modified time for {}", path.display()))?;
+    let mtime_ns = format_system_time_ns(modified)?;
+    Ok(FileStat {
+        size: metadata.len(),
+        mtime_ns,
+        modified,
+    })
+}
+
+fn format_system_time_ns(time: SystemTime) -> Result<String> {
+    let duration = time
+        .duration_since(UNIX_EPOCH)
+        .context("file timestamp is before unix epoch")?;
+    Ok(format!(
+        "{}:{:09}",
+        duration.as_secs(),
+        duration.subsec_nanos()
+    ))
+}
+
+fn file_stat_is_unchanged(tab: &NoteTab, stat: &FileStat, now: SystemTime) -> bool {
+    tab.content_revision.is_some()
+        && tab.content_file_size == Some(stat.size)
+        && tab.content_file_mtime_ns.as_deref() == Some(stat.mtime_ns.as_str())
+        && now
+            .duration_since(stat.modified)
+            .is_ok_and(|age| age >= RECONCILE_RACY_WINDOW)
+}
+
+fn apply_file_stat(tab: &mut NoteTab, stat: Option<&FileStat>) {
+    tab.content_file_size = stat.map(|value| value.size);
+    tab.content_file_mtime_ns = stat.map(|value| value.mtime_ns.clone());
 }
 
 pub(crate) fn content_revision(content: &str) -> String {
@@ -2330,5 +2464,123 @@ mod tests {
                 .collect::<Vec<_>>(),
             ordered
         );
+    }
+
+    #[test]
+    fn reconciliation_skips_hashing_unchanged_notes_outside_racy_window() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Cached".to_owned())).expect("create");
+        let path = note_file_path(&workspace, &created.file_name).expect("path");
+
+        let mut tabs = load_tabs(&workspace).expect("tabs");
+        let tab = find_note_tab_mut(&mut tabs, &created.id).expect("created tab");
+        assert!(tab.content_file_size.is_some());
+        assert!(tab.content_file_mtime_ns.is_some());
+        let sentinel = "sentinel-cached-revision".to_owned();
+        tab.content_revision = Some(sentinel.clone());
+        save_tabs(&workspace, &tabs).expect("save sentinel");
+
+        let future = SystemTime::now() + Duration::from_secs(10);
+        reconcile_note_metadata_at(&workspace, future).expect("fast-path reconcile");
+        let after_fast_path = load_tabs(&workspace).expect("tabs after fast path");
+        let fast_tab = after_fast_path
+            .tabs
+            .iter()
+            .find(|item| item.id == created.id)
+            .expect("tab");
+        assert_eq!(
+            fast_tab.content_revision.as_deref(),
+            Some(sentinel.as_str())
+        );
+
+        // Changing file size invalidates the stat cache even outside the racy window.
+        fs::write(&path, "# Cached\n\nModified body with different length")
+            .expect("external write");
+        assert!(reconcile_note_metadata_at(&workspace, future).expect("invalidated reconcile"));
+        let after_change = load_tabs(&workspace).expect("tabs after change");
+        let updated_tab = after_change
+            .tabs
+            .iter()
+            .find(|item| item.id == created.id)
+            .expect("updated tab");
+        assert_eq!(
+            updated_tab.content_revision.as_deref(),
+            Some(content_revision("# Cached\n\nModified body with different length").as_str())
+        );
+        assert!(updated_tab.updated_at > created.updated_at);
+    }
+
+    #[test]
+    fn reconciliation_rehashes_same_length_edits_inside_racy_window() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Racy".to_owned())).expect("create");
+        let written = write_note_atomic(&workspace, &created.id, "AAAA").expect("write");
+        let path = note_file_path(&workspace, &created.file_name).expect("path");
+
+        // Same byte length written immediately inside the racy window must still be hashed.
+        fs::write(&path, "BBBB").expect("same-length external write");
+        assert!(reconcile_note_metadata(&workspace).expect("reconcile"));
+
+        let tab = find_note_tab(&workspace, &created.id).expect("tab");
+        assert_eq!(
+            tab.content_revision.as_deref(),
+            Some(content_revision("BBBB").as_str())
+        );
+        assert!(tab.updated_at > written.updated_at);
+    }
+
+    #[test]
+    fn reconciliation_backfills_stat_cache_without_bumping_updated_at() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Legacy".to_owned())).expect("create");
+
+        let mut tabs = load_tabs(&workspace).expect("tabs");
+        let tab = find_note_tab_mut(&mut tabs, &created.id).expect("tab");
+        tab.content_file_size = None;
+        tab.content_file_mtime_ns = None;
+        save_tabs(&workspace, &tabs).expect("save legacy tabs");
+
+        assert!(reconcile_note_metadata(&workspace).expect("backfill reconcile"));
+        let backfilled = find_note_tab(&workspace, &created.id).expect("backfilled tab");
+        assert_eq!(backfilled.updated_at, created.updated_at);
+        assert!(backfilled.content_file_size.is_some());
+        assert!(backfilled.content_file_mtime_ns.is_some());
+    }
+
+    #[test]
+    fn library_snapshot_returns_active_archived_trashed_and_directories() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let active = create_note(&workspace, Some("Active".to_owned())).expect("active");
+        let project = create_project_note(&workspace, "Alpha", Some("Spec".to_owned()), "body")
+            .expect("project");
+        let to_archive = create_note(&workspace, Some("Archived".to_owned())).expect("to archive");
+        archive_note_to_directory(&workspace, &to_archive.id, "2026").expect("archive");
+        let to_trash = create_note(&workspace, Some("Trashed".to_owned())).expect("to trash");
+        delete_note_to_trash(&workspace, &to_trash.id).expect("trash");
+
+        let snapshot = get_library_snapshot(&workspace).expect("snapshot");
+        assert!(snapshot.active_notes.iter().any(|tab| tab.id == active.id));
+        assert!(snapshot.active_notes.iter().any(|tab| tab.id == project.id));
+        assert_eq!(snapshot.archived_notes.len(), 1);
+        assert_eq!(snapshot.archived_notes[0].id, to_archive.id);
+        assert_eq!(snapshot.trashed_notes.len(), 1);
+        assert_eq!(snapshot.trashed_notes[0].id, to_trash.id);
+        assert_eq!(snapshot.archive_directories, vec!["2026"]);
+        assert_eq!(snapshot.project_directories, vec!["Alpha"]);
+    }
+
+    #[test]
+    fn read_note_for_tab_reads_content_directly() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let workspace = init_workspace(Some(temp_dir.path().join("workspace"))).expect("workspace");
+        let created = create_note(&workspace, Some("Direct".to_owned())).expect("create");
+        let tab = find_note_tab(&workspace, &created.id).expect("tab");
+
+        let note = read_note_for_tab(&workspace, &tab).expect("direct read");
+        assert_eq!(note, created);
     }
 }

@@ -28,6 +28,10 @@ pub struct NoteTab {
     pub color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content_revision: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_file_size: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_file_mtime_ns: Option<String>,
 }
 
 fn default_open() -> bool {
@@ -65,6 +69,8 @@ impl TabsState {
                     system_title: false,
                     color: None,
                     content_revision: None,
+                    content_file_size: None,
+                    content_file_mtime_ns: None,
                 },
                 NoteTab {
                     id: "clipboard".to_owned(),
@@ -83,6 +89,8 @@ impl TabsState {
                     system_title: false,
                     color: None,
                     content_revision: None,
+                    content_file_size: None,
+                    content_file_mtime_ns: None,
                 },
             ],
         }
